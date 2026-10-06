@@ -1,27 +1,19 @@
-# IMPLEMENT
-
-Dán clipboard trong `app_trolythien` nhận cả chữ và ảnh chụp màn hình. Chọn đầu vào được nhiều tệp hoặc cả thư mục. Prompt liệt kê tệp tài liệu trong thư mục đó. Bản `dist\TroLyHoangThien\TroLyHoangThien.exe` đã được đóng gói lại.
+# IMPLEMENT: Chuẩn hóa KHBD V2.0 (NLS/AI, hình vẽ, công thức)
 
 ## Đã làm
-
-- `ui/kit.py`: `paste_clipboard()` đọc mime. Có chữ thì chèn vào `QTextEdit`. Có ảnh thì lưu PNG vào `app_trolythien/.runtime/clipboard_images/clip_<thời điểm>.png`, gán `attached_items`, và phát `image_attached`. `PasteAwareEdit.insertFromMimeData` làm cùng việc khi bấm Ctrl+V.
-- Nút **Chọn tệp…** dùng `QFileDialog.getOpenFileNames`. Nút **Chọn cả thư mục…** dùng `getExistingDirectory`. Nhãn: `Đã chọn thư mục: <tên> (N tệp)` hoặc `Đã chọn N tệp`.
-- `ui/tab_vehinh.py`: ảnh đề vừa dán hoặc vừa chọn hiện ngay trên khung xem trước, thu nhỏ `KeepAspectRatio`. Khi có kết quả vẽ, khung chuyển sang ảnh thành phẩm.
-- `core/prompt_builder.py`: `_inputs` gặp thư mục thì quét đệ quy `.docx`, `.pdf`, `.md`, `.txt`, `.png`, `.jpg`, `.jpeg` và ghi từng đường dẫn. File khác đuôi không đưa vào prompt.
-- `build_exe.bat` chạy lại, exit 0. File exe mới nằm trong `app_trolythien\dist\TroLyHoangThien\`.
+- Khóa ma trận sư phạm trong `.agents/rules/soankhbd.md`, `PROMPT_SOAN_GIAO_AN.md` và `HUONG_DAN_SOAN_KHBD_HANG_LOAT.md`: chỉ tích hợp NLS/AI khi cột Ghi chú PPCT có mã; bài số học lý thuyết không chèn ảnh; Mindmap chỉ ở Hoạt động 2.1 của tiết luyện tập chung / ôn tập; checklist trước khi xuất.
+- `sanitizeKhbdMathSource` trong `TROLYTHIEN/engine/export_khbd_engine.js`: khôi phục Vertical Tab + `dots` thành `\vdots`, Form Feed + `rac` thành `\frac`, xóa ký tự điều khiển, rút `\ \vdots \` về `\vdots`, đổi `dots` giữa hai toán hạng thành `\vdots`, đổi `\not\vdots` thành `\nmid`. Cảnh báo khi Word khóa file (ghi `_Moi.docx`).
+- `js/khbd-docx.js` dùng cùng lớp lọc trước `latexToUnicodeMath` và `normalizeLatexForMath`. Equation giữ `⋮` (U+22EE).
+- `tools/export_all_8_khbd.js` cảnh báo khi đường dẫn ra là `_Moi.docx`.
+- Ba bài 03, 04, 08 đổi dòng tích hợp sang `***(Tích hợp NLS …)***` và `***(Tích hợp AI …)***`. Năm bài còn lại không có dòng đó. Ảnh Mindmap chỉ còn ở bài 01, 02, 06.
 
 ## Kiểm thử
+- `node tests/khbd-math-sanitize-smoke.js`: PASS (chuỗi `$36 \vdots x$`, `$48 \dots x$`, `100 - x \dots 4`, `a \not\vdots b`, `\frac{24}{108}`, VT/`dots`, FF/`frac`, và đối chiếu 8 file Markdown).
+- `node tools/export_all_8_khbd.js`: 8/8 ghi đè thành công, không bị EBUSY.
+- Giải nén `word/document.xml`: không file nào còn chữ `dots`. Số `m:oMath` và `⋮`: 01 (27/0), 02 (41/0), 03 (84/14), 04 (41/2), 05 (28/0), 06 (39/9), 07 (74/3), 08 (79/1). Bài 01 và 02 không có phép chia hết nên không có `⋮`.
 
-- Qt offscreen: dán chữ «Hình bình hành ABCD» vào ô soạn thảo, khung xem trước không bị gắn ảnh.
-- Ảnh đỏ trên clipboard: lưu `clip_*.png` dưới `.runtime\clipboard_images`, nhãn «Đã chọn 1 tệp», pixmap xem trước không rỗng.
-- Ctrl+V một ảnh khác: không đổ chữ vào ô, lưu PNG mới, xem trước đổi theo ảnh đó.
-- `show_result` một PNG xanh: khung xem trước đổi sang ảnh kết quả.
-- Thư mục tạm có `giao_an.docx`, `thang9\de.pdf`, `ghi_chu.md` và `nhap.xlsx`: nhãn «Đã chọn thư mục: troly-ho-so (3 tệp)». Prompt duyệt giáo án liệt kê ba tệp tài liệu, không có file xlsx.
-- `TroLyHoangThien.exe` còn sống sau 4 giây, rồi bị tắt. Chưa bấm Win+Shift+S trên cửa sổ thật.
-- Lượt sau, cùng plan, mã nguồn không đổi. Kiểm tra lại Qt offscreen: dán chữ, dán ảnh, Ctrl+V ảnh, nhãn thư mục 3 tệp, prompt bỏ file `.xlsx`. Bản exe lúc 09:59 mới hơn `kit.py`, `tab_vehinh.py` và `prompt_builder.py`, nên không đóng gói lại.
+## Chưa kiểm
+- Chưa mở 8 file trên Microsoft Word (viền, lề, ngắt dòng). Phần này để `/verify`.
 
-## Giới hạn
-
-- Không chạy một lượt vẽ hình bằng `agy`. Cầu nối `agy.exe` không đổi.
-- Chưa bấm các nút hộp thoại chọn thư mục bằng tay. Hàm gán danh sách và hàm dựng prompt đã được gọi trực tiếp.
-- Không sửa trang web của repo.
+## Việc tiếp
+- Antigravity, chat mới: `/verify`.

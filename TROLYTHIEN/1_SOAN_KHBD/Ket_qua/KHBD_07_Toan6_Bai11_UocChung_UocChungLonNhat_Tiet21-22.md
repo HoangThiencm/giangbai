@@ -111,16 +111,16 @@
 - Nhận biết phân số tối giản và cách rút gọn phân số về tối giản bằng cách chia cả tử và mẫu cho ƯCLN.
 
 #### b) Nội dung:
-- Rút gọn phân số $rac{24}{108}$.
+- Rút gọn phân số $\frac{24}{108}$.
 
 #### c) Sản phẩm:
-- $ƯCLN(24, 108) = 12 \Rightarrow rac{24}{108} = rac{24 : 12}{108 : 12} = rac{2}{9}$.
+- $ƯCLN(24, 108) = 12 \Rightarrow \frac{24}{108} = \frac{24 : 12}{108 : 12} = \frac{2}{9}$.
 
 #### d) Tổ chức thực hiện:
 
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ:<br>- **GV:** "Để rút gọn một phân số về phân số tối giản nhanh nhất chỉ trong một lần chia, ta làm thế nào?"<br>- **HS:** Suy nghĩ và trả lời.<br>+ Bước 2: Thực hiện nhiệm vụ:<br>- **HS:** Chia cả tử và mẫu cho $ƯCLN$ của tử và mẫu.<br>+ Bước 3: Báo cáo, thảo luận:<br>- **HS:** Thực hiện rút gọn $rac{24}{108}$ bằng cách chia cho 12 được $rac{2}{9}$.<br>+ Bước 4: Kết luận, nhận định:<br>- **GV:** Khẳng định đây là phương pháp rút gọn phân số tối ưu nhất. | **3. RÚT GỌN VỀ PHÂN SỐ TỐI GIẢN:**<br><br>- **Phân số tối giản:** Là phân số mà tử và mẫu là hai số nguyên tố cùng nhau ($ƯCLN(	ext{tử}, 	ext{mẫu}) = 1$).<br>- **Quy tắc rút gọn:** Muốn rút gọn phân số về tối giản, ta chia cả tử và mẫu cho $ƯCLN$ của chúng. |
+| + Bước 1: Chuyển giao nhiệm vụ:<br>- **GV:** "Để rút gọn một phân số về phân số tối giản nhanh nhất chỉ trong một lần chia, ta làm thế nào?"<br>- **HS:** Suy nghĩ và trả lời.<br>+ Bước 2: Thực hiện nhiệm vụ:<br>- **HS:** Chia cả tử và mẫu cho $ƯCLN$ của tử và mẫu.<br>+ Bước 3: Báo cáo, thảo luận:<br>- **HS:** Thực hiện rút gọn $\frac{24}{108}$ bằng cách chia cho 12 được $\frac{2}{9}$.<br>+ Bước 4: Kết luận, nhận định:<br>- **GV:** Khẳng định đây là phương pháp rút gọn phân số tối ưu nhất. | **3. RÚT GỌN VỀ PHÂN SỐ TỐI GIẢN:**<br><br>- **Phân số tối giản:** Là phân số mà tử và mẫu là hai số nguyên tố cùng nhau ($ƯCLN(	ext{tử}, 	ext{mẫu}) = 1$).<br>- **Quy tắc rút gọn:** Muốn rút gọn phân số về tối giản, ta chia cả tử và mẫu cho $ƯCLN$ của chúng. |
 
 ---
 
@@ -139,7 +139,7 @@
 
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ:<br>- **GV:** Giao bài tập: Bài 2.30 (tìm ƯCLN của các cặp số), Bài 2.32 (rút gọn phân số).<br>- **HS:** Làm việc cá nhân và đổi chéo vở kiểm tra.<br>+ Bước 2: Thực hiện nhiệm vụ:<br>- **HS:** Phân tích ra thừa số nguyên tố, lập tích lũy thừa.<br>- **GV:** Hỗ trợ học sinh tính toán thừa số.<br>+ Bước 3: Báo cáo, thảo luận:<br>- **GV:** Gọi 3 HS lên bảng làm bài.<br>- **HS:** Nhận xét bài của bạn trên bảng.<br>+ Bước 4: Kết luận, nhận định:<br>- **GV:** Chuẩn hóa kết quả và lưu ý không nhầm lẫn giữa thừa số chung và riêng. | **GIẢI BÀI TẬP SGK TRANG 47:**<br><br>1. **Bài 2.30:** Tìm $ƯCLN$:<br>a) $ƯCLN(40, 70)$:<br>$40 = 2^3 \cdot 5$; $70 = 2 \cdot 5 \cdot 7 \Rightarrow ƯCLN(40, 70) = 2 \cdot 5 = 10$.<br>b) $ƯCLN(55, 110)$:<br>Vì $110 \ dots \ 55$ nên $ƯCLN(55, 110) = 55$.<br><br>2. **Bài 2.32:** Rút gọn về phân số tối giản:<br>a) $rac{24}{108}$: $ƯCLN(24, 108) = 12 \Rightarrow rac{24 : 12}{108 : 12} = rac{2}{9}$.<br>b) $rac{80}{140}$: $ƯCLN(80, 140) = 20 \Rightarrow rac{80 : 20}{140 : 20} = rac{4}{7}$. |
+| + Bước 1: Chuyển giao nhiệm vụ:<br>- **GV:** Giao bài tập: Bài 2.30 (tìm ƯCLN của các cặp số), Bài 2.32 (rút gọn phân số).<br>- **HS:** Làm việc cá nhân và đổi chéo vở kiểm tra.<br>+ Bước 2: Thực hiện nhiệm vụ:<br>- **HS:** Phân tích ra thừa số nguyên tố, lập tích lũy thừa.<br>- **GV:** Hỗ trợ học sinh tính toán thừa số.<br>+ Bước 3: Báo cáo, thảo luận:<br>- **GV:** Gọi 3 HS lên bảng làm bài.<br>- **HS:** Nhận xét bài của bạn trên bảng.<br>+ Bước 4: Kết luận, nhận định:<br>- **GV:** Chuẩn hóa kết quả và lưu ý không nhầm lẫn giữa thừa số chung và riêng. | **GIẢI BÀI TẬP SGK TRANG 47:**<br><br>1. **Bài 2.30:** Tìm $ƯCLN$:<br>a) $ƯCLN(40, 70)$:<br>$40 = 2^3 \cdot 5$; $70 = 2 \cdot 5 \cdot 7 \Rightarrow ƯCLN(40, 70) = 2 \cdot 5 = 10$.<br>b) $ƯCLN(55, 110)$:<br>Vì $110 \vdots 55$ nên $ƯCLN(55, 110) = 55$.<br><br>2. **Bài 2.32:** Rút gọn về phân số tối giản:<br>a) $\frac{24}{108}$: $ƯCLN(24, 108) = 12 \Rightarrow \frac{24 : 12}{108 : 12} = \frac{2}{9}$.<br>b) $\frac{80}{140}$: $ƯCLN(80, 140) = 20 \Rightarrow \frac{80 : 20}{140 : 20} = \frac{4}{7}$. |
 
 ---
 
@@ -158,4 +158,4 @@
 
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ:<br>- **GV:** Nêu Bài 2.34 SGK và gợi ý: "Số tổ nhiều nhất có thể chia có mối quan hệ gì với 36 và 48?"<br>- **HS:** Đọc đề và thảo luận cặp đôi.<br>+ Bước 2: Thực hiện nhiệm vụ:<br>- **HS:** Lập luận: Số tổ là ước chung của 36 và 48, mà số tổ là nhiều nhất nên số tổ là $ƯCLN(36, 48)$.<br>+ Bước 3: Báo cáo, thảo luận:<br>- **HS:** Trình bày: $36 = 2^2 \cdot 3^2; 48 = 2^4 \cdot 3 \Rightarrow ƯCLN(36, 48) = 2^2 \cdot 3 = 12$ tổ.<br>Mỗi tổ có: $36 : 12 = 3$ bạn nam và $48 : 12 = 4$ bạn nữ.<br>+ Bước 4: Kết luận, nhận định:<br>- **GV:** Khen ngợi học sinh và giao bài tự học ở nhà. | **BÀI 2.34 (VẬN DỤNG THỰC TẾ):**<br><br>Gọi số tổ chia được nhiều nhất là $x$ ($x \in \mathbb{N}^*$).<br>Theo đề bài ta có $36 \ dots \ x$ và $48 \ dots \ x$, đồng thời $x$ lớn nhất.<br>Do đó $x = ƯCLN(36, 48)$.<br>Ta có:<br>- $36 = 2^2 \cdot 3^2$<br>- $48 = 2^4 \cdot 3$<br>$\Rightarrow x = ƯCLN(36, 48) = 2^2 \cdot 3 = 12$.<br>Vậy có thể chia được nhiều nhất **12 tổ**.<br>Khi đó mỗi tổ có: $36 : 12 = 3$ bạn nam và $48 : 12 = 4$ bạn nữ.<br><br>**HƯỚNG DẪN TỰ HỌC TẠI NHÀ:**<br>- Học thuộc quy tắc 3 bước tìm ƯCLN.<br>- Hoàn thành Bài 2.33, 2.35 SGK trang 48.<br>- Đọc trước Bài 12: Bội chung. Bội chung nhỏ nhất. |
+| + Bước 1: Chuyển giao nhiệm vụ:<br>- **GV:** Nêu Bài 2.34 SGK và gợi ý: "Số tổ nhiều nhất có thể chia có mối quan hệ gì với 36 và 48?"<br>- **HS:** Đọc đề và thảo luận cặp đôi.<br>+ Bước 2: Thực hiện nhiệm vụ:<br>- **HS:** Lập luận: Số tổ là ước chung của 36 và 48, mà số tổ là nhiều nhất nên số tổ là $ƯCLN(36, 48)$.<br>+ Bước 3: Báo cáo, thảo luận:<br>- **HS:** Trình bày: $36 = 2^2 \cdot 3^2; 48 = 2^4 \cdot 3 \Rightarrow ƯCLN(36, 48) = 2^2 \cdot 3 = 12$ tổ.<br>Mỗi tổ có: $36 : 12 = 3$ bạn nam và $48 : 12 = 4$ bạn nữ.<br>+ Bước 4: Kết luận, nhận định:<br>- **GV:** Khen ngợi học sinh và giao bài tự học ở nhà. | **BÀI 2.34 (VẬN DỤNG THỰC TẾ):**<br><br>Gọi số tổ chia được nhiều nhất là $x$ ($x \in \mathbb{N}^*$).<br>Theo đề bài ta có $36 \vdots x$ và $48 \vdots x$, đồng thời $x$ lớn nhất.<br>Do đó $x = ƯCLN(36, 48)$.<br>Ta có:<br>- $36 = 2^2 \cdot 3^2$<br>- $48 = 2^4 \cdot 3$<br>$\Rightarrow x = ƯCLN(36, 48) = 2^2 \cdot 3 = 12$.<br>Vậy có thể chia được nhiều nhất **12 tổ**.<br>Khi đó mỗi tổ có: $36 : 12 = 3$ bạn nam và $48 : 12 = 4$ bạn nữ.<br><br>**HƯỚNG DẪN TỰ HỌC TẠI NHÀ:**<br>- Học thuộc quy tắc 3 bước tìm ƯCLN.<br>- Hoàn thành Bài 2.33, 2.35 SGK trang 48.<br>- Đọc trước Bài 12: Bội chung. Bội chung nhỏ nhất. |

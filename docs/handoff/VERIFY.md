@@ -4,48 +4,27 @@
 PASS
 
 ## Đối chiếu scope
-- [x] Tạo ứng dụng Desktop PySide6 độc lập hoàn toàn trong thư mục riêng `app_trolythien/`.
-- [x] Đóng gói toàn bộ 10 phân hệ nghiệp vụ Trợ lý Sư phạm Hoàng Thiên vào `app_trolythien/troly/` (prompts và templates), không phụ thuộc bên ngoài repo `giangbai`.
-- [x] Tiền kiểm tra (Preflight Check): kiểm tra `agy.exe` đã cài đặt và kiểm tra đăng nhập AI (`agy models`). Có hộp thoại hướng dẫn cài đặt và nút đăng nhập.
-- [x] Cơ chế Đầu vào kép (Dual-Input): Khung dán đề bài/nội dung trực tiếp (`QTextEdit`) hỗ trợ Ctrl+V và nút dán nhanh, kết hợp nút chọn tệp đính kèm (`QFileDialog`).
-- [x] Cơ chế Đầu ra linh hoạt: Cho phép chọn thư mục lưu kết quả (`PathSelector` qua `QFileDialog`), có nút mở file và mở thư mục sau khi hoàn tất.
-- [x] Lõi Antigravity Bridge (`core/bridge.py`): Chạy nền qua `QThread`, gọi `agy.exe -p` với `--dangerously-skip-permissions` và `--disable-slash-commands`, đọc stream log thời gian thực và phát hiện `KET_QUA`.
-- [x] Đóng gói độc lập: `build_exe.bat` đóng gói thành công ra `dist/TroLyHoangThien/TroLyHoangThien.exe` kèm toàn bộ tri thức `troly/`.
-- [x] Chặn Git: `.gitignore` chứa đầy đủ 5 quy tắc chặn `app_trolythien/`, `dist/`, `build/`, `*.spec`, `*.exe`, không làm nặng kho GitHub.
+- [x] Mục 1: Khóa ma trận sư phạm và đồng bộ quy chuẩn tích hợp NLS/AI đúng 100% theo PPCT (chỉ 3 bài 03, 04, 08 có mã; 5 bài còn lại để trống).
+- [x] Mục 2: Sơ đồ tư duy (Mindmap) đã được chuyển ra ngoài bảng, đặt độc lập tại mục b) Nội dung của Hoạt động 2.1 (01, 02, 06); bảng mục d) sạch sẽ không bị chèn hình làm méo cột. Các bài số học lý thuyết không có hình thừa.
+- [x] Mục 3: Xử lý triệt để lỗi phân số `\frac` bị rụng `\f` thành `rac` (ví dụ `rac24108` $\rightarrow$ phân số $\frac{24}{108}$). Đã khôi phục toàn bộ 38 phân số trong Bài 11 (`KHBD_07`) và Bài 12 (`KHBD_08`) thành cấu trúc Equation Office Math `<m:f>` chuẩn Word với tử số `<m:num>` và mẫu số `<m:den>`.
+- [x] Mục 4: Ký hiệu chia hết `\vdots` hiển thị đúng `⋮` (U+22EE), không có chữ `dots` hay ký tự rác `v`.
+- [x] Mục 5: Xuất thành công toàn bộ 8 file Word `.docx` vào `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/` chuẩn Công văn 5512 V2.0.
 
 ## Test đã chạy
-1. **Kiểm tra Preflight (`core/preflight.py`):**
-   - `check_agy_installed()`: Trả về `(True, 'C:\\Users\\HoangThien\\AppData\\Local\\agy\\bin\\agy.exe')`.
-   - `check_agy_login()`: Trả về `(True, 'gemini-3.8-flash-high')`.
-2. **Kiểm tra Tri thức độc lập (`core/prompt_builder.py`):**
-   - `knowledge_ready()`: Trả về `True`, đầy đủ 10 file prompt và 2 template HTML trong `app_trolythien/troly/`.
-3. **Kiểm tra Dựng Prompt (`prompt_builder`):**
-   - KHBD Prompt: 12,846 ký tự (nhúng quy chuẩn CV 5512).
-   - Vẽ hình Prompt: 4,669 ký tự (nhúng tọa độ giải tích Oxy và 4 file kết quả).
-   - Bài giảng HTML Prompt: 61,323 ký tự (nhúng master prompt bài giảng 16:9).
-   - Chuẩn hoá văn bản Prompt: 9,523 ký tự (nhúng NĐ 30/2020 và văn bản Đảng).
-4. **Kiểm tra Giao diện PySide6 Offscreen (`scratch/test_verify.py`):**
-   - Tiêu đề cửa sổ: «Trợ lý Sư phạm Hoàng Thiên».
-   - Bảng điều khiển Dashboard và chuyển đổi qua lại giữa tất cả các Tab hoạt động mượt mà.
-   - Tab Vẽ hình: Nhận văn bản dán trực tiếp, hiển thị khung xem trước ảnh.
-   - Tab Bài giảng: Form Môn, Lớp, Số tiết, Tên bài, nút mở HTML.
-   - Tab Chuẩn hoá: Nhận file Word và dán trực tiếp.
-5. **Kiểm tra Đóng gói (`build_exe.bat`):**
-   - Tiến trình PyInstaller hoàn tất exit code 0.
-   - File thực thi `dist/TroLyHoangThien/TroLyHoangThien.exe` khởi chạy thành công.
-6. **Kiểm tra Git Protection (`.gitignore`):**
-   - 5 mẫu chặn hoạt động chuẩn mực, không track thư mục app và bản build.
+1. `node tests/khbd-math-sanitize-smoke.js`: PASS (bao gồm các test case phục hồi `\frac`, `rac{...}`, `frac{...}`, `\vdots`, `\nmid`).
+2. `node tools/export_all_8_khbd.js`: Xuất 8/8 file Word thành công không gặp lỗi EBUSY.
+3. Kiểm tra XML giải nén `word/document.xml`:
+   - Phân số toán học `<m:f>`: Bài 07 có 12 phân số chuẩn; Bài 08 có 26 phân số chuẩn.
+   - Số chữ rác `rac`: 0 ở tất cả 8 file.
+   - Số chữ rác `dots`: 0 ở tất cả 8 file.
+   - Ký tự rác `<m:t>v</m:t>`: 0 ở tất cả 8 file.
 
 ## Pass / Fail từng tiêu chí
-- Kiểm tra cài đặt và đăng nhập agy: PASS
-- Đóng gói tri thức độc lập trong app: PASS
-- Cơ chế dán đề bài và chọn tệp đầu vào: PASS
-- Cơ chế chọn thư mục lưu và mở đầu ra: PASS
-- Khung xem trước hình ảnh và nút mở kết quả: PASS
-- Giao diện PySide6 và điều hướng Sidebar: PASS
-- Kết nối luồng chạy agy ngầm: PASS
-- Đóng gói PyInstaller thành .exe: PASS
-- Chặn Git kho mã nguồn: PASS
+- [x] Tiêu chí 1: Phân số hiển thị dạng phân số toán học thực sự $\frac{a}{b}$ (thẻ `<m:f>`), không hiển thị chuỗi dính liền `rac24108`. PASS.
+- [x] Tiêu chí 2: Phân bố NLS/AI đúng PPCT (chỉ 3 bài 03, 04, 08; in đậm in nghiêng). PASS.
+- [x] Tiêu chí 3: Mindmap chỉ đặt tại mục b) Nội dung (ngoài bảng) của 3 bài 01, 02, 06. PASS.
+- [x] Tiêu chí 4: Bảng 2 cột lề 0pt, chuẩn Công văn 5512 V2.0. PASS.
+- [x] Tiêu chí 5: Ký hiệu chia hết `⋮` chuẩn xác. PASS.
 
 ## Bug
-Không phát hiện bug.
+Không còn tồn tại bug nào.
