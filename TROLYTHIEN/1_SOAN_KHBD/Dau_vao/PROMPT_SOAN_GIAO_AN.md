@@ -79,12 +79,21 @@ III. QUY CHUẨN ĐỊNH DẠNG BẢNG BIỂU VÀ TRANG IN TRONG WORD (.DOCX)
      + Bài Số học: cấm sơ đồ quy trình dạng ảnh lặp lại lý thuyết. Nếu bài có đối tượng toán học trực quan (tia số, trục số, biểu đồ Ven, mô hình khối lập phương/lát nền) thì bắt buộc vẽ chuẩn xác.
      + Tiết Hình học: 100% phải có hình vẽ toán học vector SVG xuất ra PNG 300 DPI độ nét cao, nền trắng tinh (#ffffff), nét vẽ mực đen (#111827), nhãn điểm Times New Roman nghiêng, BỎ HOÀN TOÀN CAPTION THỪA. Độ chính xác toán học tuyệt đối: các cung góc (angle arc) phải tính tọa độ vector chính xác, nằm trọn vẹn bên trong góc; vạch gạch đánh dấu góc/đoạn thẳng vuông góc tại trung điểm.
      + Tiết Luyện tập chung / Ôn tập chương: đúng 01 Mindmap tại mục b) Nội dung của Hoạt động 2.1 (đặt bên ngoài bảng để hiển thị độc lập trọn khổ A4 rõ nét; TUYỆT ĐỐI KHÔNG chèn trong ô bảng của mục d vì cột hẹp sẽ làm méo, đè hoặc tràn bảng). Nhúng qua ![Hình Sơ đồ tư duy](khbd-ill:hinh-so-do-tu-duy).
-   - CHUẨN HÓA CÔNG THỨC TOÁN: Dấu chia hết dùng $a \vdots b$ (⋮), không chia hết dùng \not\vdots hoặc \nmid (∤). Cấm `\ \vdots \`, cấm chữ dots, cấm form feed trong \frac.
+   - CHUẨN HÓA CÔNG THỨC TOÁN & QUY CHUẨN SƯ PHẠM CẤP THCS (GDPT 2018):
+     + CẤM DÙNG DẤU TƯƠNG ĐƯƠNG (\Leftrightarrow, <=>) VÀ CÁC KIẾN THỨC CẤP 3: Trong chương trình THCS (Toán 6, 7, 8, 9), học sinh chưa học mệnh đề tương đương. Khi giải phương trình, hệ phương trình, bất phương trình, các bước biến đổi viết liên tiếp từng dòng độc lập hoặc dùng từ nối tự nhiên ('hay', 'suy ra', 'do đó', 'hoặc').
+     + CẤM KẾT LUẬN TẬP NGHIỆM S: Tuyệt đối không dùng ký hiệu tập hợp  = \{...\}$ hay  = (...)$. Chỉ kết luận đúng chuẩn SGK THCS: 'Vậy phương trình có nghiệm là  = ...$' (hoặc 'nghiệm  = ...$ và  = ...$'); 'Vậy nghiệm của bất phương trình là  > ...$'.
+     + Dấu chia hết dùng  \vdots b$ (⋮), không chia hết dùng \not\vdots hoặc \nmid (∤). Cấm \ \vdots \, cấm chữ dots, cấm form feed trong \frac.
+
+   - BẢN VÁ QUY CHUẨN ĐỒNG BỘ HÌNH VẼ MINH HỌA VỚI ĐỀ BÀI (CỰC KỲ QUAN TRỌNG):
+     + Mọi bài tập, ví dụ, hoạt động có trích dẫn hình vẽ SGK (như "Hình X.XX", "H.X.XX" hoặc "trong hình sau"...) BẮT BUỘC phải đính kèm hình ảnh minh họa tương ứng ngay tại hoạt động đó trong KHBD (cắt trực tiếp từ trang PDF SGK độ nét cao 300 DPI hoặc vẽ đồ họa vector chuẩn).
+     + Tuyệt đối CẤM tình trạng lời văn trong giáo án viện dẫn "Hình X.XX" mà trong giáo án lại vắng bóng hình ảnh đó. Mọi hình xuất hiện trong đề bài phải có ảnh hiển thị rõ ràng để học sinh và giáo viên cùng quan sát.
 
 Checklist trước khi xuất bài:
 - [ ] Đã đối chiếu cột Ghi chú PPCT chưa? (Có mã -> tích hợp in đậm nghiêng; trống -> không có mục NLS/AI).
+- [ ] Đã kiểm tra mọi bài tập/ví dụ nhắc tên "Hình X.XX" đều ĐÃ CÓ ĐẦY ĐỦ HÌNH MINH HỌA tương ứng đính kèm chưa? (Cấm sót hình).
 - [ ] Bài số học lý thuyết có bị chèn hình không? (Cấm).
 - [ ] Tiết luyện tập chung / ôn tập đã có Mindmap ở Hoạt động 2.1 chưa?
 - [ ] Đã quét sạch lỗi dots, \vdots và \frac chưa?
+- [ ] CẤM dấu tương đương (<=>), CẤM tập nghiệm S, tiêu đề Mục III chỉ ghi duy nhất "# III. TIẾN TRÌNH DẠY HỌC"?
    - Sau khi hoàn thành: Lưu file `.docx` trực tiếp vào thư mục `KHBD/`, tự động xóa các file tạm `.md` và hình ảnh trích xuất trung gian để thư mục luôn sạch sẽ.
 ```

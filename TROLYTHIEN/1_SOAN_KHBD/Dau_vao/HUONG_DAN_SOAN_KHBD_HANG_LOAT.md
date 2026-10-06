@@ -87,4 +87,6 @@ flowchart TD
 | **Chèn hình vào bài số học** | Bài số học lý thuyết không có ảnh. Mindmap chỉ ở Hoạt động 2.1 của tiết luyện tập chung / ôn tập chương. |
 | **Lỗi `dots` / `\frac`** | Engine khôi phục `\v` (Vertical Tab) thành `\vdots` và `\f` (Form Feed) thành `\frac` trước khi xuất Equation. |
 | **Bài bị tóm tắt, cắt cụt** | Chạy cơ chế Batch Loop (lần lượt từng bài riêng biệt), mỗi bài có trọn vẹn context và token để đạt độ dài chuẩn 5 – 8 trang Word. |
+| **Đề bài nhắc hình nhưng thiếu hình vẽ** | Quy chuẩn bắt buộc: Mọi bài tập/ví dụ có trích dẫn "Hình X.XX" đều được tự động cắt trực tiếp từ PDF SGK (300 DPI) hoặc vẽ vector toán học và đính kèm ngay tại đề bài. Tuyệt đối không để sót hình. |
 | **Lỗi định dạng Word, vỡ bảng** | Tự động sử dụng engine `export_khbd_engine.js` đã được tinh chỉnh lề ô 0pt, font chữ chuẩn, hình vẽ toán học sắc nét. |
+

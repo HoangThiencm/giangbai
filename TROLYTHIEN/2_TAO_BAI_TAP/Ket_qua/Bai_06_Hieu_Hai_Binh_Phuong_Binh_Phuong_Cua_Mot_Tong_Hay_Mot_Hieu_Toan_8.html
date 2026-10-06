@@ -38,7 +38,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{TEN_BAI_HOC}}</title>
+  <title>BÀI 6: HIỆU HAI BÌNH PHƯƠNG. BÌNH PHƯƠNG CỦA MỘT TỔNG HAY MỘT HIỆU — TOÁN 8 (KNTT)</title>
   
   <!-- MathJax 3 Configuration -->
   <script>
@@ -1906,7 +1906,7 @@
       <button type="button" class="c-btn equal" onclick="casioKey('=')">=</button>
     </div>
     <details class="casio-help">
-      <summary>Hướng dẫn phím Toán 9</summary>
+      <summary>Hướng dẫn phím Toán 8</summary>
       <ul>
         <li>Phân số: 1 ■/□ 2 + 1 ■/□ 3 rồi = ra 5/6. S⇔D đổi sang 0.833333, bấm lại ra 5/6.</li>
         <li>Máy đang mở: gõ số trên bàn phím, Enter là dấu =, Backspace là xóa.</li>
@@ -1983,15 +1983,35 @@
   </div>
   <header class="top-control-bar">
     <div class="bar-cluster">
-      <div class="brand-tag">📐 TOÁN 9</div>
+      <div class="brand-tag">📐 TOÁN 8</div>
       <select id="jumpSelect" class="jump-select jump-select-hidden" aria-hidden="true" onchange="jumpToSlide(this.value)">
-        __JUMP_OPTIONS__
+        <option value="1">📖 DẠNG 1: NHẬN DIỆN HẰNG ĐẲNG THỨC & KHAI TRIỂN BIỂU THỨC</option>
+        <option value="2">✍️ Bài 1: Nhận diện hằng đẳng thức (SGK 2.1)</option>
+        <option value="3">✍️ Bài 2: Khai triển bình phương cơ bản</option>
+        <option value="4">✍️ Bài 3: Khai triển hiệu hai bình phương</option>
+        <option value="5">📖 DẠNG 2: VIẾT ĐA THỨC DƯỚI DẠNG BÌNH PHƯƠNG HOẶC TÍCH</option>
+        <option value="6">✍️ Bài 4: Điền biểu thức thích hợp (SGK 2.2)</option>
+        <option value="7">✍️ Bài 5: Viết thành bình phương (SGK 2.4)</option>
+        <option value="8">✍️ Bài 6: Phân tích thành tích đa thức</option>
+        <option value="9">📖 DẠNG 3: TÍNH NHANH & RÚT GỌN BIỂU THỨC</option>
+        <option value="10">✍️ Bài 7: Tính nhanh giá trị số (SGK 2.3)</option>
+        <option value="11">✍️ Bài 8: Rút gọn biểu thức (SGK 2.5)</option>
+        <option value="12">✍️ Bài 9: Tính giá trị biểu thức đại số</option>
+        <option value="13">📖 DẠNG 4: TÌM X & GIẢI PHƯƠNG TRÌNH</option>
+        <option value="14">✍️ Bài 10: Tìm x triệt tiêu bậc hai</option>
+        <option value="15">✍️ Bài 11: Tìm x đưa về tích</option>
+        <option value="16">✍️ Bài 12: Tìm x nâng cao & Nghiệm nguyên</option>
+        <option value="17">📖 DẠNG 5: CỰC TRỊ TAM THỨC BẬC HAI & TOÁN HSG</option>
+        <option value="18">✍️ Bài 13: Chứng minh chia hết (SGK 2.6)</option>
+        <option value="19">✍️ Bài 14: Tìm Giá trị nhỏ nhất (Min)</option>
+        <option value="20">✍️ Bài 15: Tìm Giá trị lớn nhất (Max)</option>
+        <option value="21">✍️ Bài 16: Bất đẳng thức bồi dưỡng HSG</option>
       </select>
       <button type="button" class="nav-btn" onclick="toggleCatalog()" title="Mở danh mục bài">☰ Danh mục bài</button>
     </div>
     <div class="bar-cluster bar-center">
       <button type="button" class="nav-btn" onclick="prevSlide()" title="Phím mũi tên trái">◀ Trước</button>
-      <div id="slideCounter" class="slide-counter">1 / __TOTAL_SLIDES__</div>
+      <div id="slideCounter" class="slide-counter">1 / 21</div>
       <button type="button" class="nav-btn primary" onclick="nextSlide()" title="Phím mũi tên phải">Sau ▶</button>
       <button type="button" class="nav-btn info" id="btnTopAnalysis" onclick="toggleCurrentAnalysis()" title="Bật/Tắt hướng giải / gợi mở tư duy (Phím H)" style="display:none;">🧭 Hướng giải</button>
       <button type="button" class="nav-btn success" id="btnTopSolution" onclick="toggleCurrentSolution()" title="Bật/Tắt lời giải (Phím Space hoặc Enter)">💡 Lời giải</button>
@@ -2077,14 +2097,1691 @@
 
   <!-- VÙNG TRÌNH CHIẾU SLIDE -->
   <main class="slides-container">
-    __SLIDES_HTML__
+    
+    <section class="slide-card active" data-slide="1">
+      <div class="slide-header">
+        <span class="slide-badge">DẠNG 1: NHẬN DIỆN HẰNG ĐẲNG THỨC & KHAI TRIỂN BIỂU THỨC</span>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn primary" onclick="nextSlide()">Bắt Đầu Học ▶</button>
+        </div>
+      </div>
+      <div class="slide-body-full">
+        
+    <div class="theory-box">
+      <h3>1. Bản chất cốt lõi: Hằng đẳng thức (Đồng nhất thức) là gì?</h3>
+      <div class="formula-row">
+        <div class="formula-card">
+          <span class="formula-tag">Khái niệm cốt tử</span>
+          <p style="font-size: 15px; line-height: 1.6; margin-top: 6px;">
+            Đẳng thức mà hai vế luôn cùng nhận giá trị bằng nhau với <strong>mọi giá trị của các biến</strong> được gọi là một <em>đồng nhất thức</em> hay <strong>hằng đẳng thức</strong>.<br>
+            Phân biệt: Phương trình $x + 2 = 3x + 1$ chỉ đúng khi $x = \frac{1}{2}$, còn hằng đẳng thức $(x + 1)^2 = x^2 + 2x + 1$ đúng với mọi $x \in \mathbb{R}$.
+          </p>
+        </div>
+        <div class="formula-card">
+          <span class="formula-tag">Triết lý hình học phân rã diện tích</span>
+          <p style="font-size: 15px; line-height: 1.6; margin-top: 6px;">
+            • $(a + b)^2$: Diện tích hình vuông cạnh $(a+b)$ phân rã thành $2$ hình vuông $a^2, b^2$ và $2$ hình chữ nhật $ab$.<br>
+            • $a^2 - b^2$: Cắt bỏ hình vuông $b^2$ khỏi hình vuông $a^2$, phần diện tích còn lại ghép thành hình chữ nhật kích thước $(a-b) \times (a+b)$.
+          </p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 16px;">2. Ba Hằng đẳng thức cơ bản với hai biểu thức tùy ý $A$ và $B$</h3>
+      <div class="formula-row">
+        <div class="formula-card">
+          <span class="formula-tag">1. Bình phương của một tổng</span>
+          $$(A + B)^2 = A^2 + 2AB + B^2$$
+        </div>
+        <div class="formula-card">
+          <span class="formula-tag">2. Bình phương của một hiệu</span>
+          $$(A - B)^2 = A^2 - 2AB + B^2$$
+        </div>
+        <div class="formula-card">
+          <span class="formula-tag">3. Hiệu hai bình phương</span>
+          $$A^2 - B^2 = (A - B)(A + B)$$
+        </div>
+      </div>
+
+      <h3 style="margin-top: 16px;">3. Các Bổ đề mở rộng kinh điển (Chìa khóa bồi dưỡng HSG & Thi vào 10)</h3>
+      <div class="theory-steps">
+        <div class="theory-step-item">
+          <strong>Bổ đề 1 (Liên hệ Tổng - Hiệu):</strong>
+          $$(A + B)^2 + (A - B)^2 = 2(A^2 + B^2); \qquad (A + B)^2 - (A - B)^2 = 4AB$$
+        </div>
+        <div class="theory-step-item">
+          <strong>Bổ đề 2 (Biểu diễn tổng bình phương qua tích):</strong>
+          $$A^2 + B^2 = (A + B)^2 - 2AB = (A - B)^2 + 2AB$$
+        </div>
+        <div class="theory-step-item">
+          <strong>Bổ đề 3 (Bình phương tam thức 3 hạng tử):</strong>
+          $$(A + B + C)^2 = A^2 + B^2 + C^2 + 2AB + 2BC + 2CA$$
+        </div>
+      </div>
+
+      <h3 style="margin-top: 16px;">4. Thuật toán tư duy khai triển chuẩn xác (Tránh bẫy 80% học sinh mắc)</h3>
+      <div class="method-steps">
+        <ol>
+          <li><strong>Bước 1 (Xác định vai trò $A$ và $B$):</strong> Tách bạch biểu thức thứ nhất $A$ và biểu thức thứ hai $B$. Nếu $A$ hoặc $B$ là đơn thức có hệ số hoặc phân số, <em>bắt buộc phải đóng mở ngoặc đơn</em>: ví dụ $(2x)^2 = 4x^2$ (tránh viết sai thành $2x^2$).</li>
+          <li><strong>Bước 2 (Áp dụng công thức chuẩn tắc):</strong> Viết đầy đủ $A^2 \pm 2 \cdot A \cdot B + B^2$ hoặc $(A - B)(A + B)$. Tuyệt đối không nhẩm tắt bước hạng tử kép $2AB$.</li>
+          <li><strong>Bước 3 (Thực hiện lũy thừa và nhân hệ số):</strong> Lũy thừa từng thừa số, nhân các hệ số số học rồi ghép phần biến.</li>
+        </ol>
+      </div>
+    </div>
+        
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="2" data-problem-id="1">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 1: Nhận diện hằng đẳng thức</span>
+          <span class="level-badge level-1">Mức 1: Củng cố kỹ năng</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 1:</strong> Trong các đẳng thức sau, đẳng thức nào là hằng đẳng thức? Giải thích bản chất đại số:<br>
+a) $2x(x + 1) = 2x^2 + 2x$ và $(a + b)a = a^2 + ba$;<br>
+b) $x + 2 = 3x + 1$ và $a - 2 = 2a + 1$;<br>
+c) $(x - y)^2 = (y - x)^2$ và $(-x - y)^2 = (x + y)^2$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Bản chất cốt lõi:</strong> Một đẳng thức chứa biến chỉ được công nhận là hằng đẳng thức (đồng nhất thức) nếu nó <em>nghiệm đúng với mọi giá trị của biến số</em> trong tập xác định.</p>
+<p><strong>Thuật toán kiểm tra:</strong></p>
+<ul>
+  <li>Để chứng minh là hằng đẳng thức: Ta dùng các phép biến đổi đại số tương đương (nhân đơn thức với đa thức, quy tắc đổi dấu, lũy thừa) biến đổi vế này thành đúng vế kia.</li>
+  <li>Để chỉ ra KHÔNG PHẢI hằng đẳng thức: Ta chỉ cần chỉ ra <strong>ít nhất một bộ giá trị của biến</strong> làm cho hai vế nhận giá trị khác nhau (phản ví dụ).</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Xét các đẳng thức:</strong></p>
+<ul>
+  <li>Với $2x(x + 1) = 2x^2 + 2x$: Biến đổi vế trái ta có $2x \cdot x + 2x \cdot 1 = 2x^2 + 2x$. Vế trái bằng vế phải với mọi $x \in \mathbb{R}$. Do đó, đây là <strong>hằng đẳng thức</strong>.</li>
+  <li>Với $(a + b)a = a^2 + ba$: Áp dụng tính chất phân phối của phép nhân đối với phép cộng ta có $(a + b)a = a \cdot a + b \cdot a = a^2 + ba$. Vế trái luôn bằng vế phải với mọi $a, b$. Do đó, đây là <strong>hằng đẳng thức</strong>.</li>
+</ul>
+
+<p><strong>b) Xét các đẳng thức:</strong></p>
+<ul>
+  <li>Với $x + 2 = 3x + 1$: Thay $x = 0$ vào hai vế, ta được vế trái bằng $0 + 2 = 2$, vế phải bằng $3 \cdot 0 + 1 = 1$. Vì $2 \ne 1$ nên đẳng thức này <strong>không phải là hằng đẳng thức</strong> (đây chỉ là một phương trình bậc nhất có nghiệm duy nhất $x = \frac{1}{2}$).</li>
+  <li>Với $a - 2 = 2a + 1$: Thay $a = 0$ ta có vế trái bằng $-2$, vế phải bằng $1 \ne -2$. Do đó, đẳng thức này <strong>không phải là hằng đẳng thức</strong> (chỉ là phương trình có nghiệm $a = -3$).</li>
+</ul>
+
+<p><strong>c) Xét các đẳng thức lũy thừa đối xứng:</strong></p>
+<ul>
+  <li>Với $(x - y)^2 = (y - x)^2$: Ta có $y - x = -(x - y)$, nên $(y - x)^2 = [-(x - y)]^2 = (-1)^2 \cdot (x - y)^2 = (x - y)^2$. Đẳng thức luôn đúng với mọi $x, y$. Do đó, đây là <strong>hằng đẳng thức</strong>.</li>
+  <li>Với $(-x - y)^2 = (x + y)^2$: Ta có $-x - y = -(x + y)$, nên $(-x - y)^2 = [-(x + y)]^2 = (x + y)^2$. Đẳng thức luôn đúng với mọi $x, y$. Do đó, đây là <strong>hằng đẳng thức</strong>.</li>
+</ul>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Học sinh thường nhầm lẫn giữa khái niệm <strong>Hằng đẳng thức</strong> (đúng với mọi giá trị của biến) và <strong>Phương trình</strong> (chỉ đúng với một số giá trị hữu hạn của biến). Khi giải thích không phải là hằng đẳng thức, chỉ cần đưa ra một giá trị cụ thể làm hai vế khác nhau chứ không cần phải đi giải phương trình tìm nghiệm.</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Tính chất ở câu c rất quan trọng khi rút gọn biểu thức: Hai biểu thức đối nhau khi bình phương lên thì bằng nhau: $(A - B)^2 = (B - A)^2$ và $(-A - B)^2 = (A + B)^2$. Điều này giúp ta đổi dấu biểu thức trong bình phương một cách tự do mà không làm thay đổi giá trị!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="3" data-problem-id="2">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 1: Khai triển bình phương tổng và hiệu</span>
+          <span class="level-badge level-1">Mức 1: Củng cố kỹ năng</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 2:</strong> Thực hiện khai triển các biểu thức sau theo hằng đẳng thức bình phương của một tổng hoặc một hiệu:<br>
+a) $(2x + 1)^2$ và $\left(x + \frac{1}{2}\right)^2$;<br>
+b) $(3x - 2y)^2$ và $\left(2x - \frac{3}{2}\right)^2$;<br>
+c) $(x^2 + 2y)^2$ và $(2x^2 - 3y^3)^2$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Nhận biết cấu trúc:</strong> Tất cả các biểu thức đều có dạng $(A + B)^2$ hoặc $(A - B)^2$.</p>
+<p><strong>Chiến lược tiếp cận:</strong></p>
+<ul>
+  <li>Chỉ rõ $A = ?$ và $B = ?$ trong từng câu.</li>
+  <li>Viết tường minh $A^2 + 2AB + B^2$ hoặc $A^2 - 2AB + B^2$.</li>
+  <li>Đặc biệt lưu ý lũy thừa của tích: $(ka)^2 = k^2 a^2$ và lũy thừa của lũy thừa: $(x^m)^n = x^{m \cdot n}$.</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Khai triển bình phương của một tổng:</strong></p>
+<ul>
+  <li>Với $(2x + 1)^2$: Ở đây $A = 2x$ và $B = 1$. Ta có:<br>
+  $(2x + 1)^2 = (2x)^2 + 2 \cdot (2x) \cdot 1 + 1^2 = 4x^2 + 4x + 1$.</li>
+  <li>Với $\left(x + \frac{1}{2}\right)^2$: Ở đây $A = x$ và $B = \frac{1}{2}$. Ta có:<br>
+  $\left(x + \frac{1}{2}\right)^2 = x^2 + 2 \cdot x \cdot \frac{1}{2} + \left(\frac{1}{2}\right)^2 = x^2 + x + \frac{1}{4}$.</li>
+</ul>
+
+<p><strong>b) Khai triển bình phương của một hiệu:</strong></p>
+<ul>
+  <li>Với $(3x - 2y)^2$: Ở đây $A = 3x$ và $B = 2y$. Ta có:<br>
+  $(3x - 2y)^2 = (3x)^2 - 2 \cdot (3x) \cdot (2y) + (2y)^2 = 9x^2 - 12xy + 4y^2$.</li>
+  <li>Với $\left(2x - \frac{3}{2}\right)^2$: Ở đây $A = 2x$ và $B = \frac{3}{2}$. Ta có:<br>
+  $\left(2x - \frac{3}{2}\right)^2 = (2x)^2 - 2 \cdot (2x) \cdot \frac{3}{2} + \left(\frac{3}{2}\right)^2 = 4x^2 - 6x + \frac{9}{4}$.</li>
+</ul>
+
+<p><strong>c) Khai triển với biến có lũy thừa bậc cao:</strong></p>
+<ul>
+  <li>Với $(x^2 + 2y)^2$: Ở đây $A = x^2$ và $B = 2y$. Ta có:<br>
+  $(x^2 + 2y)^2 = (x^2)^2 + 2 \cdot x^2 \cdot (2y) + (2y)^2 = x^4 + 4x^2y + 4y^2$.</li>
+  <li>Với $(2x^2 - 3y^3)^2$: Ở đây $A = 2x^2$ và $B = 3y^3$. Ta có:<br>
+  $(2x^2 - 3y^3)^2 = (2x^2)^2 - 2 \cdot (2x^2) \cdot (3y^3) + (3y^3)^2 = 4x^4 - 12x^2y^3 + 9y^6$.</li>
+</ul>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Lỗi kinh điển của học sinh: Viết $(2x)^2 = 2x^2$ (quên bình phương hệ số 2 thành 4), hoặc $(3y^3)^2 = 9y^5$ (nhầm quy tắc lũy thừa $(y^3)^2 = y^{3 \cdot 2} = y^6$, chứ không phải lấy số mũ $3 + 2 = 5$). Thầy/Cô cần nhắc học sinh luôn để đơn thức trong ngoặc trước khi nâng lên lũy thừa.</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Mở rộng lên bình phương của tam thức 3 hạng tử: $(a + b + c)^2 = [(a + b) + c]^2 = (a + b)^2 + 2(a + b)c + c^2 = a^2 + b^2 + c^2 + 2ab + 2bc + 2ca$. Quy luật nhớ nhanh: Bằng tổng bình phương từng số hạng cộng với hai lần tích của từng cặp số hạng!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="4" data-problem-id="3">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 1: Khai triển hiệu hai bình phương & Biến thể</span>
+          <span class="level-badge level-2">Mức 2: Biến thể & Cài bẫy</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 3:</strong> Khai triển và thu gọn các biểu thức sau:<br>
+a) $(x - 3y)(x + 3y)$ và $(2x - 5)(2x + 5)$;<br>
+b) $\left(\frac{1}{2}x - 2y\right)\left(\frac{1}{2}x + 2y\right)$ và $(x^2 - 4)(x^2 + 4)$;<br>
+c) $(-2x - 3y)^2$ và $(y - 2x)(2x + y)$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Nhận biết cấu trúc:</strong></p>
+<ul>
+  <li>Các câu a, b có dạng $(A - B)(A + B) = A^2 - B^2$.</li>
+  <li>Câu c cài bẫy: Biểu thức có dấu trừ ở cả 2 hạng tử $(-2x - 3y)^2$ hoặc đảo thứ tự hạng tử $(y - 2x)(2x + y)$.</li>
+</ul>
+<p><strong>Xử lý bẫy hoán vị:</strong> Phép cộng có tính chất giao hoán nên $2x + y = y + 2x$. Do đó $(y - 2x)(2x + y) = (y - 2x)(y + 2x) = y^2 - (2x)^2 = y^2 - 4x^2$.</p>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Áp dụng trực tiếp hằng đẳng thức $A^2 - B^2 = (A - B)(A + B)$:</strong></p>
+<ul>
+  <li>$(x - 3y)(x + 3y) = x^2 - (3y)^2 = x^2 - 9y^2$.</li>
+  <li>$(2x - 5)(2x + 5) = (2x)^2 - 5^2 = 4x^2 - 25$.</li>
+</ul>
+
+<p><strong>b) Khai triển với hệ số phân số và bậc cao:</strong></p>
+<ul>
+  <li>$\left(\frac{1}{2}x - 2y\right)\left(\frac{1}{2}x + 2y\right) = \left(\frac{1}{2}x\right)^2 - (2y)^2 = \frac{1}{4}x^2 - 4y^2$.</li>
+  <li>$(x^2 - 4)(x^2 + 4) = (x^2)^2 - 4^2 = x^4 - 16$.</li>
+</ul>
+
+<p><strong>c) Xử lý biến thể dấu âm và hoán vị:</strong></p>
+<ul>
+  <li>Với $(-2x - 3y)^2$: Đặt dấu trừ ra ngoài làm nhân tử chung trong ngoặc:<br>
+  $(-2x - 3y)^2 = [-(2x + 3y)]^2 = (-1)^2 \cdot (2x + 3y)^2 = (2x + 3y)^2$.<br>
+  Khai triển tiếp: $(2x + 3y)^2 = (2x)^2 + 2 \cdot (2x) \cdot (3y) + (3y)^2 = 4x^2 + 12xy + 9y^2$.</li>
+  <li>Với $(y - 2x)(2x + y)$: Vì $2x + y = y + 2x$ nên:<br>
+  $(y - 2x)(2x + y) = (y - 2x)(y + 2x) = y^2 - (2x)^2 = y^2 - 4x^2$.</li>
+</ul>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Học sinh rất hay mắc bẫy ở câu $(y - 2x)(2x + y)$ viết vội thành $(2x)^2 - y^2 = 4x^2 - y^2$ (sai dấu hoàn toàn do không để ý hạng tử nào mang dấu trừ trong hiệu $(y - 2x)$). Quy tắc vàng: Biểu thức nào đứng trước dấu trừ trong ngoặc $(A - B)$ thì bình phương của nó mang dấu cộng ($A^2$), biểu thức đứng sau mang dấu trừ ($-B^2$).</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Công thức liên tiếp: $(x - 1)(x + 1)(x^2 + 1)(x^4 + 1) = (x^2 - 1)(x^2 + 1)(x^4 + 1) = (x^4 - 1)(x^4 + 1) = x^8 - 1$. Đây là bài toán quen thuộc trong các đề thi tuyển sinh để thu gọn tích dây chuyền!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="5">
+      <div class="slide-header">
+        <span class="slide-badge">DẠNG 2: VIẾT ĐA THỨC DƯỚI DẠNG BÌNH PHƯƠNG HOẶC TÍCH</span>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn primary" onclick="nextSlide()">Bắt Đầu Học ▶</button>
+        </div>
+      </div>
+      <div class="slide-body-full">
+        
+    <div class="theory-box">
+      <h3>1. Ý nghĩa toán học của bài toán ngược</h3>
+      <div class="formula-row">
+        <div class="formula-card">
+          <span class="formula-tag">Khai triển (Chiều xuôi)</span>
+          $$(A \pm B)^2 \longrightarrow A^2 \pm 2AB + B^2$$
+          $$A^2 - B^2 \longleftarrow (A - B)(A + B)$$
+        </div>
+        <div class="formula-card">
+          <span class="formula-tag">Đưa về bình phương / tích (Chiều ngược)</span>
+          $$A^2 \pm 2AB + B^2 \longrightarrow (A \pm B)^2$$
+          $$A^2 - B^2 \longrightarrow (A - B)(A + B)$$
+        </div>
+      </div>
+      <p style="margin-top: 10px; font-size: 15px; line-height: 1.6;">
+        Trong đại số, chiều biến đổi ngược từ <strong>đa thức sang bình phương hoặc tích</strong> là thao tác quan trọng nhất, làm nền tảng cho việc <em>phân tích đa thức thành nhân tử, rút gọn phân thức, giải phương trình và tìm cực trị</em>.
+      </p>
+
+      <h3 style="margin-top: 16px;">2. Kỹ thuật "Truy tìm $A, B$" từ tam thức bậc hai $A^2 \pm 2AB + B^2$</h3>
+      <div class="theory-steps">
+        <div class="theory-step-item">
+          <strong>Bước 1 (Xác định hai số chính phương):</strong> Tìm hai hạng tử chứa bình phương để suy ra $A$ và $B$. Ví dụ: trong $9x^2 + 12x + 4$, ta nhận thấy $9x^2 = (3x)^2 \implies A = 3x$ và $4 = 2^2 \implies B = 2$.
+        </div>
+        <div class="theory-step-item">
+          <strong>Bước 2 (Kiểm tra hạng tử trung gian $2AB$):</strong> Tính thử $2 \cdot A \cdot B = 2 \cdot (3x) \cdot 2 = 12x$. So sánh với hạng tử còn lại của đề bài. Nếu khớp 100%, ta kết luận đa thức viết được thành $(3x + 2)^2$.
+        </div>
+        <div class="theory-step-item">
+          <strong>Bước 3 (Thuật toán điền khuyết):</strong> Nếu đề bài khuyết một hạng tử, ta dựa vào hai hạng tử đã cho để giải phương trình tìm hạng tử còn lại.
+        </div>
+      </div>
+
+      <h3 style="margin-top: 16px;">3. Nhận diện dạng Hiệu hai bình phương $A^2 - B^2$</h3>
+      <p style="font-size: 15px; line-height: 1.6;">
+        Một nhị thức có dạng hiệu hai bình phương khi gồm hai hạng tử trái dấu, trong đó mỗi hạng tử (sau khi đưa về số dương) đều viết được dưới dạng bình phương của một biểu thức: $M - N = (\sqrt{M})^2 - (\sqrt{N})^2$.
+      </p>
+    </div>
+        
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="6" data-problem-id="4">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 2: Bài toán điền khuyết</span>
+          <span class="level-badge level-1">Mức 1: Củng cố kỹ năng</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 4:</strong> Thay dấu $[?]$ bằng biểu thức thích hợp để được các hằng đẳng thức đúng:<br>
+a) $(x - 3y)(x + 3y) = x^2 - [?]$; <br>
+b) $(2x - y)(2x + y) = 4[?] - y^2$; <br>
+c) $x^2 + 8xy + [?] = ([?] + 4y)^2$; <br>
+d) $[?] - 12xy + 9y^2 = (2x - [?])^2$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Phương pháp tư duy điền khuyết:</strong></p>
+<ul>
+  <li>Câu a, b: So sánh hai vế của hằng đẳng thức hiệu hai bình phương $(A - B)(A + B) = A^2 - B^2$.</li>
+  <li>Câu c, d: Sử dụng cấu trúc bình phương của một tổng $A^2 + 2AB + B^2 = (A + B)^2$ hoặc bình phương của một hiệu $A^2 - 2AB + B^2 = (A - B)^2$.</li>
+  <li>Tìm mối quan hệ giữa hạng tử kép $2AB$ với hai bình phương $A^2, B^2$.</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Xét $(x - 3y)(x + 3y) = x^2 - [?]$:</strong></p>
+<p>Vế trái là tích của hiệu và tổng với $A = x, B = 3y$.<br>
+Theo hằng đẳng thức, vế phải phải là $A^2 - B^2 = x^2 - (3y)^2 = x^2 - 9y^2$.<br>
+Do đó, dấu $[?]$ ở vế phải cần thay bằng $9y^2$.</p>
+
+<p><strong>b) Xét $(2x - y)(2x + y) = 4[?] - y^2$:</strong></p>
+<p>Vế trái khai triển thành $(2x)^2 - y^2 = 4x^2 - y^2$.<br>
+So sánh với vế phải $4[?] - y^2$, ta thấy $4[?] = 4x^2$, suy ra $[?] = x^2$.<br>
+Vậy dấu $[?]$ cần thay bằng $x^2$.</p>
+
+<p><strong>c) Xét $x^2 + 8xy + [?] = ([?] + 4y)^2$:</strong></p>
+<p>Ở vế trái ta có $A^2 = x^2 \implies A = x$. Hạng tử thứ hai ở vế phải là $4y \implies B = 4y$.<br>
+Kiểm tra hạng tử kép: $2AB = 2 \cdot x \cdot 4y = 8xy$ (khớp đúng với đề bài).<br>
+Hạng tử còn thiếu ở vế trái là $B^2 = (4y)^2 = 16y^2$.<br>
+Hạng tử còn thiếu ở vế phải là $A = x$.<br>
+Vậy đẳng thức hoàn chỉnh là: $x^2 + 8xy + 16y^2 = (x + 4y)^2$.</p>
+
+<p><strong>d) Xét $[?] - 12xy + 9y^2 = (2x - [?])^2$:</strong></p>
+<p>Ở vế phải ta có $A = 2x \implies A^2 = (2x)^2 = 4x^2$ ở vế trái.<br>
+Ở vế trái ta có $B^2 = 9y^2 = (3y)^2 \implies B = 3y$ ở vế phải.<br>
+Kiểm tra hạng tử kép: $-2AB = -2 \cdot (2x) \cdot (3y) = -12xy$ (khớp đúng với đề bài).<br>
+Vậy đẳng thức hoàn chỉnh là: $4x^2 - 12xy + 9y^2 = (2x - 3y)^2$.</p>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Ở câu c, học sinh thường vội vàng điền $[?] = 4y^2$ thay vì $(4y)^2 = 16y^2$ (quên bình phương hệ số 4). Ở câu d, học sinh có thể điền $2x^2$ thay vì $(2x)^2 = 4x^2$.</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Bài toán điền khuyết là dạng bài tập rèn luyện tư duy phân tích đảo ngược cực tốt, chuẩn bị trực tiếp cho phương pháp "Thêm bớt hạng tử" để phân tích đa thức thành nhân tử trong các bài học sau.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="7" data-problem-id="5">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 2: Viết thành bình phương tổng hoặc hiệu</span>
+          <span class="level-badge level-1">Mức 1: Củng cố kỹ năng</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 5:</strong> Viết các đa thức sau dưới dạng bình phương của một tổng hoặc một hiệu:<br>
+a) $x^2 + 4x + 4$ và $9x^2 - 6x + 1$;<br>
+b) $16a^2 - 16ab + 4b^2$ và $25x^2 + 20xy + 4y^2$;<br>
+c) $x^2 - x + \frac{1}{4}$ và $4(x - y)^2 - 4(x - y) + 1$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Nhận biết cấu trúc:</strong> Tất cả các biểu thức đều gồm $3$ hạng tử (tam thức), trong đó có 2 hạng tử là bình phương và 1 hạng tử là tích kép.</p>
+<p><strong>Thuật toán giải:</strong></p>
+<ol>
+  <li>Xác định $A^2$ và $B^2$ để tìm $A, B$.</li>
+  <li>Kiểm tra xem hạng tử còn lại có đúng bằng $2AB$ hay không. Nếu dấu trước hạng tử kép là dấu cộng thì là $(A + B)^2$, nếu là dấu trừ thì là $(A - B)^2$.</li>
+  <li>Ở câu c thứ hai, ta xem cụm $(x - y)$ như một ẩn phụ $t$, đưa về $4t^2 - 4t + 1 = (2t - 1)^2$.</li>
+</ol>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Các tam thức cơ bản:</strong></p>
+<ul>
+  <li>Với $x^2 + 4x + 4$: Ta có $x^2 + 2 \cdot x \cdot 2 + 2^2 = (x + 2)^2$.</li>
+  <li>Với $9x^2 - 6x + 1$: Ta có $(3x)^2 - 2 \cdot (3x) \cdot 1 + 1^2 = (3x - 1)^2$.</li>
+</ul>
+
+<p><strong>b) Các tam thức hai biến có hệ số:</strong></p>
+<ul>
+  <li>Với $16a^2 - 16ab + 4b^2$: Ta có $(4a)^2 - 2 \cdot (4a) \cdot (2b) + (2b)^2 = (4a - 2b)^2$.<br>
+  <em>Lưu ý:</em> Ta cũng có thể đặt nhân tử chung $4(4a^2 - 4ab + b^2) = 4(2a - b)^2 = [2(2a - b)]^2 = (4a - 2b)^2$.</li>
+  <li>Với $25x^2 + 20xy + 4y^2$: Ta có $(5x)^2 + 2 \cdot (5x) \cdot (2y) + (2y)^2 = (5x + 2y)^2$.</li>
+</ul>
+
+<p><strong>c) Tam thức chứa phân số và đa thức ẩn phụ:</strong></p>
+<ul>
+  <li>Với $x^2 - x + \frac{1}{4}$: Ta có $x^2 - 2 \cdot x \cdot \frac{1}{2} + \left(\frac{1}{2}\right)^2 = \left(x - \frac{1}{2}\right)^2$.</li>
+  <li>Với $4(x - y)^2 - 4(x - y) + 1$:<br>
+  Ta có $[2(x - y)]^2 - 2 \cdot [2(x - y)] \cdot 1 + 1^2 = [2(x - y) - 1]^2 = (2x - 2y - 1)^2$.</li>
+</ul>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Ở câu $x^2 - x + \frac{1}{4}$, học sinh thường lúng túng vì không thấy rõ số 2 trong hạng tử $-x$. Cần giải thích rõ: $-x = -2 \cdot x \cdot \frac{1}{2}$, nhân thêm 2 thì phải chia cho 2 để giá trị không đổi.</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Kỹ thuật tách $-x = -2 \cdot x \cdot \frac{1}{2}$ chính là kỹ thuật cốt tử sau này dùng để tìm nghiệm phương trình bậc hai bằng cách thêm bớt tạo bình phương hoàn chỉnh (nguồn gốc công thức nghiệm $\Delta$).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="8" data-problem-id="6">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 2: Phân tích thành tích hiệu hai bình phương</span>
+          <span class="level-badge level-2">Mức 2: Biến thể & Cài bẫy</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 6:</strong> Viết các đa thức sau dưới dạng tích của các đa thức bậc nhất:<br>
+a) $4x^2 - 9$ và $(x + 1)^2 - 4$;<br>
+b) $(2x - 1)^2 - (x + 2)^2$;<br>
+c) $x^4 - 16$ và $(x^2 + 1)^2 - 4x^2$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Bản chất:</strong> Áp dụng hằng đẳng thức $A^2 - B^2 = (A - B)(A + B)$.</p>
+<p><strong>Lưu ý dấu ngoặc (Nút thắt):</strong></p>
+<ul>
+  <li>Khi $A$ hoặc $B$ là đa thức, bắt buộc phải dùng ngoặc vuông bao bọc: $[A - B][A + B] = [(...) - (...)][(...) + (...)]$.</li>
+  <li>Khi phá ngoặc tròn đằng trước có dấu trừ, <em>bắt buộc phải đổi dấu tất cả các hạng tử bên trong</em>: $-(x + 2) = -x - 2$.</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Các hiệu hai bình phương đơn giản:</strong></p>
+<ul>
+  <li>$4x^2 - 9 = (2x)^2 - 3^2 = (2x - 3)(2x + 3)$.</li>
+  <li>$(x + 1)^2 - 4 = (x + 1)^2 - 2^2 = (x + 1 - 2)(x + 1 + 2) = (x - 1)(x + 3)$.</li>
+</ul>
+
+<p><strong>b) Hiệu của hai bình phương đa thức:</strong></p>
+<p>Với $(2x - 1)^2 - (x + 2)^2$:<br>
+Áp dụng $A^2 - B^2 = (A - B)(A + B)$ với $A = 2x - 1$ và $B = x + 2$, ta có:<br>
+$(2x - 1)^2 - (x + 2)^2 = [(2x - 1) - (x + 2)][(2x - 1) + (x + 2)]$</p>
+<p>Phá ngoặc bên trong từng thừa số:<br>
+$= (2x - 1 - x - 2)(2x - 1 + x + 2) = (x - 3)(3x + 1)$.</p>
+
+<p><strong>c) Hiệu hai bình phương liên tiếp và bậc cao:</strong></p>
+<ul>
+  <li>Với $x^4 - 16$: Ta có $(x^2)^2 - 4^2 = (x^2 - 4)(x^2 + 4)$.<br>
+  Nhận thấy $x^2 - 4$ tiếp tục là hiệu hai bình phương: $x^2 - 2^2 = (x - 2)(x + 2)$.<br>
+  Vậy $x^4 - 16 = (x - 2)(x + 2)(x^2 + 4)$.</li>
+  <li>Với $(x^2 + 1)^2 - 4x^2$: Ta có $(x^2 + 1)^2 - (2x)^2 = (x^2 + 1 - 2x)(x^2 + 1 + 2x)$<br>
+  $= (x^2 - 2x + 1)(x^2 + 2x + 1) = (x - 1)^2 (x + 1)^2$.</li>
+</ul>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Lỗi sai nghiêm trọng ở câu b: Học sinh viết $[(2x - 1) - (x + 2)] = 2x - 1 - x + 2 = x + 1$ (quên đổi dấu số +2 thành -2 khi phá ngoặc trước có dấu trừ). Thầy/Cô cần nhấn mạnh quy tắc đổi dấu sống còn này.</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Biểu thức ở câu c2 là một trường hợp đẹp mắt của việc đưa về bình phương: $(x^2 + 1)^2 - 4x^2 = (x - 1)^2 (x + 1)^2 = [(x - 1)(x + 1)]^2 = (x^2 - 1)^2$. Kết quả này minh chứng cho tính nhất quán tuyệt vời của đại số!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="9">
+      <div class="slide-header">
+        <span class="slide-badge">DẠNG 3: TÍNH NHANH & RÚT GỌN BIỂU THỨC</span>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn primary" onclick="nextSlide()">Bắt Đầu Học ▶</button>
+        </div>
+      </div>
+      <div class="slide-body-full">
+        
+    <div class="theory-box">
+      <h3>1. Triết lý tính nhẩm siêu tốc nhờ hằng đẳng thức</h3>
+      <p style="font-size: 15px; line-height: 1.6;">
+        Thay vì nhân hai số lớn một cách cơ học mất thời gian, ta tìm <strong>trung điểm $m$</strong> của hai số đó (thường là số tròn chục, tròn trăm) để đưa về hiệu hai bình phương:
+      </p>
+      <div class="formula-row">
+        <div class="formula-card">
+          <span class="formula-tag">Tính tích hai số cách đều số tròn</span>
+          $$(m - k)(m + k) = m^2 - k^2$$
+          <em>Ví dụ:</em> $54 \cdot 66 = (60 - 6)(60 + 6) = 60^2 - 6^2 = 3600 - 36 = 3564$.
+        </div>
+        <div class="formula-card">
+          <span class="formula-tag">Tính bình phương số gần số tròn</span>
+          $$(m \pm k)^2 = m^2 \pm 2mk + k^2$$
+          <em>Ví dụ:</em> $203^2 = (200 + 3)^2 = 200^2 + 2 \cdot 200 \cdot 3 + 3^2 = 41209$.
+        </div>
+      </div>
+
+      <h3 style="margin-top: 16px;">2. Các công thức rút gọn đại số đối xứng thần tốc</h3>
+      <div class="formula-row">
+        <div class="formula-card">
+          <span class="formula-tag">Hiệu hai bình phương tổng - hiệu</span>
+          $$(A + B)^2 - (A - B)^2 = 4AB$$
+          <em>Ý nghĩa:</em> Triệt tiêu hoàn toàn $A^2$ và $B^2$, chỉ còn lại $4AB$!
+        </div>
+        <div class="formula-card">
+          <span class="formula-tag">Tổng hai bình phương tổng - hiệu</span>
+          $$(A + B)^2 + (A - B)^2 = 2(A^2 + B^2)$$
+          <em>Ý nghĩa:</em> Triệt tiêu hoàn toàn phần tích kép $\pm 2AB$!
+        </div>
+      </div>
+
+      <h3 style="margin-top: 16px;">3. Quy tắc rút gọn an toàn (Tránh nhầm dấu khi có dấu trừ phía trước)</h3>
+      <div class="method-steps">
+        <ol>
+          <li>Khi đứng trước dấu trừ: $-(A \pm B)^2$, <strong>luôn giữ nguyên dấu trừ và mở ngoặc vuông</strong>: $-[A^2 \pm 2AB + B^2]$.</li>
+          <li>Khai triển xong toàn bộ biểu thức bên trong ngoặc vuông rồi mới thực hiện bước đổi dấu tất cả các hạng tử khi phá ngoặc.</li>
+          <li>Nhóm các đơn thức đồng dạng để thu gọn triệt để.</li>
+        </ol>
+      </div>
+    </div>
+        
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="10" data-problem-id="7">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 3: Tính nhanh giá trị số</span>
+          <span class="level-badge level-1">Mức 1: Củng cố kỹ năng</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 7:</strong> Vận dụng hằng đẳng thức để tính nhẩm nhanh giá trị của các biểu thức số sau:<br>
+a) $54 \cdot 66$ và $198 \cdot 202$;<br>
+b) $203^2$ và $99^2$;<br>
+c) $1002^2$ và $2023^2 - 2022^2$ (Bài toán mở đầu SGK trang 29).
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Nhận biết số học:</strong></p>
+<ul>
+  <li>Câu a: $54$ và $66$ cách đều số tròn chục $60$ khoảng cách là $6$. $198$ và $202$ cách đều $200$ khoảng cách là $2$. Ta áp dụng $(m - k)(m + k) = m^2 - k^2$.</li>
+  <li>Câu b: $203 = 200 + 3$ và $99 = 100 - 1$. Ta áp dụng $(m \pm k)^2 = m^2 \pm 2mk + k^2$.</li>
+  <li>Câu c: $2023^2 - 2022^2$ là hiệu hai bình phương của hai số tự nhiên liên tiếp! Áp dụng $a^2 - b^2 = (a - b)(a + b)$.</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Tính tích hai số đối xứng qua số tròn chục/trăm:</strong></p>
+<ul>
+  <li>$54 \cdot 66 = (60 - 6)(60 + 6) = 60^2 - 6^2 = 3600 - 36 = 3564$.</li>
+  <li>$198 \cdot 202 = (200 - 2)(200 + 2) = 200^2 - 2^2 = 40000 - 4 = 39996$.</li>
+</ul>
+
+<p><strong>b) Tính bình phương số gần số tròn:</strong></p>
+<ul>
+  <li>$203^2 = (200 + 3)^2 = 200^2 + 2 \cdot 200 \cdot 3 + 3^2$<br>
+  $= 40000 + 1200 + 9 = 41209$.</li>
+  <li>$99^2 = (100 - 1)^2 = 100^2 - 2 \cdot 100 \cdot 1 + 1^2$<br>
+  $= 10000 - 200 + 1 = 9801$.</li>
+</ul>
+
+<p><strong>c) Giải đáp trọn vẹn bài toán mở đầu SGK trang 29:</strong></p>
+<ul>
+  <li>$1002^2 = (1000 + 2)^2 = 1000^2 + 2 \cdot 1000 \cdot 2 + 2^2$<br>
+  $= 1000000 + 4000 + 4 = 1004004$.</li>
+  <li>$2023^2 - 2022^2 = (2023 - 2022)(2023 + 2022)$<br>
+  $= 1 \cdot (2023 + 2022) = 4045$.</li>
+</ul>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Khi tính $(100 - 1)^2$, học sinh hay quên cộng $1^2$ ở cuối hoặc tính nhầm $10000 - 200 + 1 = 9799$ do thực hiện trừ trước rồi trừ tiếp thay vì cộng 1.</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Quy luật mở rộng: Hiệu hai bình phương của hai số tự nhiên liên tiếp luôn bằng tổng của chính hai số đó: $(n + 1)^2 - n^2 = (n + 1 - n)(n + 1 + n) = 1 \cdot (2n + 1) = (n + 1) + n$. Do đó $2023^2 - 2022^2 = 2023 + 2022 = 4045$ trong chớp mắt!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="11" data-problem-id="8">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 3: Rút gọn biểu thức đại số</span>
+          <span class="level-badge level-2">Mức 2: Biến thể & Cài bẫy</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 8:</strong> Rút gọn các biểu thức sau bằng phương pháp thích hợp:<br>
+a) $(x - 3y)^2 - (x + 3y)^2$;<br>
+b) $(3x + 4y)^2 + (4x - 3y)^2$;<br>
+c) $(x + 2y)^2 - (x - 2y)^2 - 8xy$ và $P = (x - 1)(x + 1)(x^2 + 1)(x^4 + 1)$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>So sánh các con đường tiếp cận:</strong></p>
+<ul>
+  <li>Câu a: Có 2 cách giải:
+    <ul>
+      <li><em>Cách 1:</em> Khai triển từng bình phương rồi trừ cho nhau.</li>
+      <li><em>Cách 2:</em> Xem cả cụm là hiệu hai bình phương $A^2 - B^2 = (A - B)(A + B)$ với $A = x - 3y, B = x + 3y$ (nhanh và ít nhầm dấu hơn!).</li>
+    </ul>
+  </li>
+  <li>Câu b: Đây là dạng hằng đẳng thức Lagrange 2 biến: $(ax + by)^2 + (ay - bx)^2 = (a^2 + b^2)(x^2 + y^2)$. Ở đây các hạng tử tích kép sẽ triệt tiêu lẫn nhau!</li>
+  <li>Câu c: Dùng công thức thu gọn nhanh $(A + B)^2 - (A - B)^2 = 4AB$ và dây chuyền hiệu hai bình phương.</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Rút gọn $(x - 3y)^2 - (x + 3y)^2$:</strong></p>
+<p><strong>Cách 1 (Áp dụng $A^2 - B^2$):</strong><br>
+$[(x - 3y) - (x + 3y)][(x - 3y) + (x + 3y)] = (x - 3y - x - 3y)(x - 3y + x + 3y)$<br>
+$= (-6y)(2x) = -12xy$.</p>
+<p><strong>Cách 2 (Khai triển từng bình phương):</strong><br>
+$(x^2 - 6xy + 9y^2) - (x^2 + 6xy + 9y^2) = x^2 - 6xy + 9y^2 - x^2 - 6xy - 9y^2 = -12xy$.</p>
+
+<p><strong>b) Rút gọn $(3x + 4y)^2 + (4x - 3y)^2$:</strong></p>
+<p>Khai triển hai bình phương:<br>
+$=(9x^2 + 24xy + 16y^2) + (16x^2 - 24xy + 9y^2)$<br>
+Nhận thấy hai hạng tử kép $+24xy$ và $-24xy$ triệt tiêu lẫn nhau:<br>
+$= (9x^2 + 16x^2) + (24xy - 24xy) + (16y^2 + 9y^2)$<br>
+$= 25x^2 + 25y^2 = 25(x^2 + y^2)$.</p>
+
+<p><strong>c) Rút gọn các biểu thức tổng hợp:</strong></p>
+<ul>
+  <li>Với $(x + 2y)^2 - (x - 2y)^2 - 8xy$:<br>
+  Áp dụng bổ đề $(A + B)^2 - (A - B)^2 = 4AB$ với $A = x, B = 2y$:<br>
+  $(x + 2y)^2 - (x - 2y)^2 = 4 \cdot x \cdot (2y) = 8xy$.<br>
+  Do đó, biểu thức đã cho bằng: $8xy - 8xy = 0$.</li>
+  <li>Với $P = (x - 1)(x + 1)(x^2 + 1)(x^4 + 1)$:<br>
+  Ta nhóm nhân tử liên tiếp theo hiệu hai bình phương:<br>
+  $P = [(x - 1)(x + 1)](x^2 + 1)(x^4 + 1) = (x^2 - 1)(x^2 + 1)(x^4 + 1)$<br>
+  $= [(x^2 - 1)(x^2 + 1)](x^4 + 1) = (x^4 - 1)(x^4 + 1) = (x^4)^2 - 1^2 = x^8 - 1$.</li>
+</ul>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Ở câu a, nếu dùng cách khai triển thì học sinh rất hay quên đóng mở ngoặc biểu thức thứ hai dẫn đến viết sai thành $x^2 - 6xy + 9y^2 - x^2 + 6xy + 9y^2 = 18y^2$ (sai dấu).</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Biểu thức ở câu b minh họa cho Đẳng thức Lagrange: $(a^2 + b^2)(x^2 + y^2) = (ax - by)^2 + (ay + bx)^2$. Trong bài này, $a = 3, b = 4 \implies a^2 + b^2 = 3^2 + 4^2 = 25$, do đó kết quả rút gọn là $25(x^2 + y^2)$ hoàn toàn trùng khớp!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="12" data-problem-id="9">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 3: Tính giá trị biểu thức đại số</span>
+          <span class="level-badge level-2">Mức 2: Biến thể & Cài bẫy</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 9:</strong> Thực hiện tính giá trị biểu thức đại số một cách hợp lý:<br>
+a) Tính giá trị của $P = x^2 - 10x + 25$ tại $x = 105$;<br>
+b) Tính giá trị của $Q = 4x^2 + 12xy + 9y^2$ biết $2x + 3y = 20$;<br>
+c) Cho $x + y = 7$ và $xy = 12$. Không tìm giá trị của $x$ và $y$, hãy tính giá trị của $A = x^2 + y^2$ và $B = (x - y)^2$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Chiến lược tư duy:</strong></p>
+<ul>
+  <li>Không thay số trực tiếp khi biểu thức chưa được thu gọn về bình phương!</li>
+  <li>Câu a: $x^2 - 10x + 25 = (x - 5)^2$. Thay $x = 105$ ta được $(105 - 5)^2 = 100^2$, nhẩm ra ngay kết quả.</li>
+  <li>Câu b: $4x^2 + 12xy + 9y^2 = (2x + 3y)^2$. Thay cả cụm $(2x + 3y) = 20$.</li>
+  <li>Câu c: Dùng Bổ đề biểu diễn tổng bình phương qua tổng và tích: $x^2 + y^2 = (x + y)^2 - 2xy$ và $(x - y)^2 = (x + y)^2 - 4xy$.</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Tính giá trị $P = x^2 - 10x + 25$ tại $x = 105$:</strong></p>
+<p>Ta có: $P = x^2 - 2 \cdot x \cdot 5 + 5^2 = (x - 5)^2$.<br>
+Thay $x = 105$ vào biểu thức $P$, ta được:<br>
+$P = (105 - 5)^2 = 100^2 = 10000$.<br>
+<strong>Kết luận:</strong> Vậy giá trị của $P$ tại $x = 105$ là $10000$.</p>
+
+<p><strong>b) Tính giá trị $Q = 4x^2 + 12xy + 9y^2$ biết $2x + 3y = 20$:</strong></p>
+<p>Ta có: $Q = (2x)^2 + 2 \cdot (2x) \cdot (3y) + (3y)^2 = (2x + 3y)^2$.<br>
+Thay $2x + 3y = 20$ vào biểu thức $Q$, ta được:<br>
+$Q = 20^2 = 400$.<br>
+<strong>Kết luận:</strong> Vậy giá trị của $Q$ là $400$.</p>
+
+<p><strong>c) Tính $A = x^2 + y^2$ và $B = (x - y)^2$ khi biết $x + y = 7$ và $xy = 12$:</strong></p>
+<ul>
+  <li>Ta có: $(x + y)^2 = x^2 + 2xy + y^2$, suy ra $x^2 + y^2 = (x + y)^2 - 2xy$.<br>
+  Thay $x + y = 7$ và $xy = 12$ vào, ta được:<br>
+  $A = 7^2 - 2 \cdot 12 = 49 - 24 = 25$.</li>
+  <li>Ta có: $(x - y)^2 = x^2 - 2xy + y^2 = (x^2 + y^2) - 2xy = (x + y)^2 - 4xy$.<br>
+  Thay $x + y = 7$ và $xy = 12$ vào, ta được:<br>
+  $B = 7^2 - 4 \cdot 12 = 49 - 48 = 1$.</li>
+</ul>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Học sinh hay làm phức tạp câu c bằng cách cố đi giải hệ phương trình tìm ra $x = 3, y = 4$ hoặc $x = 4, y = 3$. Đề bài yêu cầu "không tìm $x, y$", điều này đòi hỏi tư duy biến đổi biểu diễn đại số qua các đa thức đối xứng cơ bản $S = x + y$ và $P = xy$.</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Kỹ thuật biểu diễn qua tổng $S$ và tích $P$ này chính là nền tảng trực tiếp của Hệ thức Vi-ét trong chương trình Toán 9 và các bài toán thi tuyển sinh vào lớp 10 chuyên.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="13">
+      <div class="slide-header">
+        <span class="slide-badge">DẠNG 4: TÌM X & GIẢI PHƯƠNG TRÌNH</span>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn primary" onclick="nextSlide()">Bắt Đầu Học ▶</button>
+        </div>
+      </div>
+      <div class="slide-body-full">
+        
+    <div class="theory-box">
+      <h3>1. Quy chuẩn ngôn ngữ THCS: Tuyệt đối không dùng ký hiệu tương đương hai chiều</h3>
+      <p style="font-size: 15px; line-height: 1.6;">
+        Học sinh cấp 2 THCS (Lớp 6 đến Lớp 9) chưa học logic mệnh đề. Do đó, trong các bài toán tìm $x$ và giải phương trình, <strong>bắt buộc phải sử dụng các từ liên kết tự nhiên</strong> theo đúng chuẩn SGK: <em>"nên", "hay", "suy ra", "hoặc", "do đó", "ta có"</em>.
+      </p>
+
+      <h3 style="margin-top: 16px;">2. Ba chiến lược tìm $x$ kinh điển bằng Hằng đẳng thức</h3>
+      <div class="formula-row">
+        <div class="formula-card">
+          <span class="formula-tag">Chiến lược 1: Triệt tiêu bậc hai</span>
+          <p style="font-size: 14.5px; line-height: 1.5; margin-top: 5px;">
+            Khai triển các bình phương ở vế trái, các hạng tử bậc hai $x^2$ sẽ triệt tiêu lẫn nhau, phương trình đưa về phương trình bậc nhất một ẩn $ax = b$.
+          </p>
+        </div>
+        <div class="formula-card">
+          <span class="formula-tag">Chiến lược 2: Đưa về phương trình tích</span>
+          <p style="font-size: 14.5px; line-height: 1.5; margin-top: 5px;">
+            Chuyển vế để xuất hiện hiệu hai bình phương $A^2 - B^2 = 0$.<br>
+            Biến đổi thành $(A - B)(A + B) = 0$.<br>
+            Nên $A - B = 0$ hoặc $A + B = 0$.
+          </p>
+        </div>
+        <div class="formula-card">
+          <span class="formula-tag">Chiến lược 3: Đưa về bình phương bằng hằng số</span>
+          <p style="font-size: 14.5px; line-height: 1.5; margin-top: 5px;">
+            Thu gọn về dạng $(ax + b)^2 = k^2$ ($k \ge 0$).<br>
+            Nên $ax + b = k$ hoặc $ax + b = -k$.
+          </p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 16px;">3. Cảnh báo cạm bẫy sống còn khi giải toán tìm $x$</h3>
+      <div class="theory-steps">
+        <div class="theory-step-item">
+          <strong>Cạm bẫy 1 (Mất nghiệm khi bỏ bình phương):</strong> Từ $A^2 = B^2$, không được suy ra $A = B$ (thiếu trường hợp $A = -B$). Bắt buộc phải viết $A = B$ hoặc $A = -B$, hoặc chuyển vế $A^2 - B^2 = 0$.
+        </div>
+        <div class="theory-step-item">
+          <strong>Cạm bẫy 2 (Triệt tiêu biểu thức chứa biến):</strong> Từ $x(x - 2) = 3(x - 2)$, tuyệt đối không được chia hai vế cho $(x - 2)$ vì chưa biết biểu thức này khác 0! Bắt buộc phải chuyển vế đặt nhân tử chung.
+        </div>
+      </div>
+    </div>
+        
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="14" data-problem-id="10">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 4: Tìm x triệt tiêu bậc hai</span>
+          <span class="level-badge level-1">Mức 1: Củng cố kỹ năng</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 10:</strong> Tìm số thực $x$, biết:<br>
+a) $(x + 3)^2 - x^2 = 21$;<br>
+b) $(2x - 1)^2 - 4x(x + 3) = 9$;<br>
+c) $(x - 2)^2 - (x + 1)(x - 1) = 5$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Quan sát cấu trúc:</strong></p>
+<ul>
+  <li>Tất cả các phương trình trên đều chứa $x^2$, nhưng hệ số của $x^2$ sau khi khai triển ở hai vế sẽ triệt tiêu hoàn toàn.</li>
+  <li>Thuật toán tư duy: Khai triển hằng đẳng thức cẩn thận, phá ngoặc đổi dấu, thu gọn các hạng tử chứa $x$ về vế trái và chuyển các hằng số tự do về vế phải.</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Giải phương trình: $(x + 3)^2 - x^2 = 21$</strong></p>
+<p>Khai triển vế trái, ta có:<br>
+$x^2 + 6x + 9 - x^2 = 21$<br>
+Nên $6x + 9 = 21$<br>
+Hay $6x = 21 - 9$<br>
+Do đó $6x = 12$, suy ra $x = 2$.<br>
+<strong>Kết luận:</strong> Vậy $x = 2$.</p>
+
+<p><strong>b) Giải phương trình: $(2x - 1)^2 - 4x(x + 3) = 9$</strong></p>
+<p>Khai triển và nhân phân phối ở vế trái, ta có:<br>
+$4x^2 - 4x + 1 - 4x^2 - 12x = 9$<br>
+Thu gọn các hạng tử đồng dạng:<br>
+$(4x^2 - 4x^2) + (-4x - 12x) + 1 = 9$<br>
+Nên $-16x + 1 = 9$<br>
+Hay $-16x = 9 - 1$<br>
+Do đó $-16x = 8$, suy ra $x = -\frac{8}{16} = -\frac{1}{2}$.<br>
+<strong>Kết luận:</strong> Vậy $x = -\frac{1}{2}$.</p>
+
+<p><strong>c) Giải phương trình: $(x - 2)^2 - (x + 1)(x - 1) = 5$</strong></p>
+<p>Khai triển bình phương và hiệu hai bình phương ở vế trái:<br>
+$(x^2 - 4x + 4) - (x^2 - 1) = 5$<br>
+Phá ngoặc đổi dấu:<br>
+$x^2 - 4x + 4 - x^2 + 1 = 5$<br>
+Nên $-4x + 5 = 5$<br>
+Hay $-4x = 5 - 5 = 0$<br>
+Do đó $x = 0$.<br>
+<strong>Kết luận:</strong> Vậy $x = 0$.</p>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Ở câu c, biểu thức $-(x + 1)(x - 1) = -(x^2 - 1) = -x^2 + 1$. Học sinh rất hay quên đổi dấu $-1$ thành $+1$, dẫn đến $-4x + 3 = 5 \implies x = -\frac{1}{2}$ (sai lầm do phá ngoặc ẩu).</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Đây là dạng phương trình đưa về phương trình bậc nhất một ẩn cơ bản nhất, xuất hiện thường xuyên trong câu 1b của các đề thi kiểm tra giữa kỳ 1 Toán 8.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="15" data-problem-id="11">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 4: Tìm x bằng hiệu hai bình phương</span>
+          <span class="level-badge level-2">Mức 2: Biến thể & Cài bẫy</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 11:</strong> Tìm các giá trị của $x$, biết:<br>
+a) $(2x + 1)^2 - (x - 3)^2 = 0$;<br>
+b) $4x^2 - 25 = 0$ và $(3x - 2)^2 = 16$;<br>
+c) $x^2 - 6x + 9 = (2x - 1)^2$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Nút thắt tư duy:</strong></p>
+<ul>
+  <li>Không nên khai triển bung ra rồi chuyển vế vì sẽ xuất hiện phương trình bậc hai chưa học cách bấm máy hay tính $\Delta$.</li>
+  <li>Ta nhận diện dạng hiệu hai bình phương $A^2 - B^2 = 0$ hoặc $(ax + b)^2 = k^2$ để đưa về phương trình tích $(A - B)(A + B) = 0$.</li>
+  <li>Phương trình tích: $A \cdot B = 0$ xảy ra khi $A = 0$ hoặc $B = 0$.</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Giải phương trình: $(2x + 1)^2 - (x - 3)^2 = 0$</strong></p>
+<p>Áp dụng hằng đẳng thức hiệu hai bình phương ở vế trái:<br>
+$[(2x + 1) - (x - 3)][(2x + 1) + (x - 3)] = 0$<br>
+Phá ngoặc bên trong từng nhân tử:<br>
+$(2x + 1 - x + 3)(2x + 1 + x - 3) = 0$<br>
+Nên $(x + 4)(3x - 2) = 0$</p>
+<p>Do đó, $x + 4 = 0$ hoặc $3x - 2 = 0$.</p>
+<ul>
+  <li>Trường hợp 1: $x + 4 = 0$, suy ra $x = -4$.</li>
+  <li>Trường hợp 2: $3x - 2 = 0$, hay $3x = 2$, suy ra $x = \frac{2}{3}$.</li>
+</ul>
+<p><strong>Kết luận:</strong> Vậy $x = -4$ hoặc $x = \frac{2}{3}$.</p>
+
+<p><strong>b) Giải các phương trình bậc hai dạng đơn giản:</strong></p>
+<ul>
+  <li>Với $4x^2 - 25 = 0$:<br>
+  Ta có $(2x)^2 - 5^2 = 0$, nên $(2x - 5)(2x + 5) = 0$.<br>
+  Suy ra $2x - 5 = 0$ hoặc $2x + 5 = 0$.<br>
+  Do đó $x = \frac{5}{2}$ hoặc $x = -\frac{5}{2}$.</li>
+  <li>Với $(3x - 2)^2 = 16$:<br>
+  Vì $16 = 4^2$, nên $(3x - 2)^2 - 4^2 = 0$.<br>
+  Suy ra $(3x - 2 - 4)(3x - 2 + 4) = 0$, hay $(3x - 6)(3x + 2) = 0$.<br>
+  Nên $3x - 6 = 0$ (suy ra $x = 2$) hoặc $3x + 2 = 0$ (suy ra $x = -\frac{2}{3}$).</li>
+</ul>
+
+<p><strong>c) Giải phương trình: $x^2 - 6x + 9 = (2x - 1)^2$</strong></p>
+<p>Nhận thấy vế trái là một bình phương: $x^2 - 6x + 9 = (x - 3)^2$.<br>
+Phương trình trở thành: $(x - 3)^2 = (2x - 1)^2$<br>
+Chuyển vế đưa về hiệu hai bình phương:<br>
+$(x - 3)^2 - (2x - 1)^2 = 0$<br>
+Nên $[(x - 3) - (2x - 1)][(x - 3) + (2x - 1)] = 0$<br>
+Hay $(x - 3 - 2x + 1)(x - 3 + 2x - 1) = 0$<br>
+Do đó $(-x - 2)(3x - 4) = 0$.</p>
+<p>Suy ra $-x - 2 = 0$ (tức $x = -2$) hoặc $3x - 4 = 0$ (tức $x = \frac{4}{3}$).<br>
+<strong>Kết luận:</strong> Vậy $x = -2$ hoặc $x = \frac{4}{3}$.</p>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Ở câu $(3x - 2)^2 = 16$, học sinh chỉ suy ra $3x - 2 = 4 \implies x = 2$ mà quên mất trường hợp $3x - 2 = -4 \implies x = -\frac{2}{3}$. Làm mất một nghiệm là lỗi trừ 50% điểm số câu đó!</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Phương pháp chuyển vế tạo hiệu hai bình phương $A^2 - B^2 = 0$ là phương pháp chuẩn mực, an toàn tuyệt đối và giúp học sinh không bao giờ bị sót nghiệm âm.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="16" data-problem-id="12">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 4: Tìm x nâng cao & Phương trình nghiệm nguyên</span>
+          <span class="level-badge level-3">Mức 3: Vận dụng cao</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 12:</strong> Giải các bài toán tìm biến số sau:<br>
+a) Tìm $x$, biết: $(x + 2)^2 - 2(x + 2) + 1 = 0$;<br>
+b) Tìm $x$, biết: $(x^2 - 4)^2 - (x - 2)^2 = 0$;<br>
+c) Tìm tất cả các cặp số nguyên $(x, y)$ thỏa mãn đẳng thức: $x^2 - y^2 = 13$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Tư duy giải toán:</strong></p>
+<ul>
+  <li>Câu a: Xem $t = x + 2$, biểu thức có dạng $t^2 - 2t + 1 = (t - 1)^2 = 0$.</li>
+  <li>Câu b: Hiệu hai bình phương $[(x^2 - 4) - (x - 2)][(x^2 - 4) + (x - 2)] = 0$. Nhận thấy có thể phân tích tiếp thành nhân tử bằng cách đặt $(x - 2)$ ra ngoài!</li>
+  <li>Câu c: Đây là bài toán phương trình nghiệm nguyên kinh điển! $x^2 - y^2 = (x - y)(x + y) = 13$. Vì $13$ là số nguyên tố nên chỉ có các ước là $\pm 1, \pm 13$. Ta lập bảng xét các ước số nguyên để tìm $x, y$.</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Giải phương trình: $(x + 2)^2 - 2(x + 2) + 1 = 0$</strong></p>
+<p>Nhận thấy vế trái có dạng $A^2 - 2A + 1 = (A - 1)^2$ với $A = x + 2$.<br>
+Do đó: $[(x + 2) - 1]^2 = 0$<br>
+Nên $(x + 1)^2 = 0$<br>
+Suy ra $x + 1 = 0$, hay $x = -1$.<br>
+<strong>Kết luận:</strong> Vậy $x = -1$.</p>
+
+<p><strong>b) Giải phương trình: $(x^2 - 4)^2 - (x - 2)^2 = 0$</strong></p>
+<p>Áp dụng hằng đẳng thức hiệu hai bình phương:<br>
+$[(x^2 - 4) - (x - 2)][(x^2 - 4) + (x - 2)] = 0$<br>
+Ta có: $x^2 - 4 = (x - 2)(x + 2)$. Đặt $(x - 2)$ làm nhân tử chung ở mỗi ngoặc:<br>
+• Ngoặc thứ nhất: $(x - 2)(x + 2) - (x - 2) = (x - 2)(x + 2 - 1) = (x - 2)(x + 1)$.<br>
+• Ngoặc thứ hai: $(x - 2)(x + 2) + (x - 2) = (x - 2)(x + 2 + 1) = (x - 2)(x + 3)$.<br>
+Nhân lại ta được: $(x - 2)^2 (x + 1)(x + 3) = 0$.<br>
+Nên $x - 2 = 0$ hoặc $x + 1 = 0$ hoặc $x + 3 = 0$.<br>
+Suy ra $x = 2$ hoặc $x = -1$ hoặc $x = -3$.<br>
+<strong>Kết luận:</strong> Vậy $x \in \{2; -1; -3\}$.</p>
+
+<p><strong>c) Tìm các cặp số nguyên $(x, y)$ thỏa mãn: $x^2 - y^2 = 13$</strong></p>
+<p>Ta có: $(x - y)(x + y) = 13$.<br>
+Vì $x, y$ là các số nguyên nên $(x - y)$ và $(x + y)$ cũng là các số nguyên và là ước của $13$.<br>
+Tập các ước nguyên của $13$ là: $\text{Ư}(13) = \{1; -1; 13; -13\}$.<br>
+Ta xét 4 trường hợp:</p>
+<ol>
+  <li>$\begin{cases} x - y = 1 \\ x + y = 13 \end{cases} \implies$ Cộng hai vế ta được $2x = 14 \implies x = 7$. Suy ra $y = 6$.</li>
+  <li>$\begin{cases} x - y = 13 \\ x + y = 1 \end{cases} \implies 2x = 14 \implies x = 7$. Suy ra $y = -6$.</li>
+  <li>$\begin{cases} x - y = -1 \\ x + y = -13 \end{cases} \implies 2x = -14 \implies x = -7$. Suy ra $y = -6$.</li>
+  <li>$\begin{cases} x - y = -13 \\ x + y = -1 \end{cases} \implies 2x = -14 \implies x = -7$. Suy ra $y = 6$.</li>
+</ol>
+<p><strong>Kết luận:</strong> Các cặp số nguyên $(x, y)$ thỏa mãn là: $(7; 6), (7; -6), (-7; -6), (-7; 6)$.</p>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Ở câu c, học sinh thường chỉ xét ước dương $1$ và $13$ mà quên mất các ước âm $-1$ và $-13$, làm sót mất 2 cặp nghiệm số nguyên âm.</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Phương trình $x^2 - y^2 = k$ là dạng toán phương trình nghiệm nguyên cơ bản nhất trong các kỳ thi HSG Toán 8 và 9. Điều kiện để phương trình có nghiệm nguyên là $k$ là số lẻ hoặc $k$ chia hết cho 4!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="17">
+      <div class="slide-header">
+        <span class="slide-badge">DẠNG 5: CỰC TRỊ TAM THỨC BẬC HAI & TOÁN HSG</span>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn primary" onclick="nextSlide()">Bắt Đầu Học ▶</button>
+        </div>
+      </div>
+      <div class="slide-body-full">
+        
+    <div class="theory-box">
+      <h3>1. Nguyên lý tìm Cực trị (GTNN & GTLN) bằng Hằng đẳng thức</h3>
+      <p style="font-size: 15px; line-height: 1.6;">
+        Tính chất nền tảng bất biến của số học và đại số: <strong>Bình phương của mọi biểu thức thực luôn không âm</strong>:
+        $$A^2 \ge 0 \quad \text{với mọi } A \in \mathbb{R}; \qquad \text{Dấu bằng xảy ra khi và chỉ khi } A = 0$$
+      </p>
+
+      <div class="formula-row">
+        <div class="formula-card">
+          <span class="formula-tag">Tìm Giá Trị Nhỏ Nhất (GTNN - Min)</span>
+          <p style="font-size: 14.5px; line-height: 1.5; margin-top: 5px;">
+            Tách biểu thức về dạng:
+            $$P(x) = [A(x)]^2 + m$$
+            Vì $[A(x)]^2 \ge 0$ nên $P(x) \ge m$.<br>
+            $\implies \min P(x) = m$, đạt được khi $A(x) = 0$.
+          </p>
+        </div>
+        <div class="formula-card">
+          <span class="formula-tag">Tìm Giá Trị Lớn Nhất (GTLN - Max)</span>
+          <p style="font-size: 14.5px; line-height: 1.5; margin-top: 5px;">
+            Tách biểu thức về dạng:
+            $$Q(x) = M - [A(x)]^2$$
+            Vì $-[A(x)]^2 \le 0$ nên $Q(x) \le M$.<br>
+            $\implies \max Q(x) = M$, đạt được khi $A(x) = 0$.
+          </p>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 16px;">2. Kỹ thuật tách tam thức bậc hai $ax^2 + bx + c$ hoàn chỉnh</h3>
+      <div class="theory-steps">
+        <div class="theory-step-item">
+          <strong>Bước 1 (Cô lập hệ số bậc hai):</strong> Nếu hệ số $a \ne 1$, đặt $a$ làm nhân tử chung cho các hạng tử chứa $x$: $a\left(x^2 + \frac{b}{a}x\right) + c$.
+        </div>
+        <div class="theory-step-item">
+          <strong>Bước 2 (Tạo hạng tử kép $2 \cdot x \cdot B$):</strong> Viết $x^2 + 2 \cdot x \cdot \frac{b}{2a}$, từ đó xác định $B = \frac{b}{2a}$ và cần cộng thêm $B^2 = \left(\frac{b}{2a}\right)^2$.
+        </div>
+        <div class="theory-step-item">
+          <strong>Bước 3 (Thêm bớt cân bằng):</strong> Cộng $B^2$ thì phải trừ ngay $B^2$ ở phía sau để giá trị biểu thức không đổi.
+        </div>
+      </div>
+
+      <h3 style="margin-top: 16px;">3. Phương pháp chứng minh chia hết bằng Hằng đẳng thức</h3>
+      <p style="font-size: 15px; line-height: 1.6;">
+        Để chứng minh một biểu thức $A(n)$ chia hết cho số tự nhiên $k$, ta biến đổi $A(n)$ về dạng $k \cdot M$ với $M$ là một số nguyên, hoặc phân tích $A(n)$ thành tích của các số nguyên liên tiếp.
+      </p>
+    </div>
+        
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="18" data-problem-id="13">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 5: Bài toán chứng minh chia hết</span>
+          <span class="level-badge level-2">Mức 2: Biến thể & Cài bẫy</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 13:</strong> Chứng minh các tính chất chia hết sau bằng hằng đẳng thức:<br>
+a) Với mọi số tự nhiên $n$, ta có: $(n + 2)^2 - n^2$ chia hết cho 4 (Bài 2.6 SGK);<br>
+b) Hiệu các bình phương của hai số lẻ liên tiếp chia hết cho 8;<br>
+c) Với mọi số nguyên $n$, biểu thức $A = (n + 7)^2 - (n - 5)^2$ luôn chia hết cho 24.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Bản chất số học:</strong></p>
+<ul>
+  <li>Tất cả các biểu thức đều có dạng hiệu hai bình phương $A^2 - B^2 = (A - B)(A + B)$.</li>
+  <li>Sau khi phân tích thành nhân tử, ta nhóm thừa số chung với số chia.</li>
+  <li>Ở câu b: Hai số lẻ liên tiếp có dạng $(2k + 1)$ và $(2k + 3)$ với $k \in \mathbb{Z}$.</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Chứng minh $(n + 2)^2 - n^2$ chia hết cho 4 với mọi số tự nhiên $n$:</strong></p>
+<p>Áp dụng hằng đẳng thức hiệu hai bình phương, ta có:<br>
+$(n + 2)^2 - n^2 = (n + 2 - n)(n + 2 + n) = 2(2n + 2) = 2 \cdot 2(n + 1) = 4(n + 1)$.</p>
+<p>Vì $n$ là số tự nhiên nên $n + 1$ cũng là số tự nhiên.<br>
+Do đó $4(n + 1)$ chia hết cho 4 với mọi số tự nhiên $n$.<br>
+<strong>Kết luận:</strong> Vậy $(n + 2)^2 - n^2$ chia hết cho 4 với mọi $n \in \mathbb{N}$ (đpcm).</p>
+
+<p><strong>b) Chứng minh hiệu bình phương hai số lẻ liên tiếp chia hết cho 8:</strong></p>
+<p>Gọi hai số lẻ liên tiếp là $2k + 1$ và $2k + 3$ (với $k \in \mathbb{Z}$).<br>
+Hiệu các bình phương của chúng là:<br>
+$(2k + 3)^2 - (2k + 1)^2 = [(2k + 3) - (2k + 1)][(2k + 3) + (2k + 1)]$<br>
+$= (2k + 3 - 2k - 1)(4k + 4) = 2 \cdot 4(k + 1) = 8(k + 1)$.</p>
+<p>Vì $k \in \mathbb{Z}$ nên $k + 1 \in \mathbb{Z}$.<br>
+Suy ra $8(k + 1)$ luôn chia hết cho 8 với mọi $k \in \mathbb{Z}$.<br>
+<strong>Kết luận:</strong> Vậy hiệu bình phương hai số lẻ liên tiếp luôn chia hết cho 8 (đpcm).</p>
+
+<p><strong>c) Chứng minh $A = (n + 7)^2 - (n - 5)^2$ chia hết cho 24 với mọi số nguyên $n$:</strong></p>
+<p>Áp dụng hiệu hai bình phương cho biểu thức $A$:<br>
+$A = [(n + 7) - (n - 5)][(n + 7) + (n - 5)]$<br>
+$= (n + 7 - n + 5)(2n + 2) = 12 \cdot 2(n + 1) = 24(n + 1)$.</p>
+<p>Vì $n \in \mathbb{Z}$ nên $n + 1 \in \mathbb{Z}$.<br>
+Do đó $24(n + 1)$ chia hết cho 24 với mọi số nguyên $n$.<br>
+<strong>Kết luận:</strong> Vậy $A$ luôn chia hết cho 24 với mọi $n \in \mathbb{Z}$ (đpcm).</p>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Ở câu b, học sinh hay quên đặt điều kiện $k \in \mathbb{Z}$, hoặc gọi hai số lẻ là $a$ và $b$ mà không biểu diễn được mối quan hệ liên tiếp qua cùng một tham số $k$, dẫn đến bế tắc khi chứng minh.</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Quy luật mở rộng: Tích của $k$ số nguyên liên tiếp luôn chia hết cho $k!$. Ví dụ tích 2 số nguyên liên tiếp $n(n+1)$ luôn chia hết cho 2, tích 3 số nguyên liên tiếp chia hết cho 6. Đây là công cụ đắc lực trong số học bồi dưỡng HSG.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="19" data-problem-id="14">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 5: Tìm Giá trị nhỏ nhất (GTNN)</span>
+          <span class="level-badge level-2">Mức 2: Biến thể & Cài bẫy</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 14:</strong> Tìm Giá trị nhỏ nhất (GTNN) của các biểu thức sau và chỉ rõ giá trị của biến khi đạt GTNN:<br>
+a) $A = x^2 - 4x + 9$;<br>
+b) $B = 4x^2 + 12x + 15$;<br>
+c) $C = x^2 - 6x + y^2 + 2y + 20$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Phương pháp tách bình phương hoàn chỉnh:</strong></p>
+<ul>
+  <li>Câu a: $x^2 - 4x = x^2 - 2 \cdot x \cdot 2$. Cần thêm $2^2 = 4$. Do đó tách $9 = 4 + 5$.</li>
+  <li>Câu b: $4x^2 + 12x = (2x)^2 + 2 \cdot (2x) \cdot 3$. Cần thêm $3^2 = 9$. Do đó tách $15 = 9 + 6$.</li>
+  <li>Câu c: Biểu thức chứa hai biến độc lập $x$ và $y$. Ta nhóm các hạng tử chứa $x$ thành một bình phương và nhóm các hạng tử chứa $y$ thành một bình phương riêng biệt!</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Tìm GTNN của $A = x^2 - 4x + 9$:</strong></p>
+<p>Biến đổi biểu thức $A$:<br>
+$A = (x^2 - 2 \cdot x \cdot 2 + 2^2) + 5 = (x - 2)^2 + 5$.</p>
+<p>Vì $(x - 2)^2 \ge 0$ với mọi $x \in \mathbb{R}$, nên $(x - 2)^2 + 5 \ge 5$ với mọi $x \in \mathbb{R}$.<br>
+Dấu bằng xảy ra khi $x - 2 = 0$, hay $x = 2$.<br>
+<strong>Kết luận:</strong> Vậy Giá trị nhỏ nhất của $A$ là $5$, đạt được khi $x = 2$.</p>
+
+<p><strong>b) Tìm GTNN của $B = 4x^2 + 12x + 15$:</strong></p>
+<p>Biến đổi biểu thức $B$:<br>
+$B = [(2x)^2 + 2 \cdot (2x) \cdot 3 + 3^2] + 6 = (2x + 3)^2 + 6$.</p>
+<p>Vì $(2x + 3)^2 \ge 0$ với mọi $x \in \mathbb{R}$, nên $(2x + 3)^2 + 6 \ge 6$ với mọi $x \in \mathbb{R}$.<br>
+Dấu bằng xảy ra khi $2x + 3 = 0$, hay $x = -\frac{3}{2}$.<br>
+<strong>Kết luận:</strong> Vậy Giá trị nhỏ nhất của $B$ là $6$, đạt được khi $x = -\frac{3}{2}$.</p>
+
+<p><strong>c) Tìm GTNN của $C = x^2 - 6x + y^2 + 2y + 20$:</strong></p>
+<p>Nhóm các biến riêng biệt:<br>
+$C = (x^2 - 6x + 9) + (y^2 + 2y + 1) + 10$<br>
+$C = (x - 3)^2 + (y + 1)^2 + 10$.</p>
+<p>Vì $(x - 3)^2 \ge 0$ và $(y + 1)^2 \ge 0$ với mọi $x, y \in \mathbb{R}$, nên:<br>
+$(x - 3)^2 + (y + 1)^2 + 10 \ge 10$ với mọi $x, y \in \mathbb{R}$.<br>
+Dấu bằng xảy ra khi đồng thời $x - 3 = 0$ và $y + 1 = 0$, tức là $x = 3$ và $y = -1$.<br>
+<strong>Kết luận:</strong> Vậy Giá trị nhỏ nhất của $C$ là $10$, đạt được khi $x = 3$ và $y = -1$.</p>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Học sinh hay quên bước "Chỉ rõ giá trị của biến khi đạt cực trị" (dấu bằng xảy ra khi nào). Trong thang điểm thi học sinh giỏi và thi vào 10, nếu không chỉ ra dấu bằng xảy ra thì sẽ bị trừ từ 0.25 đến 0.5 điểm!</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Công thức tổng quát cho tam thức bậc hai $P(x) = ax^2 + bx + c$ với $a > 0$: $\min P(x) = -\frac{\Delta}{4a} = c - \frac{b^2}{4a}$, đạt được tại đỉnh parabol $x = -\frac{b}{2a}$.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="20" data-problem-id="15">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 5: Tìm Giá trị lớn nhất (GTLN)</span>
+          <span class="level-badge level-2">Mức 2: Biến thể & Cài bẫy</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 15:</strong> Tìm Giá trị lớn nhất (GTLN) của các biểu thức sau và chỉ rõ giá trị của biến khi đạt GTLN:<br>
+a) $M = 5 - x^2 + 2x$;<br>
+b) $N = -9x^2 + 6x + 8$;<br>
+c) $P = -x^2 - y^2 + 4x - 6y + 1$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Chiến lược xử lý dấu trừ:</strong></p>
+<ul>
+  <li>Khi hệ số trước $x^2$ mang dấu âm, ta <strong>đặt dấu trừ ra ngoài dấu ngoặc tròn</strong> cho các hạng tử chứa $x$ để chuyển về bình phương quen thuộc: $-x^2 + 2x = -(x^2 - 2x)$.</li>
+  <li>Đưa về cấu trúc $M - [A(x)]^2 \le M$. Vì $-[A(x)]^2 \le 0$ nên giá trị lớn nhất chính là số $M$ đứng đầu.</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Tìm GTLN của $M = 5 - x^2 + 2x$:</strong></p>
+<p>Biến đổi biểu thức $M$:<br>
+$M = 5 - (x^2 - 2x) = 5 - (x^2 - 2x + 1 - 1)$<br>
+$M = 5 - [(x - 1)^2 - 1] = 5 - (x - 1)^2 + 1 = 6 - (x - 1)^2$.</p>
+<p>Vì $(x - 1)^2 \ge 0$ nên $-(x - 1)^2 \le 0$, suy ra $6 - (x - 1)^2 \le 6$ với mọi $x \in \mathbb{R}$.<br>
+Dấu bằng xảy ra khi $x - 1 = 0$, hay $x = 1$.<br>
+<strong>Kết luận:</strong> Vậy Giá trị lớn nhất của $M$ là $6$, đạt được khi $x = 1$.</p>
+
+<p><strong>b) Tìm GTLN của $N = -9x^2 + 6x + 8$:</strong></p>
+<p>Biến đổi biểu thức $N$:<br>
+$N = 8 - (9x^2 - 6x) = 8 - [(3x)^2 - 2 \cdot (3x) \cdot 1 + 1 - 1]$<br>
+$N = 8 - [(3x - 1)^2 - 1] = 8 - (3x - 1)^2 + 1 = 9 - (3x - 1)^2$.</p>
+<p>Vì $(3x - 1)^2 \ge 0$ nên $-(3x - 1)^2 \le 0$, suy ra $9 - (3x - 1)^2 \le 9$ với mọi $x \in \mathbb{R}$.<br>
+Dấu bằng xảy ra khi $3x - 1 = 0$, hay $x = \frac{1}{3}$.<br>
+<strong>Kết luận:</strong> Vậy Giá trị lớn nhất của $N$ là $9$, đạt được khi $x = \frac{1}{3}$.</p>
+
+<p><strong>c) Tìm GTLN của $P = -x^2 - y^2 + 4x - 6y + 1$:</strong></p>
+<p>Nhóm các biến riêng biệt và đặt dấu trừ ra ngoài:<br>
+$P = 1 - (x^2 - 4x) - (y^2 + 6y)$<br>
+$P = 1 - (x^2 - 4x + 4 - 4) - (y^2 + 6y + 9 - 9)$<br>
+$P = 1 - (x - 2)^2 + 4 - (y + 3)^2 + 9$<br>
+$P = 14 - (x - 2)^2 - (y + 3)^2$.</p>
+<p>Vì $(x - 2)^2 \ge 0$ và $(y + 3)^2 \ge 0$ với mọi $x, y \in \mathbb{R}$, nên:<br>
+$P \le 14$ với mọi $x, y \in \mathbb{R}$.<br>
+Dấu bằng xảy ra khi đồng thời $x - 2 = 0$ và $y + 3 = 0$, tức là $x = 2$ và $y = -3$.<br>
+<strong>Kết luận:</strong> Vậy Giá trị lớn nhất của $P$ là $14$, đạt được khi $x = 2$ và $y = -3$.</p>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Sai lầm phổ biến nhất là nhầm dấu khi phá ngoặc: $5 - [(x - 1)^2 - 1] = 5 - (x - 1)^2 - 1 = 4$ (quên đổi dấu $-(-1)$ thành $+1$). Đây là lỗi sai mà hơn 70% học sinh bị mắc phải.</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Dạng bài toán cực trị hai biến $x, y$ thường xuất hiện trong các bài toán thực tế tối ưu hóa hình học (ví dụ: tìm kích thước mảnh đất để diện tích lớn nhất với chu vi cho trước).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="slide-card" data-slide="21" data-problem-id="16">
+      <div class="slide-header">
+        <div>
+          <span class="slide-badge">Dạng 5: Bất đẳng thức & Cực trị phân thức (Bồi dưỡng HSG)</span>
+          <span class="level-badge level-3">Mức 3: Vận dụng cao</span>
+        </div>
+        <div class="slide-quick-ctrl">
+          <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
+          <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
+          <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
+        </div>
+      </div>
+      
+      <div class="slide-body-full">
+        <div class="problem-box">
+          <strong>Bài 16:</strong> Giải các bài toán bồi dưỡng học sinh giỏi và thi vào lớp 10 sau:<br>
+a) Chứng minh rằng với mọi số thực $x, y$, ta luôn có: $x^2 + y^2 + 1 \ge xy + x + y$;<br>
+b) Cho hai số thực $x, y$ thỏa mãn $x^2 + y^2 = 5$. Tìm GTLN và GTNN của biểu thức $T = x + 2y$;<br>
+c) Tìm Giá trị nhỏ nhất của biểu thức phân thức: $Q = \frac{4x + 3}{x^2 + 1}$.
+        </div>
+
+        <!-- 🧭 KHỐI PHÂN TÍCH TÌM HƯỚNG GIẢI (HEURISTIC / THINKING-ALOUD) -->
+        <div class="analysis-box">
+          <div class="analysis-header">
+            <span>🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (THINKING-ALOUD):</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentAnalysis(event)" title="Đóng hướng giải (Phím H)">✕ Đóng</button>
+          </div>
+          <div class="analysis-content">
+            <p><strong>Tư duy đỉnh cao dành cho học sinh giỏi:</strong></p>
+<ul>
+  <li>Câu a: Bất đẳng thức kinh điển! Nhân cả hai vế với 2 để xuất hiện các hằng đẳng thức: $2x^2 + 2y^2 + 2 - 2xy - 2x - 2y = (x - y)^2 + (x - 1)^2 + (y - 1)^2 \ge 0$.</li>
+  <li>Câu b: Dùng Bất đẳng thức Cauchy-Schwarz (hoặc hằng đẳng thức Lagrange): $(x + 2y)^2 \le (1^2 + 2^2)(x^2 + y^2)$. Từ đó chặn được hai đầu của $T$.</li>
+  <li>Câu c: Kỹ thuật tách bình phương trên phân thức: $Q - m = \frac{4x + 3 - m(x^2 + 1)}{x^2 + 1}$. Tìm $m$ sao cho tử thức trở thành một bình phương hoàn chỉnh!</li>
+</ul>
+          </div>
+        </div>
+
+        <!-- 💡 KHỐI LỜI GIẢI MẪU MỰC CHUẨN SƯ PHẠM SGK -->
+        <div class="solution-box">
+          <div class="solution-header">
+            <span>💡 LỜI GIẢI MẪU MỰC:</span>
+            <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
+          </div>
+          <div class="solution-content">
+            <p><strong>a) Chứng minh: $x^2 + y^2 + 1 \ge xy + x + y$ với mọi số thực $x, y$:</strong></p>
+<p>Biến đổi tương đương bằng cách nhân cả hai vế với 2 và chuyển hết sang vế trái:<br>
+Xét hiệu $H = 2(x^2 + y^2 + 1) - 2(xy + x + y)$<br>
+$H = 2x^2 + 2y^2 + 2 - 2xy - 2x - 2y$<br>
+Tách các hạng tử để tạo thành tổng của ba bình phương:<br>
+$H = (x^2 - 2xy + y^2) + (x^2 - 2x + 1) + (y^2 - 2y + 1)$<br>
+$H = (x - y)^2 + (x - 1)^2 + (y - 1)^2$.</p>
+<p>Vì $(x - y)^2 \ge 0$, $(x - 1)^2 \ge 0$, $(y - 1)^2 \ge 0$ với mọi $x, y \in \mathbb{R}$, nên $H \ge 0$.<br>
+Do đó $2(x^2 + y^2 + 1) \ge 2(xy + x + y)$, suy ra $x^2 + y^2 + 1 \ge xy + x + y$ với mọi $x, y$.<br>
+Dấu bằng xảy ra khi đồng thời $x - y = 0, x - 1 = 0, y - 1 = 0$, tức là $x = y = 1$.<br>
+<strong>Kết luận:</strong> Bất đẳng thức được chứng minh.</p>
+
+<p><strong>b) Tìm GTLN và GTNN của $T = x + 2y$ biết $x^2 + y^2 = 5$:</strong></p>
+<p>Áp dụng Đẳng thức Lagrange bậc hai:<br>
+$(1^2 + 2^2)(x^2 + y^2) = (1 \cdot x + 2 \cdot y)^2 + (1 \cdot 2y - 2 \cdot x)^2$<br>
+Tức là $(1 + 4)(x^2 + y^2) = (x + 2y)^2 + (2y - x)^2$.<br>
+Vì $(2y - x)^2 \ge 0$, nên ta có bất đẳng thức:<br>
+$(x + 2y)^2 \le (1^2 + 2^2)(x^2 + y^2) = 5 \cdot 5 = 25$.</p>
+<p>Từ $(x + 2y)^2 \le 25$, suy ra $-5 \le x + 2y \le 5$.<br>
+Do đó $-5 \le T \le 5$.</p>
+<ul>
+  <li>$T = 5$ khi $\begin{cases} x + 2y = 5 \\ 2y - x = 0 \end{cases} \implies \begin{cases} x = 1 \\ y = 2 \end{cases}$ (thỏa mãn $1^2 + 2^2 = 5$).</li>
+  <li>$T = -5$ khi $\begin{cases} x + 2y = -5 \\ 2y - x = 0 \end{cases} \implies \begin{cases} x = -1 \\ y = -2 \end{cases}$ (thỏa mãn $(-1)^2 + (-2)^2 = 5$).</li>
+</ul>
+<p><strong>Kết luận:</strong> Giá trị lớn nhất của $T$ là $5$ (khi $x = 1, y = 2$); Giá trị nhỏ nhất của $T$ là $-5$ (khi $x = -1, y = -2$).</p>
+
+<p><strong>c) Tìm GTNN của biểu thức phân thức: $Q = \frac{4x + 3}{x^2 + 1}$:</strong></p>
+<p>Xét hiệu $Q - (-1) = Q + 1$:<br>
+$Q + 1 = \frac{4x + 3}{x^2 + 1} + 1 = \frac{4x + 3 + x^2 + 1}{x^2 + 1} = \frac{x^2 + 4x + 4}{x^2 + 1} = \frac{(x + 2)^2}{x^2 + 1}$.</p>
+<p>Vì $(x + 2)^2 \ge 0$ và $x^2 + 1 > 0$ với mọi $x \in \mathbb{R}$, nên:<br>
+$\frac{(x + 2)^2}{x^2 + 1} \ge 0 \implies Q + 1 \ge 0 \implies Q \ge -1$.<br>
+Dấu bằng xảy ra khi $(x + 2)^2 = 0$, tức là $x = -2$.<br>
+<strong>Kết luận:</strong> Vậy Giá trị nhỏ nhất của $Q$ là $-1$, đạt được khi $x = -2$.</p>
+
+            <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
+            <div class="pitfall-box">
+              <div class="pitfall-header">⚠️ CẠM BẪY & SAI LẦM THƯỜNG GẶP:</div>
+              <p>Ở câu c, việc tìm ra số $-1$ để cộng vào thoạt nhìn như "phép màu". Cần giải thích cho học sinh cách nhẩm: Giả sử $Q \ge m \implies mx^2 - 4x + (m - 3) \ge 0$, để trở thành bình phương thì $\Delta' = 2^2 - m(m - 3) = 0 \implies 4 - m^2 + 3m = 0 \implies (m + 1)(4 - m) = 0 \implies m = -1$ (cho GTNN) hoặc $m = 4$ (cho GTLN = 4 khi $x = \frac{1}{2}$).</p>
+            </div>
+
+            <!-- 🚀 KHAI THÁC & MỞ RỘNG BÀI TOÁN -->
+            <div class="extension-box">
+              <div class="extension-header">🚀 KHAI THÁC & PHÁT TRIỂN TƯ DUY:</div>
+              <p>Kỹ thuật tìm cực trị biểu thức phân thức bằng cách đưa về bình phương ở tử thức và mẫu thức dương là một trong những câu phân loại điểm 10 kinh điển nhất trong kỳ thi tuyển sinh vào lớp 10 THPT công lập toàn quốc!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </main>
 
   <!-- VÙNG IN PHIẾU BÀI TẬP A4 CHO HỌC SINH -->
   <div class="print-handout-wrapper">
     <div class="print-header">
       <div>
-        <strong>LỚP DẠY THÊM / BỒI DƯỠNG TOÁN 9</strong><br>
+        <strong>LỚP DẠY THÊM / BỒI DƯỠNG TOÁN 8</strong><br>
         Giáo viên: Hoàng Thiên
       </div>
       <div>
@@ -2095,10 +3792,316 @@
 
     <div class="print-title">
       <h1>PHIẾU BÀI TẬP RÈN LUYỆN KỸ NĂNG</h1>
-      <p>{{TEN_CHUYEN_DE}}</p>
+      <p>CHUYÊN ĐỀ 2: BA HẰNG ĐẲNG THỨC ĐÁNG NHỚ ĐẦU TIÊN VÀ CÁC ỨNG DỤNG ĐẠI SỐ KINH ĐIỂN (TOÁN 8 - KẾT NỐI TRI THỨC)</p>
     </div>
 
-    __PRINT_HTML__
+    
+    <div class="print-section-title">DẠNG 1: NHẬN DIỆN HẰNG ĐẲNG THỨC & KHAI TRIỂN BIỂU THỨC</div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 1 (Mức 1: Củng cố kỹ năng):</div>
+      <div class="print-item-debai">Trong các đẳng thức sau, đẳng thức nào là hằng đẳng thức? Giải thích bản chất đại số:<br>
+a) $2x(x + 1) = 2x^2 + 2x$ và $(a + b)a = a^2 + ba$;<br>
+b) $x + 2 = 3x + 1$ và $a - 2 = 2a + 1$;<br>
+c) $(x - y)^2 = (y - x)^2$ và $(-x - y)^2 = (x + y)^2$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 2 (Mức 1: Củng cố kỹ năng):</div>
+      <div class="print-item-debai">Thực hiện khai triển các biểu thức sau theo hằng đẳng thức bình phương của một tổng hoặc một hiệu:<br>
+a) $(2x + 1)^2$ và $\left(x + \frac{1}{2}\right)^2$;<br>
+b) $(3x - 2y)^2$ và $\left(2x - \frac{3}{2}\right)^2$;<br>
+c) $(x^2 + 2y)^2$ và $(2x^2 - 3y^3)^2$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 3 (Mức 2: Biến thể & Cài bẫy):</div>
+      <div class="print-item-debai">Khai triển và thu gọn các biểu thức sau:<br>
+a) $(x - 3y)(x + 3y)$ và $(2x - 5)(2x + 5)$;<br>
+b) $\left(\frac{1}{2}x - 2y\right)\left(\frac{1}{2}x + 2y\right)$ và $(x^2 - 4)(x^2 + 4)$;<br>
+c) $(-2x - 3y)^2$ và $(y - 2x)(2x + y)$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-section-title">DẠNG 2: VIẾT ĐA THỨC DƯỚI DẠNG BÌNH PHƯƠNG HOẶC TÍCH (ĐIỀN KHUYẾT & THU GỌN)</div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 4 (Mức 1: Củng cố kỹ năng):</div>
+      <div class="print-item-debai">Thay dấu $[?]$ bằng biểu thức thích hợp để được các hằng đẳng thức đúng:<br>
+a) $(x - 3y)(x + 3y) = x^2 - [?]$; <br>
+b) $(2x - y)(2x + y) = 4[?] - y^2$; <br>
+c) $x^2 + 8xy + [?] = ([?] + 4y)^2$; <br>
+d) $[?] - 12xy + 9y^2 = (2x - [?])^2$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 5 (Mức 1: Củng cố kỹ năng):</div>
+      <div class="print-item-debai">Viết các đa thức sau dưới dạng bình phương của một tổng hoặc một hiệu:<br>
+a) $x^2 + 4x + 4$ và $9x^2 - 6x + 1$;<br>
+b) $16a^2 - 16ab + 4b^2$ và $25x^2 + 20xy + 4y^2$;<br>
+c) $x^2 - x + \frac{1}{4}$ và $4(x - y)^2 - 4(x - y) + 1$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 6 (Mức 2: Biến thể & Cài bẫy):</div>
+      <div class="print-item-debai">Viết các đa thức sau dưới dạng tích của các đa thức bậc nhất:<br>
+a) $4x^2 - 9$ và $(x + 1)^2 - 4$;<br>
+b) $(2x - 1)^2 - (x + 2)^2$;<br>
+c) $x^4 - 16$ và $(x^2 + 1)^2 - 4x^2$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-section-title">DẠNG 3: TÍNH NHANH GIÁ TRỊ BIỂU THỨC SỐ VÀ RÚT GỌN ĐẠI SỐ</div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 7 (Mức 1: Củng cố kỹ năng):</div>
+      <div class="print-item-debai">Vận dụng hằng đẳng thức để tính nhẩm nhanh giá trị của các biểu thức số sau:<br>
+a) $54 \cdot 66$ và $198 \cdot 202$;<br>
+b) $203^2$ và $99^2$;<br>
+c) $1002^2$ và $2023^2 - 2022^2$ (Bài toán mở đầu SGK trang 29).</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 8 (Mức 2: Biến thể & Cài bẫy):</div>
+      <div class="print-item-debai">Rút gọn các biểu thức sau bằng phương pháp thích hợp:<br>
+a) $(x - 3y)^2 - (x + 3y)^2$;<br>
+b) $(3x + 4y)^2 + (4x - 3y)^2$;<br>
+c) $(x + 2y)^2 - (x - 2y)^2 - 8xy$ và $P = (x - 1)(x + 1)(x^2 + 1)(x^4 + 1)$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 9 (Mức 2: Biến thể & Cài bẫy):</div>
+      <div class="print-item-debai">Thực hiện tính giá trị biểu thức đại số một cách hợp lý:<br>
+a) Tính giá trị của $P = x^2 - 10x + 25$ tại $x = 105$;<br>
+b) Tính giá trị của $Q = 4x^2 + 12xy + 9y^2$ biết $2x + 3y = 20$;<br>
+c) Cho $x + y = 7$ và $xy = 12$. Không tìm giá trị của $x$ và $y$, hãy tính giá trị của $A = x^2 + y^2$ và $B = (x - y)^2$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-section-title">DẠNG 4: TÌM X VÀ GIẢI PHƯƠNG TRÌNH ĐƯA VỀ TÍCH HOẶC ĐÁNH GIÁ LŨY THỪA</div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 10 (Mức 1: Củng cố kỹ năng):</div>
+      <div class="print-item-debai">Tìm số thực $x$, biết:<br>
+a) $(x + 3)^2 - x^2 = 21$;<br>
+b) $(2x - 1)^2 - 4x(x + 3) = 9$;<br>
+c) $(x - 2)^2 - (x + 1)(x - 1) = 5$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 11 (Mức 2: Biến thể & Cài bẫy):</div>
+      <div class="print-item-debai">Tìm các giá trị của $x$, biết:<br>
+a) $(2x + 1)^2 - (x - 3)^2 = 0$;<br>
+b) $4x^2 - 25 = 0$ và $(3x - 2)^2 = 16$;<br>
+c) $x^2 - 6x + 9 = (2x - 1)^2$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 12 (Mức 3: Vận dụng cao):</div>
+      <div class="print-item-debai">Giải các bài toán tìm biến số sau:<br>
+a) Tìm $x$, biết: $(x + 2)^2 - 2(x + 2) + 1 = 0$;<br>
+b) Tìm $x$, biết: $(x^2 - 4)^2 - (x - 2)^2 = 0$;<br>
+c) Tìm tất cả các cặp số nguyên $(x, y)$ thỏa mãn đẳng thức: $x^2 - y^2 = 13$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-section-title">DẠNG 5: TÌM GIÁ TRỊ LỚN NHẤT, NHỎ NHẤT VÀ BỒI DƯỠNG HỌC SINH GIỎI</div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 13 (Mức 2: Biến thể & Cài bẫy):</div>
+      <div class="print-item-debai">Chứng minh các tính chất chia hết sau bằng hằng đẳng thức:<br>
+a) Với mọi số tự nhiên $n$, ta có: $(n + 2)^2 - n^2$ chia hết cho 4 (Bài 2.6 SGK);<br>
+b) Hiệu các bình phương của hai số lẻ liên tiếp chia hết cho 8;<br>
+c) Với mọi số nguyên $n$, biểu thức $A = (n + 7)^2 - (n - 5)^2$ luôn chia hết cho 24.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 14 (Mức 2: Biến thể & Cài bẫy):</div>
+      <div class="print-item-debai">Tìm Giá trị nhỏ nhất (GTNN) của các biểu thức sau và chỉ rõ giá trị của biến khi đạt GTNN:<br>
+a) $A = x^2 - 4x + 9$;<br>
+b) $B = 4x^2 + 12x + 15$;<br>
+c) $C = x^2 - 6x + y^2 + 2y + 20$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 15 (Mức 2: Biến thể & Cài bẫy):</div>
+      <div class="print-item-debai">Tìm Giá trị lớn nhất (GTLN) của các biểu thức sau và chỉ rõ giá trị của biến khi đạt GTLN:<br>
+a) $M = 5 - x^2 + 2x$;<br>
+b) $N = -9x^2 + 6x + 8$;<br>
+c) $P = -x^2 - y^2 + 4x - 6y + 1$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-item">
+      <div class="print-item-header">Bài 16 (Mức 3: Vận dụng cao):</div>
+      <div class="print-item-debai">Giải các bài toán bồi dưỡng học sinh giỏi và thi vào lớp 10 sau:<br>
+a) Chứng minh rằng với mọi số thực $x, y$, ta luôn có: $x^2 + y^2 + 1 \ge xy + x + y$;<br>
+b) Cho hai số thực $x, y$ thỏa mãn $x^2 + y^2 = 5$. Tìm GTLN và GTNN của biểu thức $T = x + 2y$;<br>
+c) Tìm Giá trị nhỏ nhất của biểu thức phân thức: $Q = \frac{4x + 3}{x^2 + 1}$.</div>
+      <div class="print-lines">
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+        <div class="print-line"></div>
+      </div>
+    </div>
+
+
+    <div class="print-section-title" style="margin-top: 30px;">PHẦN IV: BẢNG MA TRẬN TỰ ĐÁNH GIÁ NĂNG LỰC (SELF-ASSESSMENT RUBRIC)</div>
+    <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13.5px;" border="1">
+      <thead>
+        <tr style="background: #f1f5f9; text-align: center;">
+          <th style="padding: 8px;">Tiêu chí Đánh giá</th>
+          <th style="padding: 8px; width: 18%;">Mức 1 (Đạt yêu cầu)</th>
+          <th style="padding: 8px; width: 22%;">Mức 2 (Thành thạo)</th>
+          <th style="padding: 8px; width: 22%;">Mức 3 (Vận dụng cao)</th>
+          <th style="padding: 8px; width: 15%;">Tự đánh giá</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding: 8px;"><strong>1. Kỹ năng Khai triển</strong></td>
+          <td style="padding: 8px;">Khai triển đúng $(A \pm B)^2, A^2 - B^2$ với đơn thức đơn giản</td>
+          <td style="padding: 8px;">Khai triển chính xác với hệ số phân số, bậc cao và đổi dấu</td>
+          <td style="padding: 8px;">Khai triển tam thức 3 hạng tử, đẳng thức Lagrange</td>
+          <td style="padding: 8px; text-align: center;">☐ Tốt &nbsp; ☐ Cần rèn</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px;"><strong>2. Đưa về bình phương / tích</strong></td>
+          <td style="padding: 8px;">Nhận diện đúng $A, B$ trong tam thức cơ bản</td>
+          <td style="padding: 8px;">Thu gọn thành bình phương khi có hệ số hoặc phân số</td>
+          <td style="padding: 8px;">Phân tích đa thức thành nhân tử nhiều lớp</td>
+          <td style="padding: 8px; text-align: center;">☐ Tốt &nbsp; ☐ Cần rèn</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px;"><strong>3. Tính nhẩm & Rút gọn</strong></td>
+          <td style="padding: 8px;">Tính nhẩm tích hai số cách đều số tròn</td>
+          <td style="padding: 8px;">Rút gọn biểu thức đối xứng $(A+B)^2 \pm (A-B)^2$</td>
+          <td style="padding: 8px;">Tính giá trị biểu thức qua tổng $S$ và tích $P$</td>
+          <td style="padding: 8px; text-align: center;">☐ Tốt &nbsp; ☐ Cần rèn</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px;"><strong>4. Tìm x & Phương trình</strong></td>
+          <td style="padding: 8px;">Giải phương trình triệt tiêu bậc hai</td>
+          <td style="padding: 8px;">Giải phương trình đưa về tích $A^2 - B^2 = 0$</td>
+          <td style="padding: 8px;">Giải phương trình nghiệm nguyên, phương trình ẩn phụ</td>
+          <td style="padding: 8px; text-align: center;">☐ Tốt &nbsp; ☐ Cần rèn</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px;"><strong>5. Cực trị & Bồi dưỡng HSG</strong></td>
+          <td style="padding: 8px;">Hiểu tính chất $A^2 \ge 0$</td>
+          <td style="padding: 8px;">Tìm đúng GTNN, GTLN của tam thức bậc hai</td>
+          <td style="padding: 8px;">Chứng minh chia hết, cực trị biểu thức phân thức</td>
+          <td style="padding: 8px; text-align: center;">☐ Tốt &nbsp; ☐ Cần rèn</td>
+        </tr>
+      </tbody>
+    </table>
+
   </div>
 
   <!-- ==========================================================================
@@ -2106,10 +4109,10 @@
        ========================================================================== -->
   <script>
     let currentSlide = 1;
-    const totalSlides = __TOTAL_SLIDES__;
+    const totalSlides = 21;
     let currentFontSizeIdx = 0;
     const fontSizes = ["28px", "32px", "36px", "40px", "44px", "24px"];
-    const originalSvgs = __ORIGINAL_SVGS_JSON__;
+    const originalSvgs = {};
 
     function showSlide(index) {
       if (index < 1) index = 1;

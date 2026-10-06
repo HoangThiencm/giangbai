@@ -34,6 +34,11 @@ function sanitizeKhbdMathSource(text) {
   source = source.replace(/\\\s+\\vdots\s+\\/g, "\\vdots");
   source = source.replace(/(?<=\d|[a-zA-Z])\s*(?:\\dots|\bdots\b)\s*(?=\d|[a-zA-Z])/g, " \\vdots ");
   source = source.replace(/(?<=\d|[a-zA-Z])\s*\\vdots\s*(?=\d|[a-zA-Z])/g, " \\vdots ");
+
+  // 3. Quy chuẩn Sư phạm THCS (GDPT 2018): Cấm dấu tương đương <=> và \Leftrightarrow
+  source = source.replace(/\\(?:Leftrightarrow|iff|leftrightarrow)\b/g, "\\text{ hay }");
+  source = source.replace(/<=>/g, " hay ");
+  source = source.replace(/⇔/g, " hay ");
   return source;
 }
 
