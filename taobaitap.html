@@ -15624,7 +15624,7 @@ module.exports = {
             const [step, setStep] = useState(1);
             const [mode, setMode] = useState("quiz");
             const [topics, setTopics] = useState([
-                { id: Date.now(), name: '', count: 5, level: 'Trung bình', quizType: 'multiple-choice' }
+                { id: Date.now(), name: '', count: 5, level: 'Trung bình', quizType: 'multiple-choice', note: '' }
             ]);
 
             const [questions, setQuestions] = useState(() => {
@@ -15688,6 +15688,8 @@ module.exports = {
                 setSynthCount((parseInt(next.part1, 10) || 0) + (parseInt(next.part2, 10) || 0) + (parseInt(next.part3, 10) || 0));
             };
             const [synthLevel, setSynthLevel] = useState('Hỗn hợp');
+            const [synthCustomPrompt, setSynthCustomPrompt] = useState('');
+            const [topicsGlobalNote, setTopicsGlobalNote] = useState('');
             const [retryCount, setRetryCount] = useState(0);
             const [showSettings, setShowSettings] = useState(false);
             const [showOlmModal, setShowOlmModal] = useState(false);
@@ -15810,7 +15812,8 @@ module.exports = {
                     name: '',
                     count: 5,
                     level: 'Trung bình',
-                    quizType: 'multiple-choice'
+                    quizType: 'multiple-choice',
+                    note: ''
                 };
                 setTopics([...topics, newTopic]);
             };
@@ -16181,8 +16184,14 @@ BẮT BUỘC: Bạn PHẢI tạo ra bộ câu hỏi MỚI HOÀN TOÀN, không l�
                 - Thay đổi linh hoạt các số liệu, dữ kiện, tên biến và ngữ cảnh bài toán.
                 - Mỗi lần tạo đề phải là một trải nghiệm học tập mới mẻ, phong phú, không rập khuôn đơn điệu.
                 ${antiDuplicationPrompt}`;
+                const withTopicNote = (line, topic) => (topic.note && topic.note.trim())
+                    ? `${line} [Yêu cầu riêng: ${topic.note.trim()}]`
+                    : line;
+                const topicsGlobalBlock = topicsGlobalNote.trim()
+                    ? `\nYÊU CẦU & ĐỊNH HƯỚNG CHUNG CỦA GIÁO VIÊN:\n${topicsGlobalNote.trim()}\n(BẮT BUỘC: Ưu tiên áp dụng các yêu cầu này cho tất cả câu hỏi được tạo).\nGiữ nguyên cấu trúc JSON và các field bắt buộc; chỉ điều chỉnh nội dung kiến thức và ngữ cảnh câu hỏi theo yêu cầu giáo viên.\n`
+                    : '';
                 const structurePrompt = topicsToGenerate.map((t, idx) => {
-                    return `- Phần ${idx + 1}: Chủ đề "${t.name}", ${t.count} câu/bài, Mức độ: ${t.level === "Hỗn hợp" ? "Hỗn hợp (30% Dễ, 40% TB, 30% Khó)" : t.level}`;
+                    return withTopicNote(`- Phần ${idx + 1}: Chủ đề "${t.name}", ${t.count} câu/bài, Mức độ: ${t.level === "Hỗn hợp" ? "Hỗn hợp (30% Dễ, 40% TB, 30% Khó)" : t.level}`, t);
                 }).join('\n');
                 const sourceContext = getSourceContext();
                 const sourceInstruction = sourceContext.trim()
@@ -16199,22 +16208,23 @@ BẮT BUỘC: Bạn PHẢI tạo ra bộ câu hỏi MỚI HOÀN TOÀN, không l�
                 if (mode === "quiz") {
                     const topicPrompts = topicsToGenerate.map((t, idx) => {
                         const basePrompt = `- Phần ${idx + 1}: Chủ đề "${t.name}", ${t.count} câu, Mức độ: ${t.level === "Hỗn hợp" ? "Hỗn hợp (30% Dễ, 40% TB, 30% Khó)" : t.level}`;
+                        let line = basePrompt;
 
                         if (t.quizType === "multiple-choice") {
-                            return `${basePrompt} - Loại: Trắc nghiệm nhiều lựa chọn (4 phương án A,B,C,D)`;
+                            line = `${basePrompt} - Loại: Trắc nghiệm nhiều lựa chọn (4 phương án A,B,C,D)`;
                         } else if (t.quizType === "true-false") {
-                            return `${basePrompt} - Loại: Trắc nghiệm đúng-sai 4 ý a, b, c, d trên 1 ngữ cảnh/bài toán chung (type: true-false, options 4 mệnh đề + correct_answers [bool,bool,bool,bool])`;
+                            line = `${basePrompt} - Loại: Trắc nghiệm đúng-sai 4 ý a, b, c, d trên 1 ngữ cảnh/bài toán chung (type: true-false, options 4 mệnh đề + correct_answers [bool,bool,bool,bool])`;
                         } else if (t.quizType === "fill-blank") {
-                            return `${basePrompt} - Loại: Điền khuyết (có chỗ trống ______)`;
+                            line = `${basePrompt} - Loại: Điền khuyết (có chỗ trống ______)`;
                         } else if (t.quizType === "matching") {
-                            return `${basePrompt} - Loại: Nối ô (2 cột A và B)`;
+                            line = `${basePrompt} - Loại: Nối ô (2 cột A và B)`;
                         } else if (t.quizType === "short-answer") {
-                            return `${basePrompt} - Loại: Trả lời ngắn (correctAnswer CHỈ CHỨA SỐ: nguyên, thập phân hoặc phân số ngắn gọn, ví dụ "25", "3.5", "-4", "1/2". Không kèm chữ/đơn vị)`;
+                            line = `${basePrompt} - Loại: Trả lời ngắn (correctAnswer CHỈ CHỨA SỐ: nguyên, thập phân hoặc phân số ngắn gọn, ví dụ "25", "3.5", "-4", "1/2". Không kèm chữ/đơn vị)`;
                         }
-                        return basePrompt;
+                        return withTopicNote(line, t);
                     }).join('\n');
 
-                    prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} câu hỏi trắc nghiệm dựa trên cấu trúc sau:\n${topicPrompts}\n
+                    prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} câu hỏi trắc nghiệm dựa trên cấu trúc sau:\n${topicPrompts}\n${topicsGlobalBlock}
                     ${sourceInstruction}
 
                     QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
@@ -16238,7 +16248,7 @@ BẮT BUỘC: Bạn PHẢI tạo ra bộ câu hỏi MỚI HOÀN TOÀN, không l�
 
                     Output JSON Strict: Một mảng phẳng chứa tất cả câu hỏi theo thứ tự các phần đã định.`;
                 } else {
-                    prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} bài tập TỰ LUẬN dựa trên cấu trúc sau:\n${structurePrompt}\n
+                    prompt = `Đóng vai giáo viên giỏi. Tạo tổng cộng ${totalQuestions} bài tập TỰ LUẬN dựa trên cấu trúc sau:\n${structurePrompt}\n${topicsGlobalBlock}
                     ${sourceInstruction}
 
                     Mỗi bài tập TỰ LUẬN gồm:
@@ -16377,6 +16387,10 @@ Tổng cộng toàn đề đúng ${cv7991Total} câu = 10.0 điểm. Đúng th�
                     typeInstruction = 'Hình thức: chỉ Nối ô.';
                 }
 
+                const synthTeacherBlock = synthCustomPrompt.trim()
+                    ? `\nYÊU CẦU & ĐỊNH HƯỚNG SƯ PHẠM RIÊNG CỦA GIÁO VIÊN:\n${synthCustomPrompt.trim()}\n(BẮT BUỘC: Hãy tuân thủ nghiêm ngặt và ưu tiên áp dụng đúng các yêu cầu trên vào toàn bộ câu hỏi và lời giải được tạo).\nGiữ nguyên cấu trúc JSON và các field bắt buộc; chỉ điều chỉnh nội dung kiến thức và ngữ cảnh câu hỏi theo yêu cầu giáo viên.\n`
+                    : '';
+
                 setLoading(true);
                 setRetryCount(0);
                 beginGenerationProgress();
@@ -16387,7 +16401,7 @@ Tổng cộng toàn đề đúng ${cv7991Total} câu = 10.0 điểm. Đúng th�
 KHÔNG cần danh sách chủ đề do giáo viên nhập. Quét TOÀN DIỆN tài liệu đã nạp và bám sát 100% nội dung học liệu; không bịa kiến thức ngoài nguồn.
 Mức độ: ${levelText}
 ${typeInstruction}
-
+${synthTeacherBlock}
 QUY TẮC TOÁN: Dùng dấu $...$ bao quanh công thức. KHÔNG dùng dấu huyền \`.
 QUY TẮC JSON: Chuỗi JSON phải escape đúng. Không dùng dấu \\ đơn lẻ.
 QUY TẮC OUTPUT: Trả về một mảng phẳng. Mỗi câu có field "type".
@@ -16412,6 +16426,7 @@ ${sourceContext}`;
                         prompt = `Đóng vai giáo viên giỏi. Tạo ĐÚNG ${count} bài tập TỰ LUẬN có lời giải, trực tiếp từ NGUỒN KIẾN THỨC.
 KHÔNG cần danh sách chủ đề. Quét TOÀN DIỆN tài liệu đã nạp, bám sát 100% học liệu, không bịa kiến thức ngoài nguồn.
 Mức độ: ${levelText}
+${synthTeacherBlock}
 Mỗi bài tập TỰ LUẬN gồm:
 - "question": Đề bài chuẩn mực. Nếu có các câu con (a, b, c...), BẮT BUỘC xuống dòng riêng biệt cho từng ý (dùng \\n) kèm chữ cái in nghiêng/in đậm như "a) ... \\nb) ... \\nc) ...".
 - "solution": Lời giải chi tiết sư phạm, KHÔNG viết dồn một dòng. BẮT BUỘC xuống dòng (dùng \\n\\n) theo từng phần:
@@ -17719,6 +17734,29 @@ ${sourceContext}`;
                                         })()}
                                     </div>
                                 )}
+                                <div className="mt-4">
+                                    <div className="flex items-center justify-between gap-2 mb-1">
+                                        <label className="text-xs font-bold text-violet-900 flex items-center gap-2">
+                                            <i className="fas fa-lightbulb text-amber-500"></i>
+                                            Ý kiến sư phạm / Yêu cầu bổ sung của thầy/cô (tùy chọn)
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSynthCustomPrompt('')}
+                                            disabled={!synthCustomPrompt}
+                                            className="text-xs font-bold text-violet-700 hover:text-violet-900 disabled:opacity-40"
+                                        >
+                                            <i className="fas fa-eraser mr-1"></i>Xóa nhanh
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        rows={2}
+                                        value={synthCustomPrompt}
+                                        onChange={(e) => setSynthCustomPrompt(e.target.value)}
+                                        placeholder="Ví dụ: Ra các bài toán gắn với thực tế đời sống; nghiệm số nguyên đẹp; chia rõ các bước giải chi tiết; nhấn mạnh dạng bài tìm ẩn x..."
+                                        className="w-full border border-violet-200 rounded-xl p-3 text-sm bg-white focus:ring-2 focus:ring-violet-300 outline-none resize-y"
+                                    ></textarea>
+                                </div>
                                 <button
                                     type="button"
                                     onClick={generateSynthesizedFromSource}
@@ -17808,6 +17846,18 @@ ${sourceContext}`;
                                                 )}
                                             </div>
                                         </div>
+                                        <label className="mt-3 block text-xs font-bold text-indigo-800">
+                                            <span className="flex items-center gap-1 mb-1">
+                                                <i className="fas fa-pen text-indigo-400"></i>
+                                                Yêu cầu riêng cho chủ đề này (tùy chọn)
+                                            </span>
+                                            <input
+                                                value={topic.note || ''}
+                                                onChange={(e) => updateTopic(topic.id, 'note', e.target.value)}
+                                                placeholder="Ví dụ: Cho thêm 1 câu có mẫu số cần đặt điều kiện xác định"
+                                                className="w-full border border-indigo-100 bg-white p-2 rounded-lg text-sm font-normal text-slate-700 focus:ring-2 focus:ring-indigo-400 outline-none"
+                                            />
+                                        </label>
                                     </div>
                                 ))}
                             </div>
@@ -17826,6 +17876,30 @@ ${sourceContext}`;
                                         return `${typeName} ${idx + 1}: ${t.count}`;
                                     }).join(', ')}
                                 </div>
+                            </div>
+
+                            <div className="mb-4 rounded-2xl border border-indigo-200 bg-indigo-50/70 p-4">
+                                <div className="flex items-center justify-between gap-2 mb-1">
+                                    <label className="text-xs font-bold text-indigo-900 flex items-center gap-2">
+                                        <i className="fas fa-lightbulb text-amber-500"></i>
+                                        Ý kiến / Yêu cầu sư phạm chung cho toàn bộ chủ đề
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setTopicsGlobalNote('')}
+                                        disabled={!topicsGlobalNote}
+                                        className="text-xs font-bold text-indigo-700 hover:text-indigo-900 disabled:opacity-40"
+                                    >
+                                        <i className="fas fa-eraser mr-1"></i>Xóa nhanh
+                                    </button>
+                                </div>
+                                <textarea
+                                    rows={2}
+                                    value={topicsGlobalNote}
+                                    onChange={(e) => setTopicsGlobalNote(e.target.value)}
+                                    placeholder="Ví dụ: Các câu hỏi ở mức độ vận dụng phải có ứng dụng thực tế; nghiệm nguyên đẹp; lời giải chia rõ từng bước..."
+                                    className="w-full border border-indigo-200 rounded-xl p-3 text-sm bg-white focus:ring-2 focus:ring-indigo-300 outline-none resize-y"
+                                ></textarea>
                             </div>
 
                             <div style={{ fontSize: '0.75rem', color: '#4f46e5', marginTop: '6px', marginBottom: '8px' }}><i className="fas fa-sparkles"></i> Đã bật chế độ tự động làm mới đề & chống trùng lặp câu hỏi giữa các lần tạo.</div>

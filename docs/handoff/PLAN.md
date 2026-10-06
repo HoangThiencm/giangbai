@@ -1,70 +1,89 @@
 # PLAN
 
 ## Hiện trạng
-1. **Khảo sát thiết bị phần cứng (Cây bút trình chiếu / Bút tương tác):**
-   - Thiết bị trong ảnh là bút trình chiếu / bút bảng tương tác thông minh kết nối máy tính qua USB receiver (2.4GHz) hoặc Bluetooth theo chuẩn USB HID.
-   - Nút khoanh đỏ có ký hiệu chữ **`T`** (thường biểu thị Text, Timer, Tab, hoặc nút chức năng phụ trên thiết bị thuyết trình).
-   - Khi bấm nút này, phần cứng phát ra tín hiệu bàn phím tiêu chuẩn (mã phím `t` / `T` - `keyCode: 84`, `code: KeyT` hoặc `Tab` / `ContextMenu`) hoặc sự kiện chuột phụ (Right Click / Barrel Button).
+1. **Khối "Tạo bài tập tổng hợp từ file đã nạp" (`taobaitap.html` dòng 17525-17730):**
+   - Hiện chỉ cho phép chọn `Số câu` (`synthCount`), `Hình thức` (`synthForm`), và `Mức độ` (`synthLevel`).
+   - Hàm xử lý `generateSynthesizedFromSource` (dòng 16303-16473) xây dựng prompt gửi trực tiếp lên Gemini API chỉ gồm các tham số đếm/hình thức/mức độ và văn bản bóc tách từ file (`sourceContext`).
+   - Chưa có ô nhập liệu để giáo viên đưa ra chỉ đạo/yêu cầu sư phạm theo ý chủ quan (ví dụ: "chú trọng toán thực tế", "nghiệm nguyên đẹp", "yêu cầu phương pháp giải cụ thể", "giảm độ phức tạp tính toán cho học sinh đại trà",...).
 
-2. **Khảo sát mã nguồn HTML hiện tại (`TROLYTHIEN/10_BAI_GIANG_HTML/`):**
-   - File template gốc: `TROLYTHIEN/10_BAI_GIANG_HTML/templates/master_lecture_template.html` (dòng 4708-4712) và file bài dạy thực tế `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_12_Mot_so_he_thuc_giua_canh_va_goc_trong_tam_giac_vuong_va_ung_dung.html` (dòng 8958-8960):
-     - Sự kiện `keydown` hiện đang gán cố định phím `t` / `T` để mở modal Đồng hồ đếm ngược (`toggleTimerModal()`).
-   - File template gốc (dòng 5296-5339) và file Bài 12 (dòng 9540-9583):
-     - Menu Chuột Phải Sư Phạm (`#contextMenu`) hiện chỉ mở thông qua sự kiện chuột phải vật lý `window.addEventListener('contextmenu', ...)` hoặc nhấn giữ cảm ứng.
-     - Chưa có cơ chế cho phép kích hoạt Menu Chuột Phải Sư Phạm thông qua phím tắt trên bút trình chiếu hoặc phím `T`.
-     - Chưa lưu vết tọa độ con trỏ liên tục (`lastPointerX`, `lastPointerY`) khiến việc gọi mở menu từ phím tắt chưa định vị được chính xác vị trí con trỏ chuột/ngòi bút.
+2. **Khối "Danh sách chủ đề và hình thức trắc nghiệm" (`taobaitap.html` dòng 17744-17847):**
+   - Mỗi thẻ chủ đề (`topics`) gồm `name`, `count`, `level`, `quizType` (dòng 15626-15628, 17750-17812).
+   - Có 2 nút sinh bài: Nút "Tạo câu hỏi" lẻ cho từng chủ đề (`generateContent(topic.id)`) và nút lớn "TẠO ĐỀ TOÀN BỘ CHỦ ĐỀ" (`generateContent(null)`).
+   - Hàm `generateContent` (dòng 16150-16301) tạo prompt dựa trên danh sách chủ đề và `sourceContext`.
+   - Chưa có ô nhập yêu cầu riêng cho từng chủ đề hoặc yêu cầu chung cho toàn bộ danh sách chủ đề theo ý muốn chủ quan của giáo viên.
 
 ## Phạm vi
-- Cấu hình và thiết kế lại cơ chế tiếp nhận sự kiện trong bài giảng HTML để nút khoanh đỏ (phím `T` / `ContextMenu` / `barrel button`) trên cây bút hoạt động như **Chuột Phải** (kích hoạt Menu Chuột Phải Sư Phạm).
-- Bổ sung bộ theo dõi tọa độ con trỏ (`mousemove` / `pointermove`) để Menu Chuột Phải mở ra chuẩn xác ngay tại vị trí trỏ chuột / ngòi bút hiện tại (hoặc tâm màn hình nếu chưa có tọa độ di chuyển).
-- Bổ sung cơ chế Bật/Tắt (Toggle): Nhấn nút `T` lần 1 mở menu; nhấn lần 2 (hoặc `Escape` / click ngoài) tự động đóng menu.
-- Giữ nguyên các chức năng trong Menu Chuột Phải (Laser, Bút vẽ, Dạ quang, Xóa nét, Bảng viết, Đồng hồ, Đọc bài, Chuyển bước). Đồng hồ đếm giờ chuyển vào làm 1 mục trong Menu Chuột Phải và trên thanh công cụ.
-- Áp dụng thay đổi cho:
-  + `TROLYTHIEN/10_BAI_GIANG_HTML/templates/master_lecture_template.html`
-  + `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_12_Mot_so_he_thuc_giua_canh_va_goc_trong_tam_giac_vuong_va_ung_dung.html`
-  + `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_4_Phuong_trinh_quy_ve_phuong_trinh_bac_nhat_mot_an.html`
-  + Cập nhật quy chuẩn kỹ thuật tại `TROLYTHIEN/10_BAI_GIANG_HTML/PROMPT_TAO_BAI_GIANG_HTML.md` (mục Vá 24 & Vá 28).
+- Bổ sung ô nhập "Ý kiến sư phạm / Yêu cầu tùy chỉnh theo ý giáo viên" ở cả 2 khu vực:
+  1. **Tại khối Tạo bài tập tổng hợp từ file:** Thêm ô nhập văn bản (textarea/input đa dòng, có placeholder gợi ý và nút xóa nhanh) để giáo viên nhập yêu cầu riêng. Nối nội dung này vào câu lệnh prompt gửi cho AI trong `generateSynthesizedFromSource`.
+  2. **Tại khối Danh sách chủ đề:** 
+     - Thêm ô nhập "Yêu cầu / Ghi chú chung cho toàn bộ chủ đề" đặt phía dưới danh sách chủ đề (trên nút tạo đề toàn bộ).
+     - Bổ sung ô nhập "Ghi chú / Yêu cầu riêng" trên từng thẻ chủ đề (topic card) để áp dụng chính xác khi giáo viên tạo lẻ từng chủ đề hoặc tạo hàng loạt.
+     - Cập nhật prompt trong `generateContent` để ghép các yêu cầu tùy chỉnh này vào prompt gửi Gemini.
+- Đảm bảo giao diện đồng bộ với phong cách Tailwind CSS hiện tại của `taobaitap.html` (thẻ viền mềm, màu sắc tím/indigo hài hòa, gợi ý mẫu thuận tiện).
+- Giữ nguyên toàn bộ logic chuẩn hóa trắc nghiệm, công văn 7991, tự luận, render MathJax/KaTeX và xuất Word/PDF/Online.
 
 ## Ngoài phạm vi
-- Không nạp lại firmware hoặc can thiệp vi mạch phần cứng của cây bút.
-- Không thay đổi các chức năng khác không liên quan đến trình chiếu bài giảng HTML.
+- Không thay đổi cấu trúc dữ liệu xuất đề sang `thitructuyen.html` hay xuất Word/OLM đã ổn định.
+- Không can thiệp vào các trang khác (`soanthao.html`, `khaosat.html`, `troly.html`,...).
 
 ## File dự kiến tác động
-1. `TROLYTHIEN/10_BAI_GIANG_HTML/templates/master_lecture_template.html`
-2. `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_12_Mot_so_he_thuc_giua_canh_va_goc_trong_tam_giac_vuong_va_ung_dung.html`
-3. `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_4_Phuong_trinh_quy_ve_phuong_trinh_bac_nhat_mot_an.html`
-4. `TROLYTHIEN/10_BAI_GIANG_HTML/PROMPT_TAO_BAI_GIANG_HTML.md`
+- `taobaitap.html`
 
 ## Các bước thực hiện
-1. **Lưu vết tọa độ con trỏ (Pointer Tracking):**
-   - Thêm biến toàn cục `let lastPointerX = window.innerWidth / 2; let lastPointerY = window.innerHeight / 2;`
-   - Bắt sự kiện `window.addEventListener('mousemove', ...)` và `window.addEventListener('pointermove', ...)` cập nhật `lastPointerX`, `lastPointerY`.
-2. **Xây dựng hàm mở/đóng Menu Chuột Phải linh hoạt (`toggleContextMenuAt(x, y)`):**
-   - Kiểm tra trạng thái `#contextMenu`: nếu đang hiển thị (`display === 'flex'`) thì đóng lại (`hideContextMenu()`).
-   - Nếu đang đóng: tính toán tọa độ an toàn (tránh tràn mép phải và đáy màn hình), cập nhật trạng thái các nút (Laser, Bút vẽ), hiển thị menu tại `(x, y)`.
-3. **Tái cấu trúc bộ xử lý phím `keydown`:**
-   - Khi nhận phím `t`, `T`, hoặc `ContextMenu`:
-     - Nếu đang focus trong ô nhập liệu (`input`, `textarea`, `contenteditable="true"`), bỏ qua để giáo viên gõ chữ bình thường.
-     - Nếu không trong ô nhập liệu: gọi `e.preventDefault()`, sau đó gọi `toggleContextMenuAt(lastPointerX, lastPointerY)`.
-4. **Đồng bộ hóa các file bài giảng:**
-   - Cập nhật code tương ứng vào `master_lecture_template.html` và các file HTML bài giảng mẫu trong thư mục `Ket_qua/`.
-5. **Cập nhật quy chuẩn thiết kế:**
-   - Cập nhật `PROMPT_TAO_BAI_GIANG_HTML.md` ghi rõ: Nút `T` trên bút trình chiếu được map làm phím tắt tương đương Chuột Phải (Quick Context Menu).
+1. **Khai báo State trong React Component (`taobaitap.html`):**
+   - Thêm state `synthCustomPrompt` (hoặc `synthNotes`): `const [synthCustomPrompt, setSynthCustomPrompt] = useState('');` cho khối tổng hợp từ file.
+   - Thêm state `topicsGlobalNote`: `const [topicsGlobalNote, setTopicsGlobalNote] = useState('');` cho yêu cầu chung của danh sách chủ đề.
+   - Cập nhật cấu trúc phần tử `topics`: thêm thuộc tính `note: ''` (ví dụ `{ id: Date.now(), name: '', count: 5, level: 'Trung bình', quizType: 'multiple-choice', note: '' }`).
+   - Cập nhật hàm `addTopic` để khởi tạo `note: ''`.
+2. **Cập nhật Logic tạo Prompt tổng hợp (`generateSynthesizedFromSource`):**
+   - Kiểm tra `synthCustomPrompt.trim()`. Nếu có dữ liệu, bổ sung vào prompt phần:
+     ```
+     YÊU CẦU & ĐỊNH HƯỚNG SƯ PHẠM RIÊNG CỦA GIÁO VIÊN:
+     ${synthCustomPrompt.trim()}
+     (BẮT BUỘC: Hãy tuân thủ nghiêm ngặt và ưu tiên áp dụng đúng các yêu cầu trên vào toàn bộ câu hỏi và lời giải được tạo).
+     ```
+3. **Cập nhật Logic tạo Prompt theo chủ đề (`generateContent`):**
+   - Trong `structurePrompt` (hoặc `topicPrompts`), nếu `t.note && t.note.trim()` có nội dung, bổ sung:
+     `- Phần ${idx + 1}: Chủ đề "${t.name}"... [Yêu cầu riêng: ${t.note.trim()}]`.
+   - Nếu `topicsGlobalNote.trim()` có nội dung, chèn thêm đoạn chỉ đạo chung vào `prompt`:
+     ```
+     YÊU CẦU & ĐỊNH HƯỚNG CHUNG CỦA GIÁO VIÊN:
+     ${topicsGlobalNote.trim()}
+     (BẮT BUỘC: Ưu tiên áp dụng các yêu cầu này cho tất cả câu hỏi được tạo).
+     ```
+4. **Cập nhật Giao diện người dùng (UI JSX):**
+   - **Trong khối "TẠO BÀI TẬP TỔNG HỢP TỪ FILE ĐÃ NẠP" (trên nút bấm tạo bài):**
+     - Thêm ô `textarea` nhãn: `Ý kiến sư phạm / Yêu cầu bổ sung của thầy/cô (tùy chọn)` kèm biểu tượng cây bút/bóng đèn sáng kiến.
+     - Placeholder gợi ý: `Ví dụ: Ra các bài toán gắn với thực tế đời sống; nghiệm số nguyên đẹp; chia rõ các bước giải chi tiết; nhấn mạnh dạng bài tìm ẩn x...`
+   - **Trong khối "DANH SÁCH CHỦ ĐỀ":**
+     - Trên từng thẻ chủ đề: Thêm ô nhập dòng phụ hoặc nút bấm mở rộng `Yêu cầu riêng cho chủ đề này (tùy chọn)`.
+     - Phía dưới danh sách chủ đề (trước nút "TẠO ĐỀ TOÀN BỘ CHỦ ĐỀ"): Thêm ô `textarea` hoặc `input` nhập `Ý kiến / Yêu cầu sư phạm chung cho toàn bộ chủ đề`.
+5. **Kiểm thử cú pháp và tính năng:**
+   - Kiểm tra cú pháp JSX/Babel không bị lỗi compile.
+   - Thử nghiệm sinh bài tập từ file và từ danh sách chủ đề khi có và không có ý kiến chủ quan.
 
 ## Rủi ro
-1. **Xung đột khi soạn thảo văn bản:** Nếu người dùng đang chỉnh sửa trực tiếp nội dung slide (chế độ Thiết kế) và gõ chữ "t" hoặc "T".
-   - *Biện pháp:* Điều kiện lọc `if (e.target.closest('input, textarea, [contenteditable="true"]')) return;` ngăn chặn triệt để, cho phép gõ ký tự "t" bình thường.
-2. **Tọa độ hiển thị menu khi chưa di chuột:** Khi bài giảng vừa mở và giáo viên chưa chạm chuột, tọa độ có thể là (0, 0).
-   - *Biện pháp:* Khởi tạo tọa độ mặc định ở giữa màn hình (`innerWidth / 2`, `innerHeight / 2`).
+1. **Prompt quá dài hoặc xung đột với quy tắc định dạng JSON:**
+   - *Biện pháp:* Khuyến nghị độ dài ngắn gọn, prompt hướng dẫn AI giữ nguyên cấu trúc JSON chuẩn mực, chỉ điều chỉnh nội dung kiến thức và ngữ cảnh câu hỏi theo yêu cầu giáo viên.
+2. **Ảnh hưởng giao diện trên thiết bị di động:**
+   - *Biện pháp:* Sử dụng layout responsive (flex/grid thích ứng), textarea có `rows={2}` và co dãn tự nhiên (`resize-y`).
 
 ## Cách kiểm thử
-1. Mở bài giảng `Bai_12...html` hoặc `master_lecture_template.html` trên trình duyệt Edge / Chrome.
-2. Di chuột đến một vị trí bất kỳ trên slide, bấm phím `T` trên bàn phím (hoặc bấm nút khoanh đỏ trên cây bút): Menu Chuột Phải Sư Phạm xuất hiện ngay tại vị trí trỏ chuột.
-3. Bấm lại phím `T`: Menu Chuột Phải đóng lại.
-4. Click chuột phải bằng chuột máy tính: Menu Chuột Phải vẫn xuất hiện bình thường.
-5. Click vào chế độ Thiết kế, click vào tiêu đề văn bản, gõ phím `T`: chữ "T" xuất hiện vào nội dung văn bản, không bị kích hoạt menu.
+1. Mở `taobaitap.html` trên trình duyệt.
+2. Nạp một tài liệu mẫu (hoặc paste văn bản vào Nguồn kiến thức).
+3. Tại khối **Tạo bài tập tổng hợp từ file**:
+   - Nhập vào ô ý kiến: "Yêu cầu tất cả bài toán đều liên quan đến chủ đề thể thao và có nghiệm nguyên dương".
+   - Bấm "TẠO BÀI TẬP TỔNG HỢP TỪ FILE".
+   - Kiểm tra kết quả tạo ra: Đề bài và lời giải có bám sát ngữ cảnh thể thao và nghiệm nguyên dương hay không.
+4. Tại khối **Danh sách chủ đề**:
+   - Nhập chủ đề 1: "Phương trình tích", ghi chú riêng: "Cho thêm 1 câu có mẫu số cần đặt điều kiện xác định".
+   - Nhập ô yêu cầu chung: "Các câu hỏi ở mức độ vận dụng phải có ứng dụng thực tế".
+   - Bấm "Tạo câu hỏi" hoặc "TẠO ĐỀ TOÀN BỘ CHỦ ĐỀ".
+   - Kiểm tra kết quả xem AI có đáp ứng đúng các ý kiến tùy chỉnh này hay không.
+5. Kiểm tra khi để trống ô ý kiến: Chức năng sinh bài vẫn hoạt động bình thường như trước.
 
 ## Tiêu chí nghiệm thu
-- Bấm nút khoanh đỏ (`T`) trên cây bút mở/đóng Menu Chuột Phải Sư Phạm mượt mà, đúng tọa độ.
-- Các nút chức năng trong menu (Laser, Bút vẽ, Dạ quang, Xóa nét, Bảng viết, Đồng hồ đếm giờ) hoạt động chính xác khi chọn.
-- Không gây xung đột khi gõ chữ và không phá vỡ các phím điều hướng slide khác.
+- Có ô nhập ý kiến/yêu cầu sư phạm tại khối "Tạo bài tập tổng hợp từ file" và khối "Danh sách chủ đề".
+- AI tiếp nhận và phản ánh chính xác các ý kiến chủ quan của giáo viên vào bộ câu hỏi/bài tập được tạo ra.
+- Khi không nhập ý kiến tùy chọn, hệ thống tạo bài như cũ mà không phát sinh lỗi.
+- Giao diện đẹp mắt, thân thiện, tương thích giao diện sẵn có.
