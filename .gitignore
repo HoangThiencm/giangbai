@@ -20,7 +20,9 @@ TROLYTHIEN/**/Dau_vao/*
 !TROLYTHIEN/**/Dau_vao/*.md
 TROLYTHIEN/**/Ket_qua/*
 !TROLYTHIEN/**/Ket_qua/.gitkeep
-!TROLYTHIEN/**/*.md
+TROLYTHIEN/**/Ket_qua/*.md
+!TROLYTHIEN/*.md
+!TROLYTHIEN/*/*.md
 !TROLYTHIEN/**/*.js
 !TROLYTHIEN/**/templates/**
 !TROLYTHIEN/10_BAI_GIANG_HTML/templates/**

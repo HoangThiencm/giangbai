@@ -70,7 +70,10 @@
 - Hệ thống hóa các kiến thức Chương I qua Sơ đồ tư duy liên hoàn: Tập hợp -> Phép tính -> Lũy thừa -> Thứ tự tính toán.
 
 #### b) Nội dung:
-- Quan sát và hoàn thiện sơ đồ tư duy tóm tắt Chương I; phân tích cấu trúc số trong Bài 1.54, 1.55.
+- Quan sát và hoàn thiện Sơ đồ tư duy tổng hợp kiến thức Chương I (Tập hợp, Các phép tính, Lũy thừa, Thứ tự tính toán).
+- Phân tích cấu trúc số trong Bài 1.54, 1.55 SGK trang 28.
+
+![Sơ đồ tư duy Tổng hợp kiến thức Chương I](khbd-ill:mindmap-02-tong-hop-chuong-1)
 
 #### c) Sản phẩm:
 - Sơ đồ tư duy trong vở; câu trả lời Bài 1.54, 1.55.

@@ -25,7 +25,7 @@ function sanitizeKhbdMathSource(text) {
   source = source.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "");
 
   // 2. Khôi phục các lệnh LaTeX bị rụng gạch chéo phổ biến
-  source = source.replace(/(?<![\\f])\brac(?=\{)/g, "\\frac");
+  source = source.replace(/(?<!\\)\b(?:frac|rac)(?=\{)/g, "\\frac");
   source = source.replace(/(?<!\\)\bbegin(?=\{|\b)/g, "\\begin");
   source = source.replace(/(?<!\\)\bext(?=\{)/g, "\\text");
   source = source.replace(/(?<!\\)\bimes\b/g, "\\times");

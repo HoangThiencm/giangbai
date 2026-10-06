@@ -27,8 +27,10 @@ for (const [input, expect] of samples) {
   assert.ok(!/\\v\s*\\vdots|\\v\b/.test(out), "rogue \\v left in " + JSON.stringify(out));
 }
 
-const dir = path.resolve("TROLYTHIEN/1_SOAN_KHBD/Ket_qua");
-const files = fs.readdirSync(dir).filter(name => name.endsWith(".md")).sort();
+const dir = fs.existsSync(path.resolve("tools/TROLYTHIEN/1_SOAN_KHBD/Ket_qua"))
+  ? path.resolve("tools/TROLYTHIEN/1_SOAN_KHBD/Ket_qua")
+  : path.resolve("TROLYTHIEN/1_SOAN_KHBD/Ket_qua");
+const files = fs.readdirSync(dir).filter(name => /^KHBD_0[1-8]_.*\.md$/.test(name)).sort();
 const withIntegration = new Set(["03", "04", "08"]);
 const withMindmap = new Set(["01", "02", "06"]);
 for (const name of files) {
@@ -42,6 +44,8 @@ for (const name of files) {
   if (withMindmap.has(id)) {
     assert.ok(images.length === 1 && /mindmap-0[126]/.test(images[0]), name + " mindmap");
     assert.ok(/Hoạt động 2\.1/.test(text), name + " activity 2.1");
+  } else if (id === "05") {
+    assert.ok(images.length === 1 && /hinh-05-so-do-phan-tich/.test(images[0]), name + " prime diagram");
   } else {
     assert.strictEqual(images.length, 0, name + " extra image");
   }
