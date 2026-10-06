@@ -41,3 +41,10 @@ __pycache__/
 # Scripts nháp và file tạm phát sinh trong TROLYTHIEN
 TROLYTHIEN/**/*.py
 TROLYTHIEN/**/pdf_pages/
+
+# Ứng dụng Desktop PySide6 & Bản đóng gói (tránh nặng GitHub)
+app_trolythien/
+dist/
+build/
+*.spec
+*.exe
