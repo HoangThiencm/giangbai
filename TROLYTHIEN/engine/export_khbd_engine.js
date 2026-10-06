@@ -16,10 +16,19 @@ const path = require('path');
  */
 function sanitizeKhbdMathSource(text) {
   let source = String(text || "");
+  // 1. Khôi phục các ký tự điều khiển ASCII bị nuốt dấu gạch chéo
+  source = source.replace(/\u0008egin/g, "\\begin");
   source = source.replace(/\u000bdots/g, "\\vdots");
   source = source.replace(/\u000crac/g, "\\frac");
+  source = source.replace(/\u0009ext/g, "\\text");
+  source = source.replace(/\u0009imes/g, "\\times");
   source = source.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "");
-  source = source.replace(/(?<!\\)\b(?:frac|rac)(?=\{)/g, "\\frac");
+
+  // 2. Khôi phục các lệnh LaTeX bị rụng gạch chéo phổ biến
+  source = source.replace(/(?<![\\f])\brac(?=\{)/g, "\\frac");
+  source = source.replace(/(?<!\\)\bbegin(?=\{|\b)/g, "\\begin");
+  source = source.replace(/(?<!\\)\bext(?=\{)/g, "\\text");
+  source = source.replace(/(?<!\\)\bimes\b/g, "\\times");
   source = source.replace(/\\not\s*\\vdots/g, "\\nmid");
   source = source.replace(/\\not\s*\\mid/g, "\\nmid");
   source = source.replace(/\\\s+\\vdots\s+\\/g, "\\vdots");

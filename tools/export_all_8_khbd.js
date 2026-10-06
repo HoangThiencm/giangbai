@@ -141,6 +141,7 @@ function loadIll(id, caption, filename, width, height) {
 const allIllustrations = [
   loadIll('mindmap-01-thu-tu-phep-tinh', 'Sơ đồ tư duy Thứ tự thực hiện các phép tính', 'mindmap_01_thu_tu_phep_tinh.png', 480, 230),
   loadIll('mindmap-02-tong-hop-chuong-1', 'Sơ đồ tư duy Tổng hợp kiến thức Chương I', 'mindmap_02_tong_hop_chuong_1.png', 480, 240),
+  loadIll('hinh-05-so-do-phan-tich', 'Sơ đồ cây và Sơ đồ cột dọc phân tích ra thừa số nguyên tố (SGK Toán 6)', 'so_do_cay_va_cot_so_nguyen_to.png', 480, 215),
   loadIll('mindmap-06-so-nguyen-to', 'Sơ đồ tư duy Số nguyên tố - Hợp số - Phân tích thừa số nguyên tố', 'mindmap_06_so_nguyen_to.png', 480, 230)
 ].filter(Boolean);
 

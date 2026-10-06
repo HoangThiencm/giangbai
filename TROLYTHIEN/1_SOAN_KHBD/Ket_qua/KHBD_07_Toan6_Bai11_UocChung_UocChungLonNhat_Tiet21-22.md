@@ -120,7 +120,7 @@
 
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ:<br>- **GV:** "Để rút gọn một phân số về phân số tối giản nhanh nhất chỉ trong một lần chia, ta làm thế nào?"<br>- **HS:** Suy nghĩ và trả lời.<br>+ Bước 2: Thực hiện nhiệm vụ:<br>- **HS:** Chia cả tử và mẫu cho $ƯCLN$ của tử và mẫu.<br>+ Bước 3: Báo cáo, thảo luận:<br>- **HS:** Thực hiện rút gọn $\frac{24}{108}$ bằng cách chia cho 12 được $\frac{2}{9}$.<br>+ Bước 4: Kết luận, nhận định:<br>- **GV:** Khẳng định đây là phương pháp rút gọn phân số tối ưu nhất. | **3. RÚT GỌN VỀ PHÂN SỐ TỐI GIẢN:**<br><br>- **Phân số tối giản:** Là phân số mà tử và mẫu là hai số nguyên tố cùng nhau ($ƯCLN(	ext{tử}, 	ext{mẫu}) = 1$).<br>- **Quy tắc rút gọn:** Muốn rút gọn phân số về tối giản, ta chia cả tử và mẫu cho $ƯCLN$ của chúng. |
+| + Bước 1: Chuyển giao nhiệm vụ:<br>- **GV:** "Để rút gọn một phân số về phân số tối giản nhanh nhất chỉ trong một lần chia, ta làm thế nào?"<br>- **HS:** Suy nghĩ và trả lời.<br>+ Bước 2: Thực hiện nhiệm vụ:<br>- **HS:** Chia cả tử và mẫu cho $ƯCLN$ của tử và mẫu.<br>+ Bước 3: Báo cáo, thảo luận:<br>- **HS:** Thực hiện rút gọn $\frac{24}{108}$ bằng cách chia cho 12 được $\frac{2}{9}$.<br>+ Bước 4: Kết luận, nhận định:<br>- **GV:** Khẳng định đây là phương pháp rút gọn phân số tối ưu nhất. | **3. RÚT GỌN VỀ PHÂN SỐ TỐI GIẢN:**<br><br>- **Phân số tối giản:** Là phân số mà tử và mẫu là hai số nguyên tố cùng nhau (tức là $ƯCLN$ của tử số và mẫu số bằng 1).<br>- **Quy tắc rút gọn:** Muốn rút gọn phân số về tối giản, ta chia cả tử và mẫu cho $ƯCLN$ của chúng. |
 
 ---
 

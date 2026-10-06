@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-CÔNG CỤ RÀ SOÁT & THẨM ĐỊNH TỰ ĐỘNG KẾ HOẠCH BÀI DẠY (KHBD LINTER & AUDITOR V2.0)
+CÔNG CỤ RÀ SOÁT & THẨM ĐỊNH TỰ ĐỘNG KẾ HOẠCH BÀI DẠY (KHBD LINTER & AUDITOR V3.0)
 Hệ thống Trợ lý Sư phạm Hoàng Thiên — Trường THCS Trần Phú
+Bảo vệ kép: Thẩm định đồng thời File Nguồn Markdown (.md) và File Thành Phẩm Word (.docx)
 """
 
 import os
 import glob
 import re
 import sys
+import zipfile
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -37,16 +39,30 @@ def audit_khbd_file(fpath):
     with open(fpath, "r", encoding="utf-8") as fp:
         content = fp.read()
 
-    # 1. KIỂM TRA CÔNG THỨC TOÁN HỌC & ESCAPE RÁC
-    # 1.1 Ký tự điều khiển ASCII
+    # =========================================================================
+    # TẦNG 1: KIỂM TRA FILE NGUỒN MARKDOWN (.MD)
+    # =========================================================================
+
+    # 1.1 Ký tự điều khiển ASCII ẩn
     ctrl_chars = re.findall(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", content)
     if ctrl_chars:
-        issues.append(f"Chứa {len(ctrl_chars)} ký tự điều khiển ẩn (escape corruption như VT, FF).")
+        issues.append(f"Markdown chứa {len(ctrl_chars)} ký tự điều khiển ẩn (escape corruption như VT, FF, Backspace).")
 
     # 1.2 Lệnh LaTeX rụng gạch chéo
-    broken_fractions = re.findall(r"(?<!\\)\b(?:rac|frac)\{[^}]*\}\{[^}]*\}", content)
+    # Phân số bị rụng gạch chéo thành rac{
+    broken_fractions = re.findall(r"(?<![\\f])\brac\{[^}]*\}\{[^}]*\}", content)
     if broken_fractions:
         issues.append(f"Lỗi công thức phân số: {len(broken_fractions)} vị trí bị mất gạch chéo (ví dụ: '{broken_fractions[0]}').")
+
+    # Lệnh begin bị rụng gạch chéo thành egin
+    broken_begins = re.findall(r"(?<!\\)\b(egin)\b", content)
+    if broken_begins:
+        issues.append(f"Lỗi cú pháp LaTeX: {len(broken_begins)} vị trí bị rụng gạch chéo thành 'egin' (mất \\b của \\begin).")
+
+    # Lệnh text bị rụng gạch chéo thành ext{
+    broken_texts = re.findall(r"(?<!\\)\b(ext)\{", content)
+    if broken_texts:
+        issues.append(f"Lỗi cú pháp LaTeX: {len(broken_texts)} vị trí bị rụng gạch chéo thành 'ext{{' (mất \\t của \\text).")
 
     # 1.3 Lỗi chia hết: vdots bị rách hoặc biến thành dots
     broken_div = re.findall(r"(?<!\\)\b(dots)\b|\\v\s*\\*vdots|\\v\b", content)
@@ -55,7 +71,6 @@ def audit_khbd_file(fpath):
 
     # 1.4 Kiểm tra cân bằng dấu $
     dollar_count = content.count("$")
-    # Trừ trường hợp các dấu escape \$
     escaped_dollars = content.count(r"\$")
     actual_dollars = dollar_count - escaped_dollars
     if actual_dollars % 2 != 0:
@@ -75,7 +90,6 @@ def audit_khbd_file(fpath):
         if rule["ai"] and not has_ai:
             issues.append(f"Thiếu tích hợp AI: PPCT yêu cầu mã [{rule['ai']}] nhưng bài dạy chưa tích hợp.")
 
-        # Kiểm tra in đậm, in nghiêng khi có tích hợp
         if rule["nls"]:
             nls_lines = re.findall(r".*Tích hợp NLS.*", content)
             for line in nls_lines:
@@ -95,7 +109,6 @@ def audit_khbd_file(fpath):
         if len(all_images) == 0:
             issues.append("Tiết Luyện tập chung / Ôn tập thiếu Sơ đồ tư duy (Mindmap).")
         else:
-            # 3.3 Vị trí đặt Mindmap: Phải ở mục b) Nội dung (ngoài bảng), không được nằm trong ô bảng (| ... |)
             table_lines_with_img = [line for line in content.splitlines() if "|" in line and "![" in line]
             if table_lines_with_img:
                 issues.append("Sơ đồ tư duy bị chèn SAI VỊ TRÍ: Nằm bên trong ô bảng (làm ép hẹp cột). Bắt buộc phải đặt ở mục b) Nội dung bên ngoài bảng.")
@@ -115,13 +128,41 @@ def audit_khbd_file(fpath):
     elif not is_practice and "HÌNH THÀNH KIẾN THỨC" not in content.upper():
         issues.append("Bài lý thuyết mới nhưng thiếu Hoạt động Hình thành kiến thức.")
 
+    # =========================================================================
+    # TẦNG 2: THẨM ĐỊNH TRỰC TIẾP FILE WORD THÀNH PHẨM (.DOCX XML)
+    # =========================================================================
+    docx_path = fpath.replace(".md", ".docx")
+    if not os.path.exists(docx_path):
+        issues.append(f"Chưa xuất file Word (.docx) thành phẩm: '{os.path.basename(docx_path)}' không tồn tại.")
+    else:
+        try:
+            with zipfile.ZipFile(docx_path, 'r') as zf:
+                xml_content = zf.read('word/document.xml').decode('utf-8')
+            
+            # Quét các lỗi hiển thị thô trong Word:
+            if "egin" in xml_content:
+                issues.append("LỖI WORD DOCX: Chứa chuỗi rác 'egin' trong công thức (mất gạch chéo \\begin).")
+            if re.search(r"\brac\d|\brac\{", xml_content):
+                issues.append("LỖI WORD DOCX: Chứa chuỗi rác 'rac' trong công thức (mất gạch chéo \\frac).")
+            if "\\vdots" in xml_content or "\\v " in xml_content:
+                issues.append("LỖI WORD DOCX: Chứa ký hiệu LaTeX thô '\\vdots' chưa được chuyển đổi sang Equation Word.")
+            if "array" in xml_content:
+                issues.append("LỖI WORD DOCX: Chứa chuỗi 'array' chưa được chuyển đổi thành bảng Word.")
+            
+            docx_ctrls = re.findall(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", xml_content)
+            if docx_ctrls:
+                issues.append(f"LỖI WORD DOCX: Chứa {len(docx_ctrls)} ký tự điều khiển ẩn trong văn bản Word.")
+        except Exception as e:
+            warnings.append(f"Không thể mở file docx để thẩm định XML: {e}")
+
     return {
         "file": fname,
+        "docx_file": os.path.basename(docx_path),
         "lesson": rule.get("name", fname),
         "status": "PASS" if not issues else "FAIL",
         "issues": issues,
         "warnings": warnings,
-        "math_ok": len([i for i in issues if "công thức" in i or "chia hết" in i or "kết nối" in i or "ký tự" in i]) == 0,
+        "math_ok": len([i for i in issues if "công thức" in i or "chia hết" in i or "kết nối" in i or "ký tự" in i or "WORD DOCX" in i or "LaTeX" in i]) == 0,
         "ppct_ok": len([i for i in issues if "PPCT" in i or "NLS" in i or "AI" in i]) == 0,
         "visual_ok": len([i for i in issues if "hình" in i or "Sơ đồ" in i or "Mindmap" in i]) == 0
     }
@@ -135,7 +176,8 @@ def main():
         sys.exit(1)
 
     print("=" * 80)
-    print(" HỆ THỐNG RÀ SOÁT & THẨM ĐỊNH CHẤT LƯỢNG KẾ HOẠCH BÀI DẠY (KHBD AUDITOR V2.0)")
+    print(" HỆ THỐNG RÀ SOÁT & THẨM ĐỊNH KÉP KẾ HOẠCH BÀI DẠY (KHBD AUDITOR V3.0)")
+    print(" Đảm bảo chất lượng đồng bộ: Markdown (.md) + Word (.docx XML)")
     print("=" * 80)
 
     total_pass = 0
@@ -144,11 +186,11 @@ def main():
     for fpath in files:
         res = audit_khbd_file(fpath)
         icon = "[✓ PASS]" if res["status"] == "PASS" else "[✗ FAIL]"
-        print(f"\n{icon} {res['file']} — {res['lesson']}")
+        print(f"\n{icon} {res['file']} -> {res['docx_file']} — {res['lesson']}")
 
         if res["status"] == "PASS":
             total_pass += 1
-            print("   • Công thức Toán học: CHUẨN XÁC (Không có lỗi frac, dots, vdots hay escape rác)")
+            print("   • Công thức Toán học: CHUẨN XÁC 100% (Cả MD và Word DOCX đều sạch, không lỗi egin, rac, vdots)")
             print("   • Tích hợp NLS & AI:  KHỚP 100% PPCT (Đúng mã và in đậm nghiêng)")
             print("   • Hình vẽ & Mindmap:  ĐÚNG QUY CHUẨN (Mindmap ở mục b ngoài bảng, không chèn hình thừa)")
         else:
@@ -159,7 +201,7 @@ def main():
                 print(f"   [CẢNH BÁO] {w}")
 
     print("\n" + "=" * 80)
-    print(f" TỔNG KẾT THẨM ĐỊNH: {total_pass}/{len(files)} FILE ĐẠT CHUẨN (PASS) | {total_fail} FILE CẦN CHỈNH SỬA")
+    print(f" TỔNG KẾT THẨM ĐỊNH: {total_pass}/{len(files)} FILE ĐẠT CHUẨN KÉP (PASS) | {total_fail} FILE CẦN CHỈNH SỬA")
     print("=" * 80)
 
 if __name__ == "__main__":

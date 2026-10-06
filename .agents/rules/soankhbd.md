@@ -95,3 +95,13 @@ Mỗi phản biện của giáo viên là một "bản vá đỏ" bắt buộc h
    - *Phản biện:* Cần viết thêm chức năng rà soát giáo án coi có bị lỗi gì không để tránh sai sót không đáng có.
    - *Quy chuẩn vá:* Xây dựng và duy trì công cụ thẩm định tự động `tools/ra_soat_khbd.py` (kèm file chạy nhanh 1-click `tools/Kiem_Tra_KHBD.bat`) quét 4 nhóm lỗi cốt lõi (Công thức toán, PPCT NLS/AI, Vị trí Mindmap/Hình vẽ, Cấu trúc CV 5512). Giáo án phải đạt 100% PASS trước khi bàn giao.
 
+6. **Bản vá 6 — Phản biện Lỗi rụng gạch chéo LaTeX (`eginarray`, `ext{`) & Thẩm định Kép Word DOCX XML:**
+   - *Phản biện:* File `KHBD_05_Toan6_Bai10_SoNguyenTo_Tiet18-19.docx` bị hiển thị text rác `eginarrayrl60&2 30&2 15&...` trong Word mà công cụ phản biện không phát hiện ra.
+   - *Nguyên nhân cốt lõi:*
+     1. Ký tự escape `\b` (Backspace) trong chuỗi Python/JS bị nuốt mất gạch chéo, biến `\begin` thành `egin`. Word OMML không hiểu và in thẳng chuỗi thô.
+     2. Công cụ rà soát cũ chỉ đọc file `.md`, hoàn toàn KHÔNG mở file `.docx` thành phẩm để kiểm tra, dẫn đến việc người dùng thấy lỗi trong Word nhưng công cụ rà soát vẫn báo PASS!
+   - *Quy chuẩn vá vĩnh viễn:*
+     1. **Cấm dùng `\begin{array}` cho sơ đồ cột Số học trong Word:** Sơ đồ cột phân tích thừa số nguyên tố phải trình bày bằng các bước chia liên tiếp rõ ràng hoặc bảng 2 cột mini căn giữa.
+     2. **Engine khôi phục toàn diện ký tự điều khiển:** Tự động sửa `\u0008egin` -> `\begin`, `\u0009ext` -> `\text`, `\u0009imes` -> `\times`, `(?<![\\f])rac{` -> `\frac{` trước khi xuất Word.
+     3. **Nâng cấp công cụ rà soát lên V3.0 (Bảo vệ kép Dual-Layer):** Rà soát bắt buộc phải giải nén và quét trực tiếp file `word/document.xml` của file `.docx` thành phẩm. Bắt buộc kiểm tra cả thẻ `<m:t>` và `<w:t>`. Bất kỳ chuỗi rác nào (`egin`, `array`, `rac`, `\\vdots`, `&`, `\\`) xuất hiện trong file Word đều bị đánh FAIL ngay lập tức.
+
