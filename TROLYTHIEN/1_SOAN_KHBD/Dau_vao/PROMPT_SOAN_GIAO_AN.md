@@ -26,6 +26,7 @@ I. MỤC TIÊU TINH GỌN (THEO CHUẨN THÔNG TƯ 32 & KHUNG NLS/AI)
    b) Năng lực đặc thù môn Toán: Nêu ngắn gọn 1 - 2 năng lực nổi trội nhất (ví dụ: Tư duy & lập luận toán học, Giải quyết vấn đề toán học).
    c) Năng lực số (NLS): Nêu đúng mã chỉ báo từ PPCT và hành động cụ thể (tuyệt đối KHÔNG ghi chữ "-- Theo PPCT" trong tiêu đề mục).
    d) Năng lực Trí tuệ Nhân tạo (AI): Nêu đúng mã chỉ báo từ PPCT và hành động cụ thể (tuyệt đối KHÔNG ghi chữ "-- Theo PPCT" trong tiêu đề mục).
+   * QUY CHUẨN ĐẶC BIỆT: Trong các hoạt động dạy học (Mục III), toàn bộ phần nội dung/bước tổ chức có tích hợp NLS hoặc AI BẮT BUỘC PHẢI IN ĐẬM, IN NGHIÊNG (ví dụ: ***(Tích hợp NLS 1.1.TC1a: Khai thác học liệu số...)***, ***(Tích hợp AI 6.B2.1: ...)***) để đồng bộ tuyệt đối với tiêu chuẩn kiểm duyệt hồ sơ.
 3. Về phẩm chất: Nêu ngắn gọn 1 - 2 phẩm chất nổi trội (ví dụ: Chăm chỉ, Trách nhiệm).
 
 ================================================================================
@@ -73,6 +74,10 @@ III. QUY CHUẨN ĐỊNH DẠNG BẢNG BIỂU VÀ TRANG IN TRONG WORD (.DOCX)
 
 2. QUY CHUẨN NỘI DUNG VÀ HÌNH VẼ:
    - Các dòng phân vai GV/HS: "+ Bước 1: ...", "- **GV:** ...", "- **HS:** ...". Tuyệt đối không sinh dòng chỉ chứa duy nhất dấu gạch ngang "-".
-   - Hình vẽ toán học: 100% vector SVG xuất ra PNG 300 DPI độ nét cao, nền trắng tinh (#ffffff), nét vẽ mực đen (#111827), nhãn điểm Times New Roman nghiêng, BỎ HOÀN TOÀN CAPTION THỪA. Độ chính xác toán học tuyệt đối: các cung góc (angle arc) phải tính tọa độ vector chính xác, nằm trọn vẹn bên trong góc, bắt đầu và kết thúc chuẩn trên 2 cạnh; vạch gạch đánh dấu góc (tick mark) phải vuông góc với tiếp tuyến của cung và đặt ngay ngắn tại trung điểm cung, không vẽ cẩu thả hay đâm xiên ra ngoài.
+   - TÍCH HỢP NLS VÀ AI: Toàn bộ nội dung, mã chỉ báo và lời thoại/hành động tích hợp NLS/AI trong bảng phân vai GV-HS bắt buộc phải được in đậm, in nghiêng (ví dụ: ***(Tích hợp NLS 1.1.TC1a: ...)***, ***(Tích hợp AI 6.B2.1: ...)***).
+   - BẮT BUỘC HÌNH VẼ HÌNH HỌC & SƠ ĐỒ TƯ DUY (MINDMAP):
+     + Tiết Hình học: 100% phải có hình vẽ toán học vector SVG xuất ra PNG 300 DPI độ nét cao, nền trắng tinh (#ffffff), nét vẽ mực đen (#111827), nhãn điểm Times New Roman nghiêng, BỎ HOÀN TOÀN CAPTION THỪA. Độ chính xác toán học tuyệt đối: các cung góc (angle arc) phải tính tọa độ vector chính xác, nằm trọn vẹn bên trong góc; vạch gạch đánh dấu góc/đoạn thẳng vuông góc tại trung điểm.
+     + Tiết Luyện tập / Ôn tập: Hoạt động 2.1 BẮT BUỘC PHẢI CÓ HÌNH ẢNH SƠ ĐỒ TƯ DUY (Mindmap) phân nhánh trực quan, xuất ảnh PNG nét cao nhúng vào qua ![Hình Sơ đồ tư duy](khbd-ill:hinh-so-do-tu-duy). Tuyệt đối không chỉ ghi gạch đầu dòng chữ suông.
+   - CHUẨN HÓA CÔNG THỨC TOÁN: Dấu chia hết dùng \vdots (hiển thị chuẩn ba chấm dọc ⋮), không chia hết dùng \not\vdots hoặc \nmid (hiển thị ∤). Tuyệt đối cấm để lọt chữ vdots in nghiêng ra bản in Word.
    - Sau khi hoàn thành: Lưu file `.docx` trực tiếp vào thư mục `KHBD/`, tự động xóa các file tạm `.md` và hình ảnh trích xuất trung gian để thư mục luôn sạch sẽ.
 ```

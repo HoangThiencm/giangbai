@@ -27,26 +27,27 @@ Gọi tool `ask_question` với danh sách 13 lựa chọn:
 ### BƯỚC 2: Xử lý theo từng nhánh đã chọn
 
 #### Nhánh 1: Khi chọn "1/ Duyệt giáo án"
-Tự động kích hoạt quy trình thẩm định Kế hoạch bài dạy theo chuẩn CV 5512 & Quy định chuyên môn trường THCS Trần Phú:
-- **File đầu vào:** Đọc các tệp tham chiếu `Phu-luc-3-...docx` tại thư mục gốc `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/` và thư mục riêng từng giáo viên (ví dụ `HỒ ĐĂNG DANH/`).
-- **Quy chuẩn thẩm định:**
-  + Thể thức: Times New Roman 13pt (in đứng), A4, lề trên 1.5cm, dưới 1.5cm, trái 2.0cm, phải 1.5cm, dãn dòng 0/3/Single.
-  + Bắt buộc Header (*Trường THCS Trần Phú* | *Giáo viên: ...*) và Footer (*Môn/Phân môn* | *Trang* | *Năm học*).
-  + Khớp tiến độ phân môn (Đại số, Hình học, Số học).
-  + Tích hợp NLS/AI/STEM khớp Phụ lục 1 & 3; **bắt buộc phải in đậm, nghiêng**.
-  + Soát lỗi công thức toán học và số liệu.
-- **Cơ chế cuốn chiếu & Xuất kết quả tại `TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/`:**
-  + Tự động khởi tạo và nối tiếp (append) thứ tự từng giáo viên vào Biên bản tổ: `Bien_Ban_Kiem_Tra_Ho_So_To_Toan_Thang_[X].docx` và `.md`.
-  + Xuất Phiếu nhận xét cá nhân gửi riêng: `Phieu_Nhan_Xet_Ho_So_[TenGV]_Thang_[X].docx`.
-  + Tuân thủ quy chuẩn riêng tại `.agents/rules/duyet-giao-an.md` và Master Prompt tại `TROLYTHIEN/3_DUYET_GIAO_AN/PROMPT_DUYET_GIAO_AN.md`.
+Tự động kích hoạt quy trình thẩm định Kế hoạch bài dạy theo chuẩn CV 5512 & Quy định chuyên môn nghiêm ngặt trường THCS Trần Phú:
+- **File đầu vào:** Đọc các tệp tham chiếu `Phu-luc-3-...docx` tại thư mục gốc `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/` và thư mục riêng từng giáo viên (ví dụ `HỒ ĐĂNG DANH/`, `TRAN SANG/`...).
+- **Quy chuẩn thẩm định nghiêm ngặt:**
+  + Thể thức: Times New Roman 13pt (in đứng), A4, lề trên 1.5cm, dưới 1.5cm, trái 2.0cm, phải 1.5cm, dãn dòng 0/3/Single, Header & Footer đúng mẫu THCS Trần Phú.
+  + Tiến độ: Khớp 100% phân môn và số tiết theo Phụ lục 3 (thiếu tiết không lý do chính đáng -> Trả hồ sơ).
+  + Tích hợp NLS/AI/STEM: Khớp 1-1 mã và mô tả với Phụ lục 3; **bắt buộc phải in đậm, nghiêng** (chưa in đậm nghiêng -> Trả hồ sơ).
+  + Toán học & Ký hiệu (LỖI ĐỎ): Sai kiến thức hoặc **LỖI FONT CÔNG THỨC / BIẾN DẠNG KÝ HIỆU GÓC** (dấu chấm trên đầu đỉnh ẋOz, ký tự vuông/perpendicular đè lên chữ D┴, A┴...) $\rightarrow$ **BẮT BUỘC TRẢ HỒ SƠ 100%! TUYỆT ĐỐI CẤM DUYỆT!**
+- **Đầu ra 3 nhóm tệp độc lập tại `TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/`:**
+  1. `Bien_Ban_Kiem_Tra_Ho_So_To_Toan_Thang_[X].docx` & `.md`: Biên bản hành chính trang trọng toàn tổ (cuốn chiếu append từng GV, không chèn mẫu copy-paste hệ thống).
+  2. `Cap_Nhat_He_Thong_Duyet_Giao_An_Thang_[X].docx` & `.md`: Tệp chuyên dụng để Tổ trưởng Copy & Paste vào phần mềm duyệt giáo án (vnEdu, SMAS, K12).
+  3. `Phieu_Nhan_Xet_Ho_So_[TenGV]_Thang_[X].docx`: Phiếu gửi riêng từng giáo viên (khung xanh cho Duyệt, khung đỏ cho Trả hồ sơ).
+- Tuân thủ quy chuẩn riêng tại `.agents/rules/duyet-giao-an.md` và Master Prompt tại `TROLYTHIEN/3_DUYET_GIAO_AN/PROMPT_DUYET_GIAO_AN.md`.
 
 #### Nhánh 2: Khi chọn "2/ Soạn Giáo án (KHBD)"
 Tự động kích hoạt quy trình soạn KHBD chuẩn V2.0:
 - File đầu vào (SGK, PPCT): đọc từ `TROLYTHIEN/1_SOAN_KHBD/Dau_vao/`
 - File kết quả: tự động xuất Word ra `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/`
+- **Tích hợp NLS và AI:** Trong các hoạt động dạy học có năng lực số, năng lực AI thì **bắt buộc phải in đậm, in nghiêng phần tích hợp** (khớp chuẩn duyệt giáo án).
 
 #### Nhánh 3: Khi chọn "3/ Tạo bài tập"
-Gọi tiếp tool `ask_question` với đúng 9 định dạng chuẩn (file đầu vào tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`, kết quả tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`):
+Gọi tiếp tool `ask_question` với đúng 10 định dạng chuẩn (file đầu vào tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`, kết quả tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`):
 - Question: "CHỌN ĐỊNH DẠNG TẠO BÀI TẬP: Thầy/Cô muốn tạo bài tập theo hình thức nào?"
 - Options:
   1. "1. ⭐ Dạng Công văn 7991 (17 câu)"
@@ -58,8 +59,10 @@ Gọi tiếp tool `ask_question` với đúng 9 định dạng chuẩn (file đ�
   7. "7. ⭐ Tùy chỉnh linh hoạt số câu"
   8. "8. ⭐ Bài tập tự luận"
   9. "9. ⭐ Xuất bài dạy HTML (Dạy thêm, phụ đạo, bồi dưỡng - Phân dạng & Giải từng bước)"
+  10. "10. ✂️ Tự động cắt PDF SGK thành từng bài học (Chuẩn xác 100% từng bài)"
 
 *Khi chọn lựa chọn 9:* Tự động kích hoạt quy trình tạo bài dạy HTML phân dạng chuyên biệt cho dạy thêm, dạy kèm, phụ đạo và bồi dưỡng (tuân thủ `.agents/rules/tao-bai-day-html.md`).
+*Khi chọn lựa chọn 10:* Tự động kích hoạt quy trình cắt PDF SGK thành từng bài học chuẩn xác 100% (tuân thủ `.agents/rules/tro-ly-thien.md`).
 
 
 #### Nhánh 4: Khi chọn "4/ Duyệt đề"

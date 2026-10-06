@@ -67,8 +67,9 @@ flowchart TD
    1. Lần lượt soạn từ bài 01 đến bài 08.
    2. Mỗi bài đọc đúng file SGK và thông tin PPCT đã phân tích ở Pha 1.
    3. Soạn đầy đủ bảng 2 cột phân vai GV - HS, căn lề 0pt.
-   4. Xuất thành phẩm file Word vào Ket_qua/ theo tên: KHBD_[SốTT]_[TênBài].docx thông qua engine export_khbd_engine.js.
-   5. Báo cáo hoàn thành từng bài trước khi tự động làm bài tiếp theo.
+   4. BẮT BUỘC IN ĐẬM, IN NGHIÊNG toàn bộ phần nội dung, mã chỉ báo tích hợp Năng lực số, Năng lực AI trong các hoạt động dạy học.
+   5. Xuất thành phẩm file Word vào Ket_qua/ theo tên: KHBD_[SốTT]_[TênBài].docx thông qua engine export_khbd_engine.js.
+   6. Báo cáo hoàn thành từng bài trước khi tự động làm bài tiếp theo.
    ```
 
 3. **Nhận kết quả tại:**

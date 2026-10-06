@@ -13,20 +13,38 @@ Quy tắc này áp dụng vĩnh viễn cho mọi yêu cầu "soạn khbd" trong 
   - **CẤM TUYỆT ĐỐI:** Không ghi `(01 TIẾT — 45 PHÚT)` hay `(X TIẾT — Y PHÚT)` ở tiêu đề này.
 - **Thời lượng:** Phân bổ cụ thể vào các hoạt động sao cho **tổng thời lượng khớp chính xác** thời gian của bài (ví dụ bài 1 tiết: 5p + 32p + 8p = 45 phút; bài 2 tiết: 8p + 45p + 25p + 12p = 90 phút).
 
-## 3. Tiêu đề Năng lực số và AI
+## 3. Thể hiện Năng lực số và AI
 - Tiêu đề mục con trong Phần I ghi đúng chuẩn:
   - `### c) Năng lực số (NLS)`
   - `### d) Năng lực Trí tuệ Nhân tạo (AI)`
 - **CẤM TUYỆT ĐỐI:** Không chèn chữ `-- Theo PPCT` vào tiêu đề các mục này.
+- **BẮT BUỘC IN ĐẬM, IN NGHIÊNG TRONG CÁC HOẠT ĐỘNG DẠY HỌC:**
+  + Trong tiến trình dạy học (các hoạt động A, B, C, D), ở bất kỳ hoạt động/bước nào có triển khai Năng lực số hoặc Năng lực AI, **toàn bộ nội dung tích hợp (mã chỉ báo và mô tả hành động GV/HS)** bắt buộc phải được **in đậm, in nghiêng** (ví dụ: `***(Tích hợp NLS 1.1.TC1a: Khai thác học liệu số mô phỏng...)***` hoặc `***(Tích hợp AI 6.B2.1: Sử dụng trợ lý AI...)***`).
+  + Quy định này đồng bộ 100% với tiêu chuẩn kiểm tra/duyệt giáo án của trường THCS Trần Phú (chưa in đậm nghiêng -> Trả hồ sơ).
 
-## 4. Độ chính xác tuyệt đối của Hình vẽ toán học
-- Hình vẽ tạo bằng SVG và render ra PNG 300 DPI độ nét cao, nền trắng (#ffffff), nét vẽ mực đen (#111827), nhãn điểm Times New Roman in hoa nghiêng.
-- **Quy tắc hình học vector giải tích chuẩn xác:**
-  + Các cung đo góc (angle arc) phải được tính tọa độ toán học chính xác từ 2 vector cạnh: cung bắt đầu đúng trên cạnh thứ nhất và kết thúc đúng trên cạnh thứ hai, nằm **hoàn toàn bên trong góc**, không bao giờ bị đâm lòi ra ngoài cạnh.
-  + Vạch đánh dấu góc bằng nhau (tick mark) phải nằm dọc theo phương bán kính (vuông góc với tiếp tuyến của cung) tại đúng trung điểm của cung, cắt ngang cung đối xứng và ngay ngắn; cấm vẽ nét tự do lem nhem hoặc giống mũi tên.
-  + Vạch đánh dấu đoạn thẳng bằng nhau phải nằm vuông góc với đoạn thẳng tại trung điểm đoạn thẳng.
+## 4. Bắt buộc có Sơ đồ tư duy (Mindmap) & Hình vẽ hình học chuẩn xác
+- **BẮT BUỘC CÓ SƠ ĐỒ TƯ DUY (MINDMAP) TRONG TIẾT ÔN TẬP / LUYỆN TẬP:**
+  + Trong các tiết Luyện tập chung, Ôn tập chương, Ôn tập học kỳ: tại **Hoạt động 2.1 (Hệ thống hoá kiến thức)**, **BẮT BUỘC PHẢI TẠO VÀ NHÚNG HÌNH ẢNH SƠ ĐỒ TƯ DUY (Mindmap)**.
+  + Sơ đồ tư duy phải trực quan, phân nhánh mạch lạc (Chủ đề trung tâm $\rightarrow$ Các nhánh khái niệm, định nghĩa $\rightarrow$ Tính chất, dấu hiệu $\rightarrow$ Quy tắc tính / phương pháp giải).
+  + Sơ đồ được render dạng ảnh PNG nét cao, nền trắng, nhúng vào văn bản qua thẻ: `![Hình Sơ đồ tư duy](khbd-ill:hinh-so-do-tu-duy)` và truyền dữ liệu base64 trong mảng `illustrations`.
+  + **TUYỆT ĐỐI CẤM** chỉ viết các gạch đầu dòng chữ suông mà thiếu sơ đồ tư duy trong các tiết này.
 
-## 5. Bảng biểu trong Word và Chống lỗi "Mất bảng"
+- **BẮT BUỘC CÓ HÌNH VẼ TRONG BÀI HÌNH HỌC:**
+  + Mọi bài học thuộc phân môn Hình học (đoạn thẳng, góc, tam giác, tứ giác, hình không gian...) **BẮT BUỘC PHẢI CÓ HÌNH VẼ MINH HỌA TOÁN HỌC**.
+  + Hình vẽ tạo bằng SVG và render ra PNG 300 DPI độ nét cao, nền trắng (#ffffff), nét vẽ mực đen (#111827), nhãn điểm Times New Roman in hoa nghiêng.
+  + Nhúng vào Word qua thẻ: `![Tên hình](khbd-ill:id-hinh)` kèm dữ liệu trong `illustrations`.
+  + **Quy tắc hình học vector giải tích chuẩn xác:**
+    * Các cung đo góc (angle arc) phải được tính tọa độ toán học chính xác từ 2 vector cạnh: cung bắt đầu đúng trên cạnh thứ nhất và kết thúc đúng trên cạnh thứ hai, nằm **hoàn toàn bên trong góc**, không bao giờ bị đâm lòi ra ngoài cạnh.
+    * Vạch đánh dấu góc bằng nhau (tick mark) phải nằm dọc theo phương bán kính (vuông góc với tiếp tuyến của cung) tại đúng trung điểm của cung, cắt ngang cung đối xứng và ngay ngắn; cấm vẽ nét tự do lem nhem hoặc giống mũi tên.
+    * Vạch đánh dấu đoạn thẳng bằng nhau phải nằm vuông góc với đoạn thẳng tại trung điểm đoạn thẳng.
+
+## 5. Chuẩn hóa Công thức Toán học (Chống sót ký hiệu)
+- **Ký hiệu Chia hết và Không chia hết:**
+  + Dấu chia hết: dùng `\vdots` (hiển thị chuẩn dấu ba chấm dọc $⋮$, tuyệt đối không để sót chữ *vdots* in nghiêng ra file Word).
+  + Dấu không chia hết: dùng `\not\vdots` hoặc `\nmid` (hiển thị đúng $∤$).
+- Các ký hiệu khác: phân số `\frac`, căn `\sqrt`, góc `\widehat`, vector `\overrightarrow`, quan hệ tập hợp $\in, \notin, \subset, \cup, \cap$, dấu tương đương $\Leftrightarrow$, suy ra $\Rightarrow$ phải hiển thị đúng chuẩn Equation Word (OMML).
+
+## 6. Bảng biểu trong Word và Chống lỗi "Mất bảng"
 - **Lề trái và phải trong ô đều là 0pt:**
   + `TableCell margins: { top: 60, bottom: 60, left: 0, right: 0 }`
   + `Paragraph indent: { left: 0, right: 0 }`
@@ -34,7 +52,7 @@ Quy tắc này áp dụng vĩnh viễn cho mọi yêu cầu "soạn khbd" trong 
   + Mỗi hàng trong bảng Markdown bắt buộc phải nằm trên 1 dòng duy nhất bắt đầu và kết thúc bằng `|`.
   + Khi xuất Word bằng script Node.js, luôn đọc nội dung Markdown từ file `.md` bằng `fs.readFileSync(path, 'utf8')`. Tuyệt đối không nhúng chuỗi Markdown trực tiếp vào JS template literal (dấu backticks \`...\`) vì các ký hiệu LaTeX toán học như `\ne`, `\rightarrow`, `\text` sẽ bị JS biến thành ký tự ngắt dòng `\n`, làm gãy hàng bảng thành văn bản thuần.
 
-## 6. Dung lượng và Cấu trúc bài dạy
+## 7. Dung lượng và Cấu trúc bài dạy
 - **Tiết luyện tập chung / Ôn tập (1 tiết = 45 phút):** 3 - 4 trang Word; chỉ 3 hoạt động (A. Khởi động -> B. Luyện tập: HĐ 2.1 Hệ thống hóa bằng Sơ đồ tư duy Mindmap + HĐ 2.2 Giải quyết bài tập trọng tâm -> C. Vận dụng).
 - **Tiết hình thành kiến thức mới (2 tiết = 90 phút):** 6 - 7 trang Word; đủ 4 hoạt động A, B (chia theo đề mục SGK), C, D.
 - Tự động lưu file thành phẩm `.docx` tại `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/`.
