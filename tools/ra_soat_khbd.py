@@ -85,9 +85,10 @@ def audit_khbd_file(fpath):
     # 3. KIỂM TRA HÌNH VẼ VÀ SƠ ĐỒ TƯ DUY
     all_images = re.findall(r"!\[([^\]]*)\]\((khbd-ill:[^)]+)\)", content)
     
-    # 3.1 Bài số học lý thuyết không được có hình minh họa
-    if rule and not rule.get("mindmap", False) and len(all_images) > 0:
-        issues.append(f"Bài số học lý thuyết có {len(all_images)} hình minh họa thừa, làm loãng giáo án.")
+    # 3.1 Bài số học: Cấm sơ đồ hộp / quy trình giả tạo lặp lại lý thuyết
+    for img_caption, img_id in all_images:
+        if any(bad in img_id.lower() for bad in ["quy-trinh", "tinh-chat-chia-het", "dau-hieu-chia-het"]):
+            issues.append(f"Chèn sơ đồ hộp/quy trình giả tạo thừa ('{img_id}'). Cần trình bày bằng công thức và bảng 2 cột.")
 
     # 3.2 Tiết Luyện tập / Ôn tập phải có Mindmap
     if rule and rule.get("mindmap", False):

@@ -24,7 +24,7 @@ Quy tắc này áp dụng vĩnh viễn cho mọi yêu cầu "soạn khbd" trong 
   + Quy định này đồng bộ 100% với tiêu chuẩn kiểm tra/duyệt giáo án của trường THCS Trần Phú (chưa in đậm nghiêng -> Trả hồ sơ).
 
 ## 4. Hình vẽ, sơ đồ tư duy
-- **Bài Số học lý thuyết:** Không chèn hình minh họa và không chèn sơ đồ quy trình dạng ảnh. Trình bày bằng ngôn ngữ toán, bảng và công thức.
+- **Bài Số học:** Không chèn sơ đồ quy trình dạng ảnh lặp lại lý thuyết. Nhưng nếu bài học/bài tập có các đối tượng toán học trực quan (tia số, trục số, biểu đồ Ven, mô hình khối lập phương, bài toán thực tế lát nền/chia mảnh đất) thì **bắt buộc phải vẽ và nhúng hình đầy đủ**. Trình bày lý thuyết đại số bằng ngôn ngữ toán, bảng và công thức.
 - **BẮT BUỘC CÓ SƠ ĐỒ TƯ DUY (MINDMAP) TRONG TIẾT ÔN TẬP / LUYỆN TẬP:**
   + Trong các tiết Luyện tập chung, Ôn tập chương, Ôn tập học kỳ: tại **Hoạt động 2.1 (Hệ thống hoá kiến thức)**, **BẮT BUỘC PHẢI TẠO VÀ NHÚNG HÌNH ẢNH SƠ ĐỒ TƯ DUY (Mindmap)**.
   + Sơ đồ tư duy phải trực quan, phân nhánh mạch lạc (Chủ đề trung tâm $\rightarrow$ Các nhánh khái niệm, định nghĩa $\rightarrow$ Tính chất, dấu hiệu $\rightarrow$ Quy tắc tính / phương pháp giải).
@@ -70,10 +70,16 @@ Mỗi phản biện của giáo viên là một "bản vá đỏ" bắt buộc h
    - *Quy chuẩn vá:* Căn cứ pháp lý duy nhất là cột Ghi chú của PPCT. Chỉ tích hợp khi có mã chỉ định (ví dụ Bài 8, 9, 12). Cột Ghi chú để trống $\rightarrow$ TUYỆT ĐỐI CẤM bịa mã hoặc tự chèn mục NLS/AI. Khi có tích hợp, bắt buộc **in đậm, in nghiêng** `***(...)***` trong bảng phân vai GV-HS.
 
 2. **Bản vá 2 — Phản biện Hình minh họa trong môn Số học:**
-   - *Phản biện:* Số học bài nào cũng vẽ hình hộp/sơ đồ quy trình làm loãng giáo án, chỉ vẽ khi thực sự cần thiết.
-   - *Quy chuẩn vá:* Cấm triệt để hình minh họa sơ đồ hộp trong bài Số học lý thuyết. Chỉ 2 trường hợp được có hình ảnh:
-     + Tiết Luyện tập chung / Ôn tập: Đúng 01 Sơ đồ tư duy (Mindmap).
-     + Phân môn Hình học: 100% hình vẽ vector Oxy giải tích cực kỳ chính xác.
+   - *Phản biện:* Số học bài nào cũng vẽ sơ đồ hộp/sơ đồ quy trình làm loãng giáo án, chỉ vẽ khi thực sự cần thiết. Nếu bài số học có hình vẽ thực sự cần thiết thì có chèn không?
+   - *Quy chuẩn vá (Phân định rạch ròi):*
+     + **CẤM:** Vẽ các sơ đồ hộp chữ nhật / lưu đồ quy trình giả tạo chỉ lặp lại bằng chữ các định lý, quy tắc (ví dụ: vẽ hình chữ nhật ghi chữ "Tính chất chia hết", "Quy trình 3 bước tìm BCNN"...). Những nội dung này trình bày bằng bảng 2 cột và công thức toán học là chuẩn mực và trang trọng nhất.
+     + **BẮT BUỘC CHÈN KHI CÓ YÊU CẦU TOÁN HỌC TRỰC QUAN:** Trong môn Số học, nếu bài học hoặc bài tập SGK có các đối tượng toán học trực quan sau đây thì **BẮT BUỘC PHẢI VẼ VÀ NHÚNG ĐẦY ĐỦ**:
+       * **Tia số / Trục số:** Biểu diễn số tự nhiên, điểm biểu diễn số nguyên âm/dương, bước nhảy bội số trên tia số.
+       * **Biểu đồ Ven:** Minh họa tập hợp, phần tử thuộc/không thuộc, tập hợp con, giao của hai tập hợp.
+       * **Mô hình toán học của bài toán thực tế:** Mô hình khối lập phương ghép (bài Lũy thừa, Thứ tự phép tính), mô hình lưới ô vuông chia kẹo/chia tổ, hình vẽ mảnh đất/nền nhà lát gạch trong bài toán thực tế, mô hình cân đĩa thăng bằng.
+       * **Hình ảnh tư liệu từ đề bài SGK.**
+     + **Tiết Luyện tập chung / Ôn tập:** Đúng 01 Sơ đồ tư duy (Mindmap) tại mục b) Nội dung của Hoạt động 2.1 (ngoài bảng).
+     + **Phân môn Hình học:** 100% hình vẽ vector Oxy giải tích cực kỳ chính xác.
 
 3. **Bản vá 3 — Phản biện Vị trí đặt Sơ đồ tư duy (Mindmap):**
    - *Phản biện:* "Đặt ảnh ở đây nó không phù hợp, vì cột nhỏ lắm. Ảnh sơ đồ tư duy có thể đặt ở mục b, Nội dung là được."

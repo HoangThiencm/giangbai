@@ -76,7 +76,7 @@ III. QUY CHUẨN ĐỊNH DẠNG BẢNG BIỂU VÀ TRANG IN TRONG WORD (.DOCX)
    - Các dòng phân vai GV/HS: "+ Bước 1: ...", "- **GV:** ...", "- **HS:** ...". Tuyệt đối không sinh dòng chỉ chứa duy nhất dấu gạch ngang "-".
    - TÍCH HỢP NLS VÀ AI: Toàn bộ nội dung, mã chỉ báo và lời thoại/hành động tích hợp NLS/AI trong bảng phân vai GV-HS bắt buộc phải được in đậm, in nghiêng (ví dụ: ***(Tích hợp NLS 1.1.TC1a: ...)***, ***(Tích hợp AI 6.B2.1: ...)***).
    - BẮT BUỘC HÌNH VẼ HÌNH HỌC & SƠ ĐỒ TƯ DUY (MINDMAP):
-     + Bài Số học lý thuyết: cấm hình minh họa và cấm sơ đồ quy trình dạng ảnh.
+     + Bài Số học: cấm sơ đồ quy trình dạng ảnh lặp lại lý thuyết. Nếu bài có đối tượng toán học trực quan (tia số, trục số, biểu đồ Ven, mô hình khối lập phương/lát nền) thì bắt buộc vẽ chuẩn xác.
      + Tiết Hình học: 100% phải có hình vẽ toán học vector SVG xuất ra PNG 300 DPI độ nét cao, nền trắng tinh (#ffffff), nét vẽ mực đen (#111827), nhãn điểm Times New Roman nghiêng, BỎ HOÀN TOÀN CAPTION THỪA. Độ chính xác toán học tuyệt đối: các cung góc (angle arc) phải tính tọa độ vector chính xác, nằm trọn vẹn bên trong góc; vạch gạch đánh dấu góc/đoạn thẳng vuông góc tại trung điểm.
      + Tiết Luyện tập chung / Ôn tập chương: đúng 01 Mindmap tại mục b) Nội dung của Hoạt động 2.1 (đặt bên ngoài bảng để hiển thị độc lập trọn khổ A4 rõ nét; TUYỆT ĐỐI KHÔNG chèn trong ô bảng của mục d vì cột hẹp sẽ làm méo, đè hoặc tràn bảng). Nhúng qua ![Hình Sơ đồ tư duy](khbd-ill:hinh-so-do-tu-duy).
    - CHUẨN HÓA CÔNG THỨC TOÁN: Dấu chia hết dùng $a \vdots b$ (⋮), không chia hết dùng \not\vdots hoặc \nmid (∤). Cấm `\ \vdots \`, cấm chữ dots, cấm form feed trong \frac.
