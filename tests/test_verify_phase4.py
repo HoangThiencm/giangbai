@@ -19,9 +19,10 @@ sys.stdout.reconfigure(encoding="utf-8")
 
 
 def test_title_and_lock() -> None:
-    from PySide6.QtWidgets import QApplication, QLabel
+    from PySide6.QtWidgets import QApplication, QLabel, QPushButton
 
-    from core.license import get_machine_id, issue_offline_key, is_licensed, save_activation
+    from core.license import is_licensed, save_activation
+    from ui.license_dialog import LicenseDialog
     from ui.main_window import MainWindow
 
     app = QApplication.instance() or QApplication([])
@@ -44,8 +45,17 @@ def test_title_and_lock() -> None:
     assert not window.lock_banner.isHidden()
     assert not window.vehinh.run_button.isEnabled()
 
+    dialog = LicenseDialog()
+    labels = [label.text() for label in dialog.findChildren(QLabel)]
+    buttons = [button.text() for button in dialog.findChildren(QPushButton)]
+    assert "Kích hoạt bản quyền" in buttons
+    assert "Nhập Mã kích hoạt" not in buttons
+    assert not any("offline" in text.lower() for text in labels + buttons)
+    assert not hasattr(dialog, "key")
+    dialog.close()
+
     email = "gv.phase4@example.com"
-    save_activation(email, "offline", issue_offline_key(email, get_machine_id()))
+    save_activation(email, "online")
     window._apply_license_gate()
     assert is_licensed() == (True, email)
     assert not window._app_locked
@@ -88,9 +98,15 @@ def test_agy_models() -> None:
 
 
 def test_online_api_client() -> None:
+    import core.license as license
+
     from core.license import LICENSE_ONLINE_URL, license_message, verify_license_online
 
     assert LICENSE_ONLINE_URL == "https://hoangthiencm.id.vn/api/license.php"
+    source = Path(license.__file__).read_text(encoding="utf-8")
+    assert "issue_offline_key" not in source
+    assert "verify_license_offline" not in source
+    assert "mã offline" not in source.lower()
     state = {"status": "pending"}
 
     class Handler(BaseHTTPRequestHandler):
