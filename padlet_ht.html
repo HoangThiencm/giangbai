@@ -524,10 +524,13 @@
     <div id="previewModal" class="fixed inset-0 z-[70] hidden bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6">
         <div class="mx-auto flex h-full max-w-6xl flex-col overflow-hidden rounded-[26px] bg-white soft-shadow">
             <div class="flex items-center justify-between border-b border-slate-200 px-5 py-3">
-                <strong id="previewTitle">Xem tệp</strong>
-                <button type="button" onclick="closePreview()" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100">
-                    <i class="fas fa-xmark"></i>
-                </button>
+                <strong id="previewTitle" class="min-w-0 truncate pr-3">Xem tệp</strong>
+                <div class="flex shrink-0 items-center gap-2">
+                    <a id="previewExternalLink" href="#" target="_blank" rel="noopener" class="flex items-center gap-1.5 rounded-xl bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100"><i class="fas fa-external-link-alt"></i><span>Mở tab mới</span></a>
+                    <button type="button" onclick="closePreview()" class="grid h-10 w-10 place-items-center rounded-xl bg-slate-100">
+                        <i class="fas fa-xmark"></i>
+                    </button>
+                </div>
             </div>
             <iframe id="previewFrame" class="min-h-0 flex-1 bg-slate-100" title="Xem tệp Google Drive"></iframe>
         </div>
@@ -1810,10 +1813,11 @@
                         </button>
                         <a href="${esc(viewUrl)}" target="_blank" rel="noopener"
                             class="rounded-lg bg-teal-50 px-2 py-1 text-xs font-bold text-teal-800 hover:bg-teal-100">
-                            <i class="fas fa-external-link-alt"></i>
+                            <i class="fas fa-external-link-alt mr-1"></i>Mở tệp ngoài
                         </a>
                     </div>
                 </div>
+                <p class="px-3 py-1.5 text-[11px] font-semibold text-slate-500">Nếu không tải được trên điện thoại, bấm Mở tệp ngoài</p>
                 <iframe src="${esc(embedUrl)}" class="doc-embed-frame w-full bg-slate-50" title="${esc(file.original_name)}" loading="lazy" allow="autoplay"></iframe>
             </div>`;
         }
@@ -2550,10 +2554,13 @@
 
         function previewFile(id, name, viewUrl = '') {
             const file = findPostFile(id, name, viewUrl);
+            const openUrl = viewUrl || file.view_url || `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`;
             document.getElementById('previewTitle').textContent = name || 'Xem tệp';
+            const external = document.getElementById('previewExternalLink');
+            if (external) external.href = openUrl;
             document.getElementById('previewFrame').src = isDocumentFile(file) || fileExt(name) === 'pdf'
                 ? driveEmbedUrl(file)
-                : (viewUrl || `https://drive.google.com/file/d/${encodeURIComponent(id)}/view`);
+                : openUrl;
             document.getElementById('previewModal').classList.remove('hidden');
         }
 

@@ -434,6 +434,19 @@ function padlet_delete_drive_files_by_ids(PDO $pdo, int $postId, array $fileIds)
     return $failed;
 }
 
+function padlet_share_uploaded_file(string $fileId): void
+{
+    $fileId = trim($fileId);
+    if ($fileId === '') {
+        return;
+    }
+    try {
+        drive_share_file_anyone($fileId);
+    } catch (Throwable $e) {
+        error_log('Padlet share file error: ' . $e->getMessage());
+    }
+}
+
 function padlet_payload(PDO $pdo, array $board, bool $includeAll = false, ?array $currentUser = null): array
 {
     $columns = padlet_columns($pdo, (int)$board['id']);
@@ -604,6 +617,11 @@ if ($method === 'GET' && $action === 'board') {
     $board = padlet_board($pdo, 0, (string)($_GET['code'] ?? '')); if (!$board) respond(['error' => 'Không tìm thấy bảng chia sẻ.'], 404);
     $user = padlet_current_user($pdo); $accessUser = padlet_access($pdo, $board, $user); $canManage = $accessUser && ($accessUser['role'] ?? '') === 'teacher' && (int)$board['owner_id'] === (int)$accessUser['id'];
     $payload = padlet_payload($pdo, $board, $canManage, $accessUser);
+    foreach ($payload['posts'] as $post) {
+        foreach ($post['files'] ?? [] as $file) {
+            padlet_share_uploaded_file((string)($file['drive_file_id'] ?? ''));
+        }
+    }
     $payload['ok'] = true; $payload['can_manage'] = $canManage; $payload['user'] = $accessUser ? public_user($accessUser) : null;
     respond($payload);
 }
@@ -673,6 +691,7 @@ if ($method === 'POST' && $action === 'post') {
             if ($invalid) respond(['error' => $invalid], 422);
             $mime = drive_detect_mime($file['tmp_name'], $original, (string)($file['type'] ?? ''));
             $drive = drive_upload_file($personFolder, date('Ymd-His') . '-' . ($index + 1) . '-' . drive_safe_name($original), $mime, $file['tmp_name']);
+            padlet_share_uploaded_file((string)($drive['file_id'] ?? ''));
             $insertFile->execute([$postId, $drive['file_id'], $original, $drive['stored_name'], $drive['mime_type'] ?? $mime, (int)$file['size'], $drive['view_url'], $drive['download_url']]);
         }
     }
@@ -773,6 +792,7 @@ if ($method === 'POST' && $action === 'edit-post') {
             if ($invalid) respond(['error' => $invalid], 422);
             $mime = drive_detect_mime($file['tmp_name'], $original, (string)($file['type'] ?? ''));
             $drive = drive_upload_file($personFolder, date('Ymd-His') . '-' . ($index + 1) . '-' . drive_safe_name($original), $mime, $file['tmp_name']);
+            padlet_share_uploaded_file((string)($drive['file_id'] ?? ''));
             $insertFile->execute([$postId, $drive['file_id'], $original, $drive['stored_name'], $drive['mime_type'] ?? $mime, (int)$file['size'], $drive['view_url'], $drive['download_url']]);
         }
     }

@@ -180,10 +180,11 @@
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
 > `Soạn đủ 08 tiết đảm bảo đúng tiến độ tháng 9. Kiến thức góc ở vị trí đặc biệt, tia phân giác, hai đường thẳng song song và tiên đề Euclid đầy đủ, logic. Ký hiệu góc và quan hệ hình học hiển thị dấu mũ góc chuẩn xác, không lỗi font. Duyệt.`
 
-### • Phân môn Hoạt động trải nghiệm, hướng nghiệp 6 (18 trang — 12 tiết: Chủ đề 1: Em với nhà trường): [KHÔNG DUYỆT / TRẢ HỒ SƠ]
+### • Phân môn Hoạt động trải nghiệm, hướng nghiệp 6 (18 trang — 12 tiết: Chủ đề 1: Em với nhà trường): [ĐẠT / DUYỆT (TỐT)]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
-> `TRẢ HỒ SƠ PHÂN MÔN HĐTN 6 do vi phạm quy chế chuyên môn: Toàn bộ câu mô tả mục tiêu chỉ báo Năng lực số (2.2.TC1a) và AI (6.C2.2) tại Trang 1, Trang 10 KHÔNG IN ĐẬM, KHÔNG IN NGHIÊNG theo quy định bắt buộc. Yêu cầu giáo viên định dạng in đậm, nghiêng chuẩn mực và nộp lại để phê duyệt.`
+> `Kế hoạch bài dạy Chủ đề 1 soạn đủ 12 tiết đảm bảo 100% tiến độ tháng 9. Giáo viên đã nghiêm túc tiếp thu, chỉnh sửa hoàn thiện 100% các câu mô tả chỉ báo Năng lực số (2.2.TC1a) và Năng lực AI (6.C2.2) cả ở mục tiêu và tiến trình hoạt động đều được IN ĐẬM, NGHIÊNG, MÀU ĐỎ rất chuẩn mực theo đúng quy chế chuyên môn. Duyệt.`
 
-### • Nhận xét chung toàn bộ hồ sơ Thầy Hoàng Xuân Ánh (Duyệt theo gói): [TRẢ HỒ SƠ - CHỜ ĐÍNH CHÍNH HĐTN 6]
+### • Nhận xét chung toàn bộ hồ sơ Thầy Hoàng Xuân Ánh (Duyệt theo gói): [DUYỆT - XẾP LOẠI TỐT]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
-> `TRẢ LẠI HỒ SƠ. Nghiệm thu đạt yêu cầu 2 phân môn Toán 7 (Đại số 7 và Hình học 7). Tạm thời trả hồ sơ phân môn HĐTN 6 do vi phạm quy định định dạng NLS/AI (không in đậm, nghiêng). Đề nghị thầy Hoàng Xuân Ánh hoàn thiện và nộp lại trước ngày 10/10/2026.`
+> `DUYỆT TOÀN BỘ HỒ SƠ (Xếp loại Tốt). Hồ sơ giáo án nộp đầy đủ 29 tiết (80 trang PDF) thuộc 3 phân môn Đại số 7, Hình học 7 và HĐTN 6. Đảm bảo 100% tiến độ Tháng 9 và vượt tuần 5 ở Đại 7. Ký hiệu góc chuẩn xác, không lỗi font. Phân môn HĐTN 6 đã được bổ sung, chỉnh sửa định dạng tích hợp NLS và AI in đậm, nghiêng màu đỏ chuẩn mực theo quy chế chuyên môn. Biểu dương tinh thần cầu thị và hoàn thiện hồ sơ kịp thời của thầy Ánh.`
+

@@ -30,5 +30,10 @@ assert.match(html, /openEditPostModal\(\$\{p\.id\}\)/, 'post cards must expose a
 assert.match(html, /imageFiles\.length > 1/, 'posts must render a multi-image gallery');
 assert.match(html, /grid grid-cols-2 gap-1\.5|grid \$\{cols\} gap-1\.5/, 'multi-image gallery must use a grid layout');
 assert.match(html, /action=edit-post/, 'edit flow must post to edit-post');
+assert.match(html, /Mở tệp ngoài/, 'document embed must offer an external open link');
+assert.match(html, /Nếu không tải được trên điện thoại, bấm Mở tệp ngoài/, 'document embed must explain the phone cookie fallback');
+assert.match(html, /id="previewExternalLink"/, 'preview modal must include an external open link');
+assert.match(html, /Mở tab mới/, 'preview modal must label the external open action');
+assert.match(html, /previewExternalLink[\s\S]*external\.href = openUrl/, 'previewFile must assign the external open URL');
 
 console.log('padlet UI smoke: passed');
