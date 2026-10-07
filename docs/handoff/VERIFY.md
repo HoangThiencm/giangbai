@@ -1,51 +1,46 @@
 # VERIFY
 
 ## Kết luận
-PASS
+FAIL
 
 ## Đối chiếu scope
-- [x] Tạo ứng dụng Desktop PySide6 độc lập hoàn toàn trong thư mục riêng `app_trolythien/`.
-- [x] Đóng gói toàn bộ 10 phân hệ nghiệp vụ Trợ lý Sư phạm Hoàng Thiên vào `app_trolythien/troly/` (prompts và templates), không phụ thuộc bên ngoài repo `giangbai`.
-- [x] Tiền kiểm tra (Preflight Check): kiểm tra `agy.exe` đã cài đặt và kiểm tra đăng nhập AI (`agy models`). Có hộp thoại hướng dẫn cài đặt và nút đăng nhập.
-- [x] Cơ chế Đầu vào kép (Dual-Input): Khung dán đề bài/nội dung trực tiếp (`QTextEdit`) hỗ trợ Ctrl+V và nút dán nhanh, kết hợp nút chọn tệp đính kèm (`QFileDialog`).
-- [x] Cơ chế Đầu ra linh hoạt: Cho phép chọn thư mục lưu kết quả (`PathSelector` qua `QFileDialog`), có nút mở file và mở thư mục sau khi hoàn tất.
-- [x] Lõi Antigravity Bridge (`core/bridge.py`): Chạy nền qua `QThread`, gọi `agy.exe -p` với `--dangerously-skip-permissions` và `--disable-slash-commands`, đọc stream log thời gian thực và phát hiện `KET_QUA`.
-- [x] Đóng gói độc lập: `build_exe.bat` đóng gói thành công ra `dist/TroLyHoangThien/TroLyHoangThien.exe` kèm toàn bộ tri thức `troly/`.
-- [x] Chặn Git: `.gitignore` chứa đầy đủ 5 quy tắc chặn `app_trolythien/`, `dist/`, `build/`, `*.spec`, `*.exe`, không làm nặng kho GitHub.
+1. **Khóa toàn bộ tính năng khi chưa kích hoạt:**
+   - Chưa đạt trọn vẹn trên bản thực thi thực tế của người dùng:
+     + File thực thi `app_trolythien/dist/TroLyHoangThien/TroLyHoangThien.exe` chưa được đóng gói lại (vẫn là bản cũ được biên dịch từ Phase 3), nên khi người dùng nhấp chạy file `.exe` thì ứng dụng vẫn chạy code cũ chưa có cơ chế khóa.
+     + Trong mã nguồn `app_trolythien/ui/main_window.py`: hàm `open_module` chưa kiểm tra `if self._app_locked: return` (khiến người dùng click vào thẻ trên Dashboard vẫn chuyển trang được); luồng `_apply_status` khi preflight xong vẫn gọi `model_combo.setEnabled(...)` ghi đè trạng thái khóa.
+2. **Tiêu đề và nhận diện:**
+   - Mã nguồn đã đổi thành «Trợ lý sư phạm», nhưng bản `.exe` cũ vẫn hiện tiêu đề dài dòng cũ.
+3. **Mô hình AI:**
+   - Mã nguồn đã nạp động từ `agy models`.
+4. **Bản quyền Online:**
+   - Đã có `api/license.php` và tab trên `admin.html`.
 
 ## Test đã chạy
-1. **Kiểm tra Preflight (`core/preflight.py`):**
-   - `check_agy_installed()`: Trả về `(True, 'C:\\Users\\HoangThien\\AppData\\Local\\agy\\bin\\agy.exe')`.
-   - `check_agy_login()`: Trả về `(True, 'gemini-3.8-flash-high')`.
-2. **Kiểm tra Tri thức độc lập (`core/prompt_builder.py`):**
-   - `knowledge_ready()`: Trả về `True`, đầy đủ 10 file prompt và 2 template HTML trong `app_trolythien/troly/`.
-3. **Kiểm tra Dựng Prompt (`prompt_builder`):**
-   - KHBD Prompt: 12,846 ký tự (nhúng quy chuẩn CV 5512).
-   - Vẽ hình Prompt: 4,669 ký tự (nhúng tọa độ giải tích Oxy và 4 file kết quả).
-   - Bài giảng HTML Prompt: 61,323 ký tự (nhúng master prompt bài giảng 16:9).
-   - Chuẩn hoá văn bản Prompt: 9,523 ký tự (nhúng NĐ 30/2020 và văn bản Đảng).
-4. **Kiểm tra Giao diện PySide6 Offscreen (`scratch/test_verify.py`):**
-   - Tiêu đề cửa sổ: «Trợ lý Sư phạm Hoàng Thiên».
-   - Bảng điều khiển Dashboard và chuyển đổi qua lại giữa tất cả các Tab hoạt động mượt mà.
-   - Tab Vẽ hình: Nhận văn bản dán trực tiếp, hiển thị khung xem trước ảnh.
-   - Tab Bài giảng: Form Môn, Lớp, Số tiết, Tên bài, nút mở HTML.
-   - Tab Chuẩn hoá: Nhận file Word và dán trực tiếp.
-5. **Kiểm tra Đóng gói (`build_exe.bat`):**
-   - Tiến trình PyInstaller hoàn tất exit code 0.
-   - File thực thi `dist/TroLyHoangThien/TroLyHoangThien.exe` khởi chạy thành công.
-6. **Kiểm tra Git Protection (`.gitignore`):**
-   - 5 mẫu chặn hoạt động chuẩn mực, không track thư mục app và bản build.
+- Kiểm tra tệp `.exe`: `app_trolythien/dist/TroLyHoangThien/TroLyHoangThien.exe` có thời gian tạo là `10/6/2026 19:38`, trước khi triển khai Phase 4.
+- Kiểm tra logic `ui/main_window.py`:
+  + `open_module()` thiếu `if self._app_locked: return`.
+  + `_apply_status()` kích hoạt lại `model_combo` khi `_app_locked` đang là `True`.
 
 ## Pass / Fail từng tiêu chí
-- Kiểm tra cài đặt và đăng nhập agy: PASS
-- Đóng gói tri thức độc lập trong app: PASS
-- Cơ chế dán đề bài và chọn tệp đầu vào: PASS
-- Cơ chế chọn thư mục lưu và mở đầu ra: PASS
-- Khung xem trước hình ảnh và nút mở kết quả: PASS
-- Giao diện PySide6 và điều hướng Sidebar: PASS
-- Kết nối luồng chạy agy ngầm: PASS
-- Đóng gói PyInstaller thành .exe: PASS
-- Chặn Git kho mã nguồn: PASS
+- [ ] File thực thi `.exe` được đóng gói cập nhật cơ chế khóa bản quyền: **FAIL**
+- [ ] Chặn triệt để điều hướng từ Dashboard (`open_module`) khi ứng dụng đang khóa: **FAIL**
+- [ ] Giữ khóa `model_combo` khi preflight kết nối xong nếu chưa có bản quyền: **FAIL**
+- [x] Tiêu đề và thương hiệu tối giản trong mã nguồn: **PASS**
+- [x] Mô hình AI nạp động từ `agy models`: **PASS**
+- [x] API bản quyền `api/license.php` và giao diện `admin.html`: **PASS**
 
 ## Bug
-Không phát hiện bug.
+- Lỗi 1: File thực thi `TroLyHoangThien.exe` chưa được build lại sau khi sửa code Phase 4, khiến người dùng mở app vẫn thấy giao diện cũ và chưa bị khóa.
+  + Tái hiện: Chạy `app_trolythien\dist\TroLyHoangThien\TroLyHoangThien.exe`.
+  + File liên quan: `app_trolythien/build_exe.bat`, `app_trolythien/dist/TroLyHoangThien/TroLyHoangThien.exe`.
+  + Cách sửa: Chạy lại `build_exe.bat` để cập nhật bản phân phối `.exe`.
+
+- Lỗi 2: Trong `ui/main_window.py`, người dùng có thể nhấp vào các nút thẻ trên Dashboard để chuyển tab vì `open_module` không kiểm tra `_app_locked`.
+  + Tái hiện: Mở app ở trạng thái chưa kích hoạt, nhấp vào thẻ "Vẽ hình học" trên Dashboard, app vẫn chuyển tab sang vẽ hình.
+  + File liên quan: `app_trolythien/ui/main_window.py`.
+  + Cách sửa: Thêm `if self._app_locked: return` vào đầu hàm `open_module(self, key: str, label: str)`.
+
+- Lỗi 3: Khi preflight xong, hàm `_apply_status` mở lại `model_combo` ngay cả khi `_app_locked == True`.
+  + Tái hiện: Đợi 1-2 giây sau khi mở app khi có kết nối Agy, combobox mô hình AI sáng trở lại.
+  + File liên quan: `app_trolythien/ui/main_window.py`.
+  + Cách sửa: Trong `_apply_status`, đặt `self.model_combo.setEnabled(not self._app_locked and (ready or self.model_combo.count() > 0))`.

@@ -3362,6 +3362,7 @@
                 ['accounts', 'Tạo tài khoản', 'fa-user-graduate'],
                 ['tranphu', 'THCS Trần Phú', 'fa-school'],
                 ['aiusage', 'Theo dõi AI', 'fa-chart-line'],
+                ['licenseapp', 'Bản Quyền App Desktop', 'fa-key'],
                 ['settings', 'Cài đặt hệ thống', 'fa-sliders']
             ];
 
@@ -3612,6 +3613,113 @@
                 return $('tableBody')?.closest('.bg-white.rounded-xl');
             }
 
+            function desktopAdminKey() {
+                if (typeof cachedKey !== 'undefined' && cachedKey) return cachedKey;
+                return document.getElementById('adminKey')?.value || '';
+            }
+
+            function desktopLicensePanel() {
+                let node = $('adminDesktopLicensePanel');
+                if (node) return node;
+                node = document.createElement('div');
+                node.id = 'adminDesktopLicensePanel';
+                node.className = 'bg-white rounded-xl shadow-lg border border-slate-200 p-6';
+                node.innerHTML = `
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between mb-4">
+                        <div>
+                            <h3 class="font-bold text-slate-800 text-lg"><i class="fas fa-key text-amber-600 mr-2"></i>Bản Quyền App Desktop</h3>
+                            <p class="text-sm text-slate-500 mt-1">Duyệt, khóa hoặc xóa máy Trợ lý sư phạm. App gửi Email và Mã máy tới api/license.php.</p>
+                        </div>
+                        <button type="button" id="desktopLicenseRefresh" class="rounded border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700">Tải lại</button>
+                    </div>
+                    <input id="desktopLicenseSearch" type="search" placeholder="Tìm Email, Mã máy hoặc trạng thái" class="mb-4 w-full rounded border border-slate-300 px-3 py-2 text-sm">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-slate-500">
+                                    <th class="py-2 pr-3">Email</th>
+                                    <th class="py-2 pr-3">Mã máy</th>
+                                    <th class="py-2 pr-3">Trạng thái</th>
+                                    <th class="py-2">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="desktopLicenseRows"></tbody>
+                        </table>
+                    </div>
+                    <p id="desktopLicenseStatus" class="mt-3 text-sm text-slate-500"></p>
+                `;
+                node.querySelector('#desktopLicenseRefresh').addEventListener('click', () => loadDesktopLicenses());
+                node.querySelector('#desktopLicenseSearch').addEventListener('input', () => renderDesktopLicenses(window._desktopLicenses || []));
+                return node;
+            }
+
+            function desktopStatusLabel(status) {
+                if (status === 'active') return 'Đã duyệt';
+                if (status === 'revoked') return 'Đã khóa';
+                return 'Chờ duyệt';
+            }
+
+            function renderDesktopLicenses(rows) {
+                const query = ($('desktopLicenseSearch')?.value || '').trim().toLowerCase();
+                const body = $('desktopLicenseRows');
+                if (!body) return;
+                const shown = (rows || []).filter(row => {
+                    const blob = `${row.email || ''} ${row.device_id || ''} ${row.status || ''}`.toLowerCase();
+                    return !query || blob.includes(query);
+                });
+                body.innerHTML = shown.map(row => `
+                    <tr class="border-t border-slate-100">
+                        <td class="py-2 pr-3">${row.email || ''}</td>
+                        <td class="py-2 pr-3 font-mono">${row.device_id || ''}</td>
+                        <td class="py-2 pr-3">${desktopStatusLabel(row.status)}</td>
+                        <td class="py-2 space-x-2">
+                            <button type="button" class="rounded bg-blue-600 px-3 py-1 text-xs font-bold text-white" data-license-action="approve" data-email="${row.email || ''}" data-device="${row.device_id || ''}">Duyệt</button>
+                            <button type="button" class="rounded bg-amber-600 px-3 py-1 text-xs font-bold text-white" data-license-action="revoke" data-email="${row.email || ''}" data-device="${row.device_id || ''}">Khóa</button>
+                            <button type="button" class="rounded bg-rose-700 px-3 py-1 text-xs font-bold text-white" data-license-action="delete" data-email="${row.email || ''}" data-device="${row.device_id || ''}">Xóa</button>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="4" class="py-4 text-slate-500">Chưa có máy nào.</td></tr>';
+                body.querySelectorAll('[data-license-action]').forEach(button => {
+                    button.addEventListener('click', () => changeDesktopLicense(button.dataset.licenseAction, button.dataset.email, button.dataset.device));
+                });
+            }
+
+            async function loadDesktopLicenses() {
+                const status = $('desktopLicenseStatus');
+                const key = desktopAdminKey();
+                if (!key) {
+                    if (status) status.textContent = 'Cần Admin Key để tải danh sách bản quyền.';
+                    return;
+                }
+                if (status) status.textContent = 'Đang tải danh sách máy…';
+                try {
+                    const res = await fetch('api/license.php?action=list', { headers: { 'X-Admin-Key': key } });
+                    const data = await res.json();
+                    if (!res.ok || !data.ok) throw new Error(data.error || 'Không tải được danh sách.');
+                    window._desktopLicenses = data.licenses || [];
+                    renderDesktopLicenses(window._desktopLicenses);
+                    if (status) status.textContent = `Có ${window._desktopLicenses.length} máy.`;
+                } catch (error) {
+                    if (status) status.textContent = error.message || 'Không tải được danh sách.';
+                }
+            }
+
+            async function changeDesktopLicense(action, email, deviceId) {
+                const key = desktopAdminKey();
+                if (!key) return alert('Cần Admin Key.');
+                const res = await fetch('api/license.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-Admin-Key': key },
+                    body: JSON.stringify({ action, email, device_id: deviceId })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || data.ok === false) {
+                    alert(data.error || 'Không cập nhật được bản quyền.');
+                    return;
+                }
+                await loadDesktopLicenses();
+            }
+
             function activate(id) {
                 if (!TAB_DEFS.some(([tabId]) => tabId === id)) id = 'accounts';
                 // The account counters do not describe the shared reference
@@ -3635,6 +3743,9 @@
                 }
                 if (id === 'settings' && typeof window.refreshAiQuickTestPanel === 'function') {
                     window.refreshAiQuickTestPanel(true);
+                }
+                if (id === 'licenseapp') {
+                    loadDesktopLicenses();
                 }
                 localStorage.setItem('admin_active_tab', id);
             }
@@ -3810,6 +3921,7 @@
                 move(panel('aiusage'), $('aiUsageStatsPanel'));
                 move(panel('settings'), settingsCard());
                 move(panel('settings'), aiQuickTestCard());
+                move(panel('licenseapp'), desktopLicensePanel());
                 compactAiConfigCards(panel('settings'));
 
                 nav.querySelectorAll('.admin-tab-button').forEach(btn => {

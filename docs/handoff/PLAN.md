@@ -1,94 +1,81 @@
 # PLAN
 
 ## Hiện trạng
-1. **Vấn đề Dán đề bài trong Vẽ hình học (`VeHinhTab` & `DualInput`):**
-   - Hiện tại hàm `paste_clipboard()` trong `DualInput` chỉ gọi `QApplication.clipboard().text()`.
-   - Khi giáo viên chụp ảnh màn hình đề bài toán hình học (dùng Snipping Tool hoặc phím Windows + Shift + S), nội dung trong Clipboard là dạng ảnh (`QImage`/`QPixmap`), không có text thuần. Do đó khi bấm "Dán từ Clipboard" hoặc `Ctrl+V`, app không nhận được gì và không hiển thị gì cả.
-   - Khung xem trước trong `VeHinhTab` hiện chỉ hiển thị ảnh sau khi vẽ xong, chưa hiển thị ảnh đề bài vừa dán hoặc vừa chọn.
-2. **Vấn đề Duyệt cả thư mục hồ sơ (`DuyetTab` & các phân hệ xử lý hàng loạt):**
-   - Trong nghiệp vụ gốc của Trợ lý Hoàng Thiên (`3_DUYET_GIAO_AN`, `4_DUYET_DE`, `1_SOAN_KHBD_HANG_LOAT`), giáo viên thường đưa cả một thư mục chứa nhiều file giáo án/đề thi của cả tổ chuyên môn vào để duyệt toàn diện một lần.
-   - Hiện tại `DualInput` chỉ có nút `QFileDialog.getOpenFileName` chọn đúng 1 file đơn lẻ, không có nút chọn cả thư mục và không hỗ trợ chọn nhiều tệp cùng lúc.
-   - Hàm `_inputs` trong `core/prompt_builder.py` chưa có cơ chế tự động quét đệ quy các tệp con khi người dùng chọn một thư mục.
+1. **Khóa bản quyền (Licensing Lock):**
+   - Hiện tại khi chưa kích hoạt bản quyền, ứng dụng mới chỉ cảnh báo khi bấm nút "Gửi việc/Chạy", người dùng vẫn bấm chuyển tab và thao tác trên giao diện bình thường.
+   - Cần phải **khóa toàn bộ tính năng** (vô hiệu hóa các tab, nút chuyển trang, các ô nhập liệu) khi máy chưa được kích hoạt bản quyền. Chỉ mở khóa sau khi đã kích hoạt thành công.
+2. **Nhận diện & Tiêu đề giao diện (UI/UX Branding):**
+   - Tiêu đề cửa sổ và sidebar hiện đang quá dài dòng (`Trợ Lý Sư Phạm Hoàng Thiên — Nền Tảng Giảng Dạy & Khảo Thí 4.0`).
+   - Có dòng ghi chú thừa ở chân sidebar: `Chạy ngầm agy.exe. Cửa sổ vẫn chuyển tab khi đang soạn.`.
+   - Cần tối giản: Tiêu đề cửa sổ và thanh sidebar chỉ để duy nhất: **«Trợ lý sư phạm»**. Xóa toàn bộ các dòng phụ đề rườm rà.
+3. **Mô hình AI từ Agy:**
+   - Danh sách mô hình AI phải được lấy tự động trực tiếp từ lệnh `agy models` do chính Agy cung cấp.
+   - Tránh việc hardcode hoặc hiển thị danh sách mô hình giả lập khiến người dùng nhầm lẫn.
+4. **Hệ thống Kích hoạt Online qua hoangthiencm.id.vn:**
+   - Website `hoangthiencm.id.vn` cần có `api/license.php` và giao diện quản lý trên `admin.html` để Thầy Thiên duyệt/khóa máy từ xa.
+   - Desktop App kết nối trực tiếp đến API này để kích hoạt 1-click.
 
 ## Phạm vi
-- **Nâng cấp cơ chế Dán thông minh (Smart Paste cho cả Văn bản và Ảnh chụp màn hình):**
-  - Trong `DualInput` (`app_trolythien/ui/kit.py`):
-    + Hỗ trợ kiểm tra mime data của Clipboard:
-      * Nếu Clipboard chứa **Văn bản**: Chèn trực tiếp văn bản vào ô nhập `QTextEdit`.
-      * Nếu Clipboard chứa **Ảnh chụp màn hình**: Tự động lưu thành file ảnh PNG tạm thời trong `app_trolythien/.runtime/clipboard_images/`, gán làm tệp đầu vào, hiển thị tên file trên nhãn đính kèm và phát tín hiệu `image_attached(str)`.
-    + Override sự kiện dán `insertFromMimeData` của `QTextEdit` để khi người dùng ấn phím tắt `Ctrl+V` vào ô soạn thảo, nếu trong clipboard là ảnh thì cũng tự động nhận diện và lưu ảnh đính kèm.
-  - Trong `VeHinhTab` (`app_trolythien/ui/tab_vehinh.py`):
-    + Khi người dùng dán ảnh từ clipboard hoặc chọn file ảnh đề bài, khung xem trước sẽ lập tức hiển thị ngay bức ảnh đề bài đó để giáo viên quan sát trực quan.
-    + Khi AI vẽ xong, khung xem trước tự động chuyển sang hiển thị hình vẽ thành phẩm.
-- **Bổ sung chức năng Chọn cả thư mục & Chọn nhiều tệp (Folder & Multi-file Batch Input):**
-  - Trong `DualInput` (`ui/kit.py`):
-    + Thêm nút bấm **"Chọn cả thư mục…"** (`QFileDialog.getExistingDirectory`).
-    + Nâng cấp nút **"Chọn tệp…"** cho phép chọn nhiều file cùng lúc (`QFileDialog.getOpenFileNames`).
-    + Hiển thị nhãn thông tin rõ ràng: ví dụ *"Đã chọn thư mục: Giaocan_Thang9 (8 tệp)"* hoặc *"Đã chọn 5 tệp"*.
-  - Trong `core/prompt_builder.py` (`_inputs`):
-    + Kiểm tra nếu phần tử trong `files` là một thư mục (`path.is_dir()`): Quét toàn bộ các tệp tài liệu con bên trong thư mục đó (`*.docx`, `*.pdf`, `*.md`, `*.txt`) và đưa danh sách đường dẫn đầy đủ vào prompt cho AI đọc và duyệt toàn bộ.
-- **Cập nhật bản đóng gói `.exe`:**
-  - Chạy lại `app_trolythien/build_exe.bat` để cập nhật bản phân phối trong `app_trolythien/dist/TroLyHoangThien/`.
+1. **Khóa toàn bộ tính năng khi chưa có bản quyền:**
+   - Trong `main_window.py`: Tạo hàm quản lý trạng thái khóa `_set_app_locked(locked: bool)`.
+   - Khi `locked = True` (chưa kích hoạt):
+     + Vô hiệu hóa toàn bộ `self.stack` (hoặc hiển thị màn hình khóa thông báo bản quyền).
+     + Vô hiệu hóa toàn bộ danh sách `self.nav_buttons` trên sidebar.
+     + Vô hiệu hóa combobox mô hình AI và các thao tác soạn bài/vẽ hình/kiểm tra.
+     + Nút «Bản quyền» trên Header luôn bật để người dùng mở hộp thoại kích hoạt.
+   - Khi kích hoạt thành công (dù qua Online trên web Thầy hay nhập Offline key): Tự động gọi `_set_app_locked(False)` để mở khóa toàn bộ ứng dụng ngay lập tức mà không cần khởi động lại app.
+2. **Tối giản giao diện & Tiêu đề:**
+   - Sửa tiêu đề cửa sổ chính thành đúng: `Trợ lý sư phạm`.
+   - Sửa nhãn thương hiệu trên sidebar thành: `Trợ lý sư phạm`.
+   - Xóa bỏ hoàn toàn nhãn phụ đề `Nền tảng giảng dạy & khảo thí 4.0`.
+   - Xóa bỏ hoàn toàn nhãn `Chạy ngầm agy.exe. Cửa sổ vẫn chuyển tab khi đang soạn.` ở chân sidebar.
+3. **Mô hình AI lấy tự động theo Agy:**
+   - Hoàn thiện việc đọc kết quả từ `agy models` trong `core/preflight.py`.
+   - Combobox mô hình AI trên Header nạp danh sách trực tiếp từ các model do `agy models` trả về, tự động chọn model mặc định đầu tiên nếu người dùng chưa chọn.
+4. **Tích hợp Quản lý Bản quyền Online trên hoangthiencm.id.vn:**
+   - `api/license.php`: Hỗ trợ lưu trữ `api/storage/licenses.json`, xử lý `verify` (cho App Desktop) và `list`, `approve`, `revoke`, `delete` (cho trang `admin.html` bảo vệ bằng Admin Key).
+   - `admin.html`: Thêm tab/panel «Bản Quyền App Desktop» hỗ trợ duyệt máy, khóa máy, xóa và tìm kiếm nhanh.
+   - `app_trolythien/core/license.py`: Kết nối trực tiếp `https://hoangthiencm.id.vn/api/license.php`.
 
 ## Ngoài phạm vi
-- Không thay đổi logic chạy ngầm của `agy.exe`.
-- Không ảnh hưởng đến các phân hệ khác ngoài việc được hưởng lợi từ tính năng chọn thư mục và dán ảnh thông minh.
+- Không can thiệp vào các logic nghiệp vụ môn học (Toán, KHBD, Văn bản...) bên trong từng tab.
+- Giữ nguyên phương án nhập mã Offline Key dự phòng cho giáo viên ở vùng không có Internet.
 
 ## File dự kiến tác động
-1. `app_trolythien/ui/kit.py`:
-   - Nâng cấp `DualInput` hỗ trợ dán ảnh clipboard, chọn cả thư mục (`getExistingDirectory`) và chọn nhiều tệp (`getOpenFileNames`).
-2. `app_trolythien/ui/tab_vehinh.py`:
-   - Kết nối tín hiệu hiển thị ảnh đề bài ngay khi dán/chọn ảnh vào khung xem trước.
-3. `app_trolythien/core/prompt_builder.py`:
-   - Cập nhật hàm `_inputs` để duyệt toàn bộ tệp khi đầu vào là một thư mục.
-4. `app_trolythien/dist/TroLyHoangThien/`:
-   - Cập nhật bản đóng gói hoàn chỉnh.
+1. `app_trolythien/ui/main_window.py` *(Sửa)*: Khóa toàn bộ tính năng khi chưa kích hoạt; sửa tiêu đề và sidebar thành «Trợ lý sư phạm»; xóa các dòng mô tả phụ; cập nhật nạp models từ agy.
+2. `app_trolythien/core/preflight.py` *(Sửa)*: Đảm bảo `fetch_available_models()` nạp chính xác các model từ `agy models`.
+3. `app_trolythien/core/license.py` *(Sửa)*: Kết nối `https://hoangthiencm.id.vn/api/license.php`.
+4. `app_trolythien/ui/license_dialog.py` *(Sửa)*: Cải tiến thông báo kích hoạt online rõ ràng.
+5. `api/license.php` *(Tạo mới)*: API lưu trữ và quản lý bản quyền trên web Thầy Thiên.
+6. `admin.html` *(Sửa)*: Bổ sung panel Quản trị Bản Quyền App Desktop.
+7. `tests/test_verify_phase4.py` *(Tạo mới)*: Kiểm thử tự động cơ chế khóa app, tiêu đề, models agy và API license.
 
 ## Các bước thực hiện
-1. **Cập nhật `app_trolythien/ui/kit.py`:**
-   - Trong `DualInput`:
-     - Thêm phương thức `paste_clipboard()`:
-       ```python
-       mime = QApplication.clipboard().mimeData()
-       if mime.hasImage():
-           image = QApplication.clipboard().image()
-           # Lưu vào .runtime/clipboard_images/clip_<timestamp>.png
-           # Gán self.attached = [path] và phát tín hiệu
-       elif mime.hasText():
-           self.editor.insertPlainText(mime.text())
-       ```
-     - Thêm nút `browse_folder = QPushButton("Chọn cả thư mục…")` kết nối tới hộp thoại `QFileDialog.getExistingDirectory`.
-     - Sửa nút `browse` dùng `QFileDialog.getOpenFileNames` để chọn nhiều tệp.
-     - Quản lý danh sách `self.attached_items: list[str]` hỗ trợ cả danh sách file lẫn thư mục.
-2. **Cập nhật `app_trolythien/ui/tab_vehinh.py`:**
-   - Bắt sự kiện khi dán/chọn ảnh đề bài: hiển thị ngay ảnh đề bài lên `self.preview`.
-   - Giữ nguyên hiển thị ảnh kết quả sau khi AI hoàn thành.
-3. **Cập nhật `app_trolythien/core/prompt_builder.py`:**
-   - Trong `_inputs(pasted, files)`:
-     - Duyệt từng mục trong `files`. Nếu là thư mục (`is_dir()`), quét danh sách tệp tài liệu bên trong và liệt kê chi tiết từng tệp cho AI xử lý.
-4. **Kiểm thử tính năng:**
-   - Kiểm tra dán text thuần: Text hiển thị trong ô soạn thảo.
-   - Kiểm tra dán ảnh chụp màn hình: Ảnh được lưu và hiển thị preview.
-   - Kiểm tra chọn thư mục trong tab Duyệt giáo án: Nhận diện đủ danh sách file trong thư mục.
-5. **Đóng gói lại:**
-   - Chạy `app_trolythien/build_exe.bat` để cập nhật `TroLyHoangThien.exe`.
+1. **Thắt chặt cơ chế Khóa bản quyền trong `main_window.py`:**
+   - Viết hàm `_set_app_locked(locked: bool)`: Khóa `stack`, sidebar nav buttons, header controls (trừ nút Bản quyền).
+   - Khi mở app: Kiểm tra `is_licensed()`. Nếu `False`, áp dụng `_set_app_locked(True)` và mở `LicenseDialog`.
+   - Trong `LicenseDialog` hoặc sau khi kích hoạt thành công: Gọi lại `_set_app_locked(False)` để mở khóa toàn bộ tính năng.
+2. **Tối giản thông tin tiêu đề và Sidebar:**
+   - Sửa `setWindowTitle("Trợ lý sư phạm")`.
+   - Sửa `brand = QLabel("Trợ lý sư phạm")`, xóa widget `tag` và xóa widget `note`.
+3. **Đồng bộ Mô hình AI tự động từ `agy`:**
+   - `core/preflight.py`: Gọi `agy models` lấy danh sách chuẩn từ CLI Agy.
+   - Đưa kết quả vào `model_combo` khi tiến trình preflight hoàn tất.
+4. **Xây dựng Backend `api/license.php` & Giao diện `admin.html`:**
+   - Viết `api/license.php` đọc/ghi `api/storage/licenses.json` bằng `flock`.
+   - Bổ sung panel Bản Quyền App Desktop trên `admin.html` với nút Duyệt, Khóa, Xóa.
+   - Trỏ `LICENSE_ONLINE_URL = "https://hoangthiencm.id.vn/api/license.php"` trong `core/license.py`.
+5. **Kiểm thử nghiệm thu:**
+   - Chạy kiểm thử tự động với `tests/test_verify_phase4.py`.
 
-## Rủi ro
-1. **Ảnh clipboard có dung lượng lớn:**
-   - *Biện pháp:* Tự động nén lưu định dạng PNG tiêu chuẩn, hiển thị thu nhỏ với tỷ lệ phù hợp (`KeepAspectRatio`).
-2. **Thư mục chọn chứa quá nhiều file rác:**
-   - *Biện pháp:* Bộ lọc chỉ lấy các đuôi tệp văn bản/tài liệu hợp lệ (`.docx`, `.pdf`, `.md`, `.txt`, `.png`, `.jpg`).
-
-## Cách kiểm thử
-1. Mở `app_trolythien/main.py`.
-2. Vào Tab **Vẽ hình học**:
-   - Dùng Win+Shift+S chụp một góc màn hình, quay lại app bấm "Dán từ Clipboard" (hoặc Ctrl+V) -> ảnh đề bài xuất hiện ngay ở khung xem trước và có thông báo đính kèm ảnh.
-   - Thử dán một đoạn chữ đề bài -> chữ xuất hiện rõ trong ô soạn thảo.
-3. Vào Tab **Duyệt giáo án**:
-   - Bấm nút "Chọn cả thư mục…" và chọn một thư mục chứa nhiều file giáo án -> nhãn hiển thị số lượng file trong thư mục, prompt sinh ra liệt kê đầy đủ danh sách file đó.
-4. Chạy `build_exe.bat` và kiểm tra file `.exe` trong `dist/TroLyHoangThien/`.
+## Rủi ro & Giải pháp
+- **Rủi ro:** Người dùng mở app khi chưa có mạng và chưa có bản quyền $\rightarrow$ Khóa toàn bộ tính năng, hướng dẫn copy Mã máy gửi Thầy Thiên lấy mã Offline hoặc kết nối mạng để Thầy duyệt Online.
+- **Rủi ro:** Agy CLI mất nhiều giây để trả về danh sách models $\rightarrow$ Giữ Preflight chạy nền (QThread) để giao diện không bị đơ, khi có kết quả từ Agy thì nạp ngay vào combobox.
 
 ## Tiêu chí nghiệm thu
-- Dán được cả chữ và ảnh chụp màn hình từ Clipboard (ảnh hiện ngay ở khung xem trước).
-- Có nút chọn cả thư mục cho các phân hệ duyệt hồ sơ/hàng loạt, AI nhận diện và quét toàn bộ tệp trong thư mục.
-- Bản `.exe` trong `dist/TroLyHoangThien/` được cập nhật và chạy mượt mà.
+- [ ] Khi chưa kích hoạt: Mọi tính năng (các tab, nút chuyển trang, thao tác) bị KHÓA hoàn toàn, không thể sử dụng.
+- [ ] Sau khi kích hoạt thành công (Online hoặc Offline): Toàn bộ tính năng tự động MỞ KHÓA ngay lập tức.
+- [ ] Tiêu đề cửa sổ và Sidebar hiển thị đúng: **«Trợ lý sư phạm»** (đã xóa các dòng phụ đề và ghi chú rườm rà).
+- [ ] Danh sách mô hình AI được nạp tự động từ chính Agy CLI cung cấp.
+- [ ] `api/license.php` và `admin.html` kết nối đồng bộ, cho phép Thầy duyệt bản quyền online qua web.
+- [ ] Toàn bộ bộ test `tests/test_verify_phase4.py` đạt PASS.

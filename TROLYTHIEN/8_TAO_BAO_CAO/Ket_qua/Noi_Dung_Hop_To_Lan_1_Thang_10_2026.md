@@ -120,13 +120,20 @@ Nhằm tạo sân chơi học tập bổ ích, khơi dậy niềm đam mê học
   - **Ngày 24/10/2026:** Hạn chót nộp Đề kiểm tra giữa kỳ (kèm hướng dẫn chấm, biểu điểm) và hoàn thành công tác phản biện chéo giữa các giáo viên trong tổ.
   - **Ngày 28/10/2026:** Tổ trưởng chuyên môn tổng hợp, thẩm định lần cuối và chính thức nộp toàn bộ Đề thi giữa kỳ về bộ phận Chuyên môn nhà trường (Ban Giám hiệu) để in sao và bảo mật.
 
-#### 4. Công tác Sinh hoạt chuyên môn theo Nghiên cứu bài học (NCBH):
-- **Tên bài học được lựa chọn:** **Môn Toán lớp 6 – Bài “Hình bình hành – Hình thoi”** (Thuộc Chương Hình học trực quan, bộ sách GDPT 2018).
-- **Lý do lựa chọn bài học:**
-  - Đây là nội dung hình học trực quan trọng tâm của học kỳ 1, học sinh khối 6 mới chuyển cấp thường gặp lúng túng trong việc nhận biết và phân biệt tính chất các cạnh, góc đối, đường chéo của hai hình này.
-  - Tiết học tạo điều kiện tối ưu để áp dụng phương pháp dạy học tích cực (hoạt động nhóm, thực hành gấp giấy, cắt ghép hình, đo đạc trực quan).
-  - Rất thuận lợi để tích hợp **Năng lực số** (sử dụng phần mềm GeoGebra mô phỏng trực quan trên bảng tương tác) và định hướng **giáo dục STEM** (thiết kế hoa văn trang trí, khung tranh hình học).
-- **Phân công thực hiện:** Cô **Nguyễn Thị Thảo** chủ trì thiết kế Kế hoạch bài dạy minh họa; toàn tổ họp đóng góp ý kiến hoàn thiện tiến trình dạy học; dự kiến tổ chức dạy thể nghiệm và phân tích bài học vào tuần 3 tháng 10/2026.
+#### 4. Kế hoạch Sinh hoạt chuyên môn theo Nghiên cứu bài học (NCBH) trong tháng 11/2026:
+Nhằm bảo đảm tính liên tục và nâng cao chất lượng dạy học ở các khối lớp trọng tâm, Tổ chuyên môn thống nhất không tổ chức nghiên cứu bài học ở khối 6 (do khối 6 đang tập trung cho Chuyên đề Ngoại khóa Rung chuông vàng) mà chuyển trọng tâm sang khối 8 và khối 9 trong tháng 11/2026 (sau kỳ kiểm tra giữa học kỳ 1) với định hướng chi tiết như sau:
+- **Bài học trọng tâm được lựa chọn thực hiện:** **Môn Toán lớp 8 – Bài “Định lí Thalès trong tam giác”** (Chương Định lí Thalès, bộ sách GDPT 2018; phân phối chương trình dạy vào trung tuần tháng 11).
+- **Chuyên đề định hướng nâng cao lớp 9:** Nhóm giáo viên dạy Toán 9 (Thầy Thiên, Thầy Danh, Thầy Sáng) đồng thời chuẩn bị chuyên đề sinh hoạt chuyên môn “Đổi mới phương pháp dạy học Hàm số bậc nhất và Rèn kỹ năng giải toán thực tế cho học sinh lớp 9 ôn thi Tuyển sinh 10”.
+- **Lý do lựa chọn bài “Định lí Thalès trong tam giác” (Lớp 8):**
+  - Đây là bài học mang tính nền tảng và bước ngoặt của hình học lớp 8, giúp học sinh chuyển từ hình học trực quan sang tư duy suy luận tỉ số đoạn thẳng tỉ lệ.
+  - Khả năng ứng dụng thực tế và giáo dục STEM rất cao: Học sinh có thể trực tiếp thực hành đo đạc ngoài sân trường (đo bóng mặt trời để xác định chiều cao cột cờ, cây xanh mà không cần trèo lên; đo khoảng cách giữa hai điểm qua chướng ngại vật).
+  - Rất thuận lợi ứng dụng Năng lực số: Sử dụng phần mềm hình học động GeoGebra để học sinh tự tay kéo thả các đỉnh tam giác, trực quan quan sát các tỉ số đoạn thẳng luôn không đổi khi có đường thẳng song song.
+- **Tiến độ và phân công thực hiện:**
+  - **Người thực hiện dạy minh họa:** Cô **Lê Thị Bình** (phụ trách chính khối 8) chủ trì xây dựng Kế hoạch bài dạy minh họa; Thầy **Trần Long Hải** và Thầy **Tính** phối hợp hỗ trợ thiết kế phiếu học tập, chuẩn bị dụng cụ đo đạc thực hành (thước dây, giác kế mini).
+  - **Từ 25/10 – 05/11/2026:** Nhóm Toán 8 hoàn thành dự thảo Kế hoạch bài dạy minh họa chuẩn Công văn 5512 tích hợp Năng lực số và STEM.
+  - **Tuần 1 Tháng 11/2026:** Tổ chuyên môn họp đóng góp ý kiến, hoàn thiện giáo án và thống nhất các tình huống sư phạm cần quan sát.
+  - **Tuần 3 Tháng 11/2026** *(Dự kiến ngày 19/11/2026)*: Cô **Lê Thị Bình** tiến hành dạy thể nghiệm tại lớp 8; toàn thể giáo viên trong tổ tham gia dự giờ quan sát hoạt động học của học sinh.
+  - **Sau tiết dạy:** Tổ chức họp phân tích bài học, rút kinh nghiệm theo 4 bước sinh hoạt chuyên môn theo nghiên cứu bài học chuẩn quy định.
 
 #### 5. Một số công tác chuyên môn khác:
 - **Phong trào thi đua chào mừng ngày Phụ nữ Việt Nam 20/10:** Phát động phong trào “Tuần học tốt, giờ dạy tốt”, mỗi giáo viên trong tổ đăng ký ít nhất 01 tiết dạy tốt, tăng cường ứng dụng công nghệ thông tin và chuyển đổi số trong giảng dạy.
@@ -138,21 +145,21 @@ Nhằm tạo sân chơi học tập bổ ích, khơi dậy niềm đam mê học
 
 ### IV. Ý KIẾN THẢO LUẬN CỦA CÁC THÀNH VIÊN TRONG TỔ
 Sau khi nghe Tổ trưởng chuyên môn triển khai nội dung cuộc họp, các thành viên trong tổ đã tích cực thảo luận, đóng góp ý kiến:
-- **Ý kiến của Cô Nguyễn Thị Thảo:** Nhất trí với sự phân công của tổ. Tôi sẽ hoàn thành ma trận, bản đặc tả và đề cương khối 6 đúng hạn 15/10/2026. Về đề kiểm tra và chuyên đề Rung chuông vàng, tôi sẽ phối hợp cùng cô Bình hoàn thành ngân hàng câu hỏi và nộp đề đúng hạn phản biện 24/10/2026.
+- **Ý kiến của Cô Lê Thị Bình:** Tôi hoàn toàn nhất trí nhận nhiệm vụ chủ trì dạy thể nghiệm bài Nghiên cứu bài học lớp 8 “Định lí Thalès trong tam giác” trong tháng 11/2026. Đây là bài rất hay để đổi mới phương pháp dạy học, tôi sẽ kết hợp hoạt động đo đạc thực tế ngoài sân trường và mô phỏng GeoGebra để tiết học sinh động. Về ma trận đề cương Toán 8 giữa kỳ, tôi cam kết nộp đúng hạn 15/10/2026; nộp đề kiểm tra phản biện đúng hạn 24/10/2026.
+- **Ý kiến của Cô Nguyễn Thị Thảo:** Cảm ơn tổ đã điều chỉnh nhiệm vụ NCBH sang khối 8, giúp tôi có điều kiện tập trung tối đa cho Chuyên đề Ngoại khóa Rung chuông vàng khối 6 và ra ma trận đề cương giữa kỳ đúng tiến độ 15/10/2026.
 - **Ý kiến của Thầy Trần Sáng:** Tôi tiếp thu kế hoạch kiểm tra nội bộ toàn diện của nhà trường, sẽ hoàn thiện toàn bộ hồ sơ giáo án đúng mẫu và gửi lịch dạy sớm nhất cho Tổ trưởng. Về ma trận và đề Toán 9, tôi đảm bảo bám sát chuẩn kiến thức, nộp đúng tiến độ (ma trận ngày 15/10, đề kiểm tra ngày 24/10) để tổ phản biện và nộp về chuyên môn nhà trường ngày 28/10/2026.
-- **Ý kiến của Cô Lê Thị Bình:** Thống nhất các mốc thời gian ra đề, ma trận và phản biện chéo giữa kỳ. Về hồ sơ giáo án, đề nghị các thầy cô lưu ý sửa lỗi font công thức và in đậm nghiêng NLS/AI.
-- **Ý kiến của Thầy Hồ Đăng Danh, Thầy Ánh:** Hoàn toàn nhất trí với kế hoạch triển khai của tổ và các mốc thời gian kiểm tra giữa kỳ; các nhóm sẽ phối hợp chặt chẽ để phản biện đề kiểm tra đạt chất lượng cao nhất.
+- **Ý kiến của Thầy Hồ Đăng Danh, Thầy Hải, Thầy Ánh:** Nhất trí cao với phân công chuyên môn; nhóm Toán 8 sẽ hỗ trợ cô Bình chuẩn bị tốt dụng cụ thực hành và học liệu số; toàn tổ sẵn sàng thực hiện tốt các nhiệm vụ trọng tâm.
 
 ---
 
 ### V. KẾT LUẬN CỦA TỔ TRƯỞNG CHUYÊN MÔN VÀ BIỂU QUYẾT
 1. **Kết luận của Tổ trưởng chuyên môn:**
-   - Đánh giá cao tinh thần trách nhiệm và sự thống nhất cao của toàn thể các thầy cô giáo trong tổ.
+   - Đánh giá cao tinh thần trách nhiệm và sự thống nhất, hỗ trợ lẫn nhau của các thành viên trong tổ.
    - Yêu cầu các đồng chí phụ trách các khối thực hiện chuẩn xác 03 mốc thời gian kiểm tra giữa kỳ:
      + **Ngày 15/10/2026:** Nộp Ma trận, Bản đặc tả và Đề cương ôn tập về Tổ trưởng duyệt.
      + **Ngày 24/10/2026:** Nộp Đề kiểm tra giữa kỳ và hoàn tất công tác phản biện chéo trong nhóm bộ môn.
      + **Ngày 28/10/2026:** Hoàn tất nộp bộ Đề kiểm tra giữa kỳ chính thức về bộ phận Chuyên môn nhà trường (Ban Giám hiệu).
-   - Hoàn tất công tác chuẩn bị kiểm tra nội bộ của Thầy Sáng, xây dựng ngân hàng đề Rung chuông vàng khối 6 và thực hiện tốt chuyên đề Nghiên cứu bài học.
+   - Hoàn tất chuẩn bị kiểm tra nội bộ của Thầy Sáng; đẩy mạnh xây dựng ngân hàng đề Rung chuông vàng khối 6; nhóm Toán 8 khẩn trương chuẩn bị Kế hoạch bài dạy minh họa bài “Định lí Thalès trong tam giác” để tổ chức thành công trong tháng 11/2026.
    - Chấp hành nghiêm các quy định về chuyên môn và quản lý dạy thêm học thêm của Sở GD&ĐT thành phố Đồng Nai.
 2. **Biểu quyết của tổ:**
    - Số lượng đồng ý: **100%** thành viên tham dự cuộc họp nhất trí thông qua nội dung biên bản.
