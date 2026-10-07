@@ -1878,9 +1878,7 @@
                     <i class="far fa-comment-dots mr-1"></i>Thêm bình luận
                 </button>` : '';
             const canEditPost = state.canManage || p.can_delete;
-            const actions = (canEditPost || b.comments_enabled) ? `
-                <div class="post-action mt-3 flex flex-wrap gap-2 border-t border-slate-900/10 pt-3">
-                    ${state.canManage && isPending ? `
+            const manageBtns = `${state.canManage && isPending ? `
                         <button type="button" onclick="moderate(${p.id},'publish')" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white">
                             <i class="fas fa-check mr-1"></i>Duyệt
                         </button>
@@ -1895,8 +1893,11 @@
                     </button>
                     <button type="button" onclick="moderate(${p.id},'delete')" class="rounded-lg bg-red-50 px-3 py-2 font-bold text-red-700">
                         <i class="fas fa-trash-can mr-1"></i>Xóa
-                    </button>` : ''}
-                    ${commentBtn}
+                    </button>` : ''}`;
+            const actions = (canEditPost || b.comments_enabled) ? `
+                <div class="post-action mt-3 flex flex-col gap-2 border-t border-slate-900/10 pt-3">
+                    ${manageBtns.trim() ? `<div class="flex flex-wrap gap-2">${manageBtns}</div>` : ''}
+                    ${commentBtn ? `<div class="flex">${commentBtn}</div>` : ''}
                 </div>` : '';
 
             const otherFiles = (p.files || []).filter((f) => !isImageFile(f)).map((f) => `

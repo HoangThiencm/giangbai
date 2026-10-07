@@ -138,3 +138,27 @@
 ### • Nhận xét chung toàn bộ hồ sơ Cô Lê Thị Bình (Duyệt theo gói): [DUYỆT - XẾP LOẠI TỐT]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
 > `DUYỆT HỒ SƠ (Xếp loại Tốt). Hồ sơ giáo án nộp đầy đủ 45 tiết (178 trang) thuộc 5 phân môn Toán 7, Toán 8, HĐTN 7. Đảm bảo 100% tiến độ Tháng 9 và vượt tuần 5. Đã chỉnh sửa hoàn toàn sạch sẽ lỗi font công thức toán học và ký hiệu góc trong các phân môn Hình học. Nội dung tích hợp NLS và AI mẫu mực, 100% câu mô tả đều in đậm nghiêng đúng quy định.`
+
+---
+
+## 6. THẦY DƯƠNG QUANG TÙNG (MÔN TIN HỌC 6, 7, 8, 9 — 17 TIẾT, 115 TRANG)
+
+### • Phân môn Tin học 6 (19 trang — 04 tiết: Bài 1, Bài 2): [ĐẠT / DUYỆT (TỐT)]
+> **👉 Nhận xét hệ thống (Copy & Paste):**  
+> `Kế hoạch bài dạy chuẩn bị chu đáo, đủ 04 tiết đảm bảo 100% tiến độ 4 tuần tháng 9 theo đúng PPCT (Bài 1: 2 tiết, Bài 2: 2 tiết). Cấu trúc 4 hoạt động CV 5512 rõ ràng. Tích hợp Năng lực số (1.2.TC1a, 5.3.TC1a) và Năng lực AI (6.A1.1) khớp chuẩn Phụ lục 3 và đã IN ĐẬM, NGHIÊNG, MÀU TÍM rất nổi bật theo quy chế chuyên môn. Duyệt.`
+
+### • Phân môn Tin học 7 (23 trang — 04 tiết: Bài 1, Bài 2, Bài 3): [ĐẠT / DUYỆT (TỐT)]
+> **👉 Nhận xét hệ thống (Copy & Paste):**  
+> `Soạn đủ 04 tiết đúng tiến độ tháng 9 theo PPCT (Bài 1: 1 tiết, Bài 2: 1 tiết, Bài 3: 2 tiết). Tiến trình dạy học mạch lạc, phiếu học tập rõ ràng. Tích hợp Năng lực AI (7.A1.1) và Năng lực số (5.3.TC1a, 1.2.TC1a, 3.1.TC1a) khớp Phụ lục 3 và đã IN ĐẬM, NGHIÊNG, MÀU TÍM chuẩn mực. Duyệt.`
+
+### • Phân môn Tin học 8 (24 trang — 04 tiết: Bài 1, Bài 2, Bài 3, Bài 4): [ĐẠT / DUYỆT (TỐT)]
+> **👉 Nhận xét hệ thống (Copy & Paste):**  
+> `Kế hoạch bài dạy chuẩn bị tốt, đủ 04 tiết đảm bảo 100% tiến độ tháng 9 (Bài 1 đến Bài 4). Thiết kế hoạt động học tập phong phú, kết hợp công cụ số sinh động. Tích hợp Năng lực AI (8.A3.3) tại Bài 1 và Năng lực số (1.2.TC2a) tại Bài 2 đã IN ĐẬM, NGHIÊNG, MÀU TÍM đúng quy định. Duyệt.`
+
+### • Phân môn Tin học 9 (49 trang — 05 tiết: Bài 1, Bài 2, Bài 3, Bài 4): [ĐẠT / DUYỆT (XUẤT SẮC)]
+> **👉 Nhận xét hệ thống (Copy & Paste):**  
+> `Kế hoạch bài dạy soạn rất công phu (49 trang), đạt 05 tiết (đảm bảo 100% tháng 9 và vượt tuần 5 đến hết Bài 4). Ứng dụng công cụ AI (ChatGPT, Gemini, Copilot) làm trợ lý học tập rất sáng tạo, hiện đại. Tích hợp Năng lực số (3.1.TC2a, 1.2.TC2a) và Năng lực AI (9.B2.1, 9.D1.1) khớp Phụ lục 3 và đã IN ĐẬM, NGHIÊNG, MÀU TÍM cực kỳ chuẩn mực. Duyệt.`
+
+### • Nhận xét chung toàn bộ hồ sơ Thầy Dương Quang Tùng (Duyệt theo gói): [DUYỆT - XẾP LOẠI TỐT]
+> **👉 Nhận xét hệ thống (Copy & Paste):**  
+> `DUYỆT TOÀN BỘ HỒ SƠ (Xếp loại Tốt). Hồ sơ giáo án nộp đầy đủ 17 tiết (115 trang PDF) thuộc 4 khối lớp Tin học 6, 7, 8, 9. Đảm bảo 100% tiến độ Tháng 9 và vượt tuần 5 ở khối 9. Tích hợp Năng lực số và AI trong cả 4 khối lớp rất mẫu mực, 100% câu mô tả đều in đậm, nghiêng, màu tím nổi bật và khớp Phụ lục 3. Thể thức và tiến trình CV 5512 chuẩn mực. Biểu dương tinh thần tiên phong ứng dụng công nghệ của thầy Tùng.`

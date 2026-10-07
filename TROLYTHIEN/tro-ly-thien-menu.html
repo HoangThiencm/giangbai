@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trợ lý Sư phạm Hoàng Thiên</title>
+  <style>
+    :root { --navy:#12325b; --blue:#2374c6; --sky:#edf6ff; --ink:#182235; --muted:#5e6b7e; --line:#d9e3f0; --white:#fff; --ok:#127a50; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:linear-gradient(135deg,#eef6ff 0%,#f8fbff 48%,#edf4f1 100%); }
+    main { width:min(1120px,calc(100% - 32px)); margin:0 auto; padding:42px 0 56px; }
+    .hero { display:flex; align-items:center; gap:18px; margin-bottom:18px; }
+    .mark { display:grid; place-items:center; flex:none; width:58px; height:58px; border-radius:18px; color:#fff; font-size:27px; background:linear-gradient(145deg,var(--blue),var(--navy)); box-shadow:0 10px 25px #1d5b9840; }
+    h1 { margin:0; font-size:clamp(1.65rem,3vw,2.3rem); line-height:1.16; color:var(--navy); }
+    .subtitle { margin:5px 0 0; color:var(--muted); }
+    .guide { margin:22px 0 28px; padding:13px 17px; border-left:4px solid var(--blue); border-radius:0 12px 12px 0; background:#ffffffb8; color:#30445f; }
+    .guide strong { color:var(--navy); }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(235px,1fr)); gap:14px; }
+    button, a.tool { font:inherit; }
+    .choice { position:relative; display:flex; align-items:flex-start; gap:12px; width:100%; min-height:94px; padding:16px; text-align:left; color:var(--ink); cursor:pointer; border:1px solid var(--line); border-radius:15px; background:var(--white); box-shadow:0 3px 11px #19395a0c; transition:.18s ease; }
+    .choice:hover, .choice:focus-visible, .choice.active { outline:none; transform:translateY(-2px); border-color:#80b8eb; box-shadow:0 8px 22px #1c5a9630; }
+    .num { display:grid; place-items:center; flex:none; width:30px; height:30px; border-radius:9px; background:var(--sky); color:var(--blue); font-weight:800; }
+    .choice b { display:block; line-height:1.27; color:var(--navy); }
+    .choice small { display:block; margin-top:5px; color:var(--muted); line-height:1.35; }
+    .panel { margin-top:26px; padding:clamp(18px,3vw,28px); border:1px solid var(--line); border-radius:19px; background:#fffffff0; box-shadow:0 12px 30px #14375c12; }
+    .panel[hidden], #exercisePanel[hidden] { display:none; }
+    h2 { margin:0 0 8px; color:var(--navy); font-size:1.25rem; }
+    .hint { margin:0 0 15px; color:var(--muted); }
+    label { display:block; margin:14px 0 7px; font-size:.92rem; font-weight:700; color:#30445f; }
+    textarea { width:100%; min-height:122px; resize:vertical; padding:13px; border:1px solid #b8cbe0; border-radius:11px; color:var(--ink); background:#fbfdff; font:14px/1.48 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .actions, .tools { display:flex; flex-wrap:wrap; gap:10px; margin-top:13px; }
+    .copy, .tool { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:8px 14px; border:0; border-radius:10px; font-weight:750; text-decoration:none; cursor:pointer; }
+    .copy { color:#fff; background:var(--blue); }
+    .copy:hover, .copy:focus-visible { background:#185eaa; outline:3px solid #a8d1f5; outline-offset:2px; }
+    .tool { color:var(--navy); border:1px solid #bcd3e8; background:#fff; }
+    .tool:hover { background:var(--sky); }
+    #status { min-height:24px; margin:10px 0 0; color:var(--ok); font-weight:650; }
+    .exercise-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+    .exercise { min-height:62px; padding:10px 12px; cursor:pointer; text-align:left; color:#27445f; border:1px solid #c9dae9; border-radius:10px; background:#fafdff; }
+    .exercise:hover, .exercise:focus-visible { outline:none; border-color:var(--blue); background:var(--sky); }
+    .micro { margin:0 0 12px; font-size:.92rem; color:var(--muted); }
+    @media (max-width:540px) { main { width:min(100% - 22px,1120px); padding-top:24px; } .hero { align-items:flex-start; } .mark { width:48px; height:48px; border-radius:14px; font-size:22px; } .choice { min-height:82px; } .grid { grid-template-columns:1fr; } .panel { margin-top:18px; } }
+  </style>
+</head>
+<body>
+<main>
+  <header class="hero"><div class="mark" aria-hidden="true">✦</div><div><h1>Trợ lý Sư phạm Hoàng Thiên</h1><p class="subtitle">Chọn một việc để tạo lời nhắn khởi đầu cho Codex.</p></div></header>
+  <p class="guide"><strong>Cách dùng:</strong> bấm chọn → xem lời nhắn → <strong>Sao chép</strong> → dán và gửi trong chat Codex. Trang này không tự gửi tin nhắn vào Codex.</p>
+  <section class="grid" id="menu" aria-label="Menu chức năng"></section>
+  <section class="panel" id="exercisePanel" hidden aria-live="polite">
+    <h2>3. Chọn dạng bài tập</h2><p class="micro">Chọn một trong 10 dạng để tạo lời nhắn phù hợp.</p>
+    <div class="exercise-grid" id="exerciseMenu"></div>
+  </section>
+  <section class="panel" id="promptPanel" hidden aria-live="polite">
+    <h2 id="promptTitle">Lời nhắn khởi đầu</h2><p class="hint">Bạn có thể sửa thêm thông tin trước khi sao chép.</p>
+    <label for="prompt">Nội dung để dán vào chat Codex</label>
+    <textarea id="prompt" spellcheck="false"></textarea>
+    <div class="actions"><button class="copy" id="copyButton" type="button">Sao chép lời nhắn</button></div>
+    <p id="status" role="status"></p>
+    <div class="tools" id="tools" aria-label="Công cụ liên quan"></div>
+  </section>
+</main>
+<script>
+  const items = [
+    ['Duyệt giáo án','Hãy duyệt giáo án trong TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/. Đọc hướng dẫn nhánh, đối chiếu kiến thức, thể thức, NLS/AI/STEM và xuất biên bản/phiếu nhận xét vào Ket_qua/.'],
+    ['Soạn Giáo án (KHBD)','Hãy soạn KHBD. Tôi sẽ cung cấp môn, lớp, bài/chủ đề và số tiết. Đọc tài liệu trong TROLYTHIEN/1_SOAN_KHBD/Dau_vao/ rồi xuất KHBD .docx vào Ket_qua/.'],
+    ['Tạo bài tập',''],
+    ['Duyệt đề','Hãy duyệt đề và ma trận trong TROLYTHIEN/4_DUYET_DE/Dau_vao/. Hãy nêu lỗi kiến thức, ma trận, mức độ và các chỉnh sửa đề xuất; lưu kết quả vào Ket_qua/.'],
+    ['Game giáo dục','Hãy mở hoặc hướng dẫn tôi dùng công cụ Game giáo dục.'],
+    ['Sổ điểm','Hãy mở hoặc hướng dẫn tôi dùng Sổ điểm.'],
+    ['Quản lý tổ chuyên môn','Hãy mở hoặc hướng dẫn tôi dùng công cụ Quản lý tổ chuyên môn.'],
+    ['Tạo báo cáo','Hãy tạo báo cáo từ dữ liệu trong TROLYTHIEN/8_TAO_BAO_CAO/Dau_vao/. Đọc hướng dẫn, không bịa dữ liệu và xuất Word vào Ket_qua/.'],
+    ['Viết sáng kiến','Hãy viết sáng kiến từ hướng dẫn và minh chứng trong TROLYTHIEN/9_VIET_SANG_KIEN/Dau_vao/, theo cấu trúc bốn phần và xuất Word vào Ket_qua/.'],
+    ['Tạo bài giảng HTML (từ PDF)','Hãy tạo bài giảng HTML từ PDF. Trước hết hãy hỏi tôi đủ môn, lớp và số tiết; sau đó đọc PDF trong TROLYTHIEN/10_BAI_GIANG_HTML/Dau_vao/ và tạo HTML tại Ket_qua/.'],
+    ['Vẽ hình học cực kỳ chính xác','Hãy vẽ hình học chính xác từ đề bài/ảnh tôi cung cấp hoặc dữ liệu trong TROLYTHIEN/11_VE_HINH/Dau_vao/. Dựng bằng tọa độ giải tích; tạo PNG, SVG, lệnh GeoGebra và HTML xem trước trong Ket_qua/.'],
+    ['Chuẩn hoá văn bản (Hành chính / Đảng)','Hãy chuẩn hóa các tệp Word trong TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Dau_vao/. Giữ nguyên số liệu, đọc hướng dẫn và xuất [Ten_File]_Chuan_Hoa.docx vào Ket_qua/.'],
+    ['Chuyển ghi âm thành văn bản (iPhone / MP3)','Hãy chuyển ghi âm trong TROLYTHIEN/13_CHUYEN_GHI_AM/Dau_vao/ thành văn bản trung thực. Đọc hướng dẫn và xuất cả .docx cùng .txt UTF-8 vào Ket_qua/.']
+  ];
+  const exercises = [
+    'Dạng Công văn 7991 (17 câu)','Dạng Công văn 7991 (tùy chỉnh mức độ/số câu)','100% trắc nghiệm 4 lựa chọn (tùy chỉnh số câu)','Xuất game giáo dục','Chuẩn hóa import OLM / Azota','Đề 15 phút tinh gọn (8 TN + 2 TL ngắn)','Tùy chỉnh linh hoạt số câu','Bài tập tự luận','Xuất bài dạy HTML (dạy thêm, phụ đạo, bồi dưỡng — phân dạng và giải từng bước)','Tự động cắt PDF SGK thành từng bài'
+  ];
+  const webTools = {
+    5:[['Mở Game giáo dục','https://www.hoangthiencm.id.vn/trochoi.html']],
+    6:[['Mở Sổ điểm','https://www.hoangthiencm.id.vn/sodiem.html']],
+    7:[['Mở Quản lý tổ chuyên môn','https://www.hoangthiencm.id.vn/phancongtochuyenmon.html']],
+    11:[['Mở công cụ Vẽ hình','https://www.hoangthiencm.id.vn/vehinh.html']]
+  };
+  const menu = document.querySelector('#menu'), panel = document.querySelector('#promptPanel'), prompt = document.querySelector('#prompt'), status = document.querySelector('#status'), tools = document.querySelector('#tools'), exercisePanel = document.querySelector('#exercisePanel');
+  items.forEach(([name,text], index) => {
+    const button = document.createElement('button'); button.type = 'button'; button.className = 'choice';
+    button.innerHTML = `<span class="num">${index + 1}</span><span><b>${name}</b><small>${index === 2 ? '10 dạng bài tập' : 'Tạo lời nhắn khởi đầu'}</small></span>`;
+    button.addEventListener('click', () => { document.querySelectorAll('.choice').forEach(x => x.classList.remove('active')); button.classList.add('active'); if(index === 2) { exercisePanel.hidden = false; panel.hidden = true; exercisePanel.scrollIntoView({behavior:'smooth',block:'nearest'}); } else { exercisePanel.hidden = true; showPrompt(index + 1, name, text); } }); menu.append(button);
+  });
+  exercises.forEach((name,index) => { const button=document.createElement('button'); button.type='button'; button.className='exercise'; button.textContent=`${index+1}. ${name}`; button.addEventListener('click',()=>showPrompt(3,`Tạo bài tập — ${name}`,`Hãy tạo bài tập theo dạng: ${name}. Đọc đúng hướng dẫn và tài liệu trong TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/, không bịa dữ liệu, rồi xuất kết quả vào TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/.`)); document.querySelector('#exerciseMenu').append(button); });
+  function showPrompt(number,title,text) { document.querySelector('#promptTitle').textContent=`${number}. ${title}`; prompt.value=text; status.textContent=''; tools.replaceChildren(); (webTools[number] || []).forEach(([label,url]) => { const a=document.createElement('a'); a.className='tool'; a.href=url; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=label; tools.append(a); }); panel.hidden=false; panel.scrollIntoView({behavior:'smooth',block:'nearest'}); prompt.focus(); }
+  document.querySelector('#copyButton').addEventListener('click', async () => { prompt.focus(); prompt.select(); let copied=false; try { if(navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(prompt.value); copied=true; } } catch (_) {} if(!copied) { try { copied=document.execCommand('copy'); } catch (_) {} } status.textContent=copied ? 'Đã sao chép. Hãy dán và gửi trong chat Codex.' : 'Chưa thể tự sao chép. Nội dung đã được bôi chọn — hãy nhấn Ctrl+C (hoặc Cmd+C).'; });
+</script>
+</body>
+</html>

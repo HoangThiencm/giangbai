@@ -45,7 +45,7 @@ Tổ chuyên môn thống nhất thẩm định hồ sơ theo 04 tiêu chuẩn b
 | **3** | **NGUYỄN THỊ THẢO** | Toán 6, Toán 7 | 34 tiết (123 trang) | Đã sửa sạch 100% lỗi font góc; NLS in đậm nghiêng chuẩn | **DUYỆT**<br>*(Xếp loại: Tốt)* |
 | **4** | **TRẦN SÁNG** | Toán 6, Toán 9 | 32 tiết (155 trang) | Đã bổ sung đủ 100% Tháng 9; NLS khớp PL3 | **DUYỆT**<br>*(Xếp loại: Khá)* |
 | **5** | **LÊ THỊ BÌNH** | Toán 7, Toán 8, HĐTN 7 | 45 tiết (178 trang) | Đã sửa sạch 100% lỗi font công thức; NLS/AI chuẩn mực | **DUYỆT**<br>*(Xếp loại: Tốt)* |
-| *6* | *[Đang chờ nạp...]* | *—* | *—* | *—* | *—* |
+| **6** | **DƯƠNG QUANG TÙNG** | Tin học 6, 7, 8, 9 | 17 tiết (115 trang) | Đủ 100% Tháng 9 & vượt Tuần 5; NLS/AI mẫu mực | **DUYỆT**<br>*(Xếp loại: Tốt)* |
 
 ---
 
@@ -88,8 +88,16 @@ Tổ chuyên môn thống nhất thẩm định hồ sơ theo 04 tiêu chuẩn b
 
 ---
 
+
+### 6. Thầy Dương Quang Tùng (Môn Tin học 6, 7, 8, 9)
+- **Tiến độ và khối lượng**: Nộp đầy đủ 04 tệp PDF gồm 115 trang qua 4 khối lớp, tổng cộng 17 tiết dạy: Tin học 6 (4 tiết, 19 tr), Tin học 7 (4 tiết, 23 tr), Tin học 8 (4 tiết, 24 tr) và Tin học 9 (5 tiết, 49 tr). Đảm bảo 100% tiến độ 4 tuần Tháng 9/2026 và vượt tiến độ sang tuần 5 ở khối 9 (đến hết Bài 4).
+- **Ưu điểm nổi bật**: Hồ sơ bài dạy chuẩn bị cực kỳ đồ sộ, bài bản, mẫu mực bậc nhất trong tổ. Thể thức văn bản, Header/Footer đúng chuẩn quy định của trường THCS Trần Phú. Thiết kế tiến trình dạy học đảm bảo đầy đủ 4 hoạt động theo Công văn số 5512/BGDĐT-GDTrH. Đặc biệt, việc tích hợp Năng lực số (NLS) và Trí tuệ nhân tạo (AI) được thực hiện xuất sắc: 100% các câu mô tả chỉ báo hành động trong cả 4 khối lớp đều được đưa đúng địa chỉ theo Phụ lục 3 và được định dạng in đậm, nghiêng, màu tím rất nổi bật (Tin 6: 1.2.TC1a, 5.3.TC1a, AI 6.A1.1; Tin 7: AI 7.A1.1, NLS 5.3.TC1a, 1.2.TC1a, 3.1.TC1a; Tin 8: AI 8.A3.3, NLS 1.2.TC2a; Tin 9: NLS 3.1.TC2a, 1.2.TC2a, AI 9.B2.1, 9.D1.1). Kế hoạch bài dạy có ứng dụng các công cụ AI (ChatGPT, Gemini, Copilot) hỗ trợ học tập rất hiện đại, sáng tạo.
+- **Kết luận và xếp loại**: **Duyệt hồ sơ (Xếp loại: Tốt)**. Biểu dương sự đầu tư công phu và tính gương mẫu của thầy Dương Quang Tùng.
+
+---
+
 ## V. KẾT LUẬN VÀ KIẾN NGHỊ
-1. **Đánh giá chung**: Đợt kiểm tra hồ sơ tháng 9/2026 đã tiến hành thẩm định 05 giáo viên trong tổ. Kết quả: 04 giáo viên đạt chuẩn được phê duyệt (trong đó 03 giáo viên xếp loại Tốt, 01 giáo viên xếp loại Khá); 01 giáo viên tạm thời trả hồ sơ để chỉnh sửa sai sót toán học (thầy Trần Long Hải).
+1. **Đánh giá chung**: Đợt kiểm tra hồ sơ tháng 9/2026 đã tiến hành thẩm định 06 giáo viên trong tổ. Kết quả: 05 giáo viên đạt chuẩn được phê duyệt (trong đó 04 giáo viên xếp loại Tốt, 01 giáo viên xếp loại Khá); 01 giáo viên tạm thời trả hồ sơ để chỉnh sửa sai sót toán học (thầy Trần Long Hải).
 2. **Yêu cầu đối với giáo viên được phê duyệt**: Tiếp tục duy trì tính nghiêm túc, chuẩn mực trong soạn giảng; hoàn thiện việc in đậm, nghiêng các chỉ báo NLS/AI trước khi giảng dạy trên lớp.
 3. **Yêu cầu đối với giáo viên trả hồ sơ**: Thầy Trần Long Hải khẩn trương đính chính dứt điểm toàn bộ lỗi kiến thức và ký hiệu góc tại Trang 5 Bài 10 Hình học 8, in đậm nghiêng mục tiêu NLS và nộp lại hồ sơ trước ngày 08 tháng 10 năm 2026.
 
