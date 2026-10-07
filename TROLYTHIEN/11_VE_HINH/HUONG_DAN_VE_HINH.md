@@ -31,16 +31,14 @@ Dựng trên hệ trục Oxy. Không vẽ ước lượng.
 - Hình không gian (chóp, lăng trụ): một góc nhìn phối cảnh cố định. Cạnh nhìn thấy nét liền. Cạnh khuất nét đứt.
 - **Bản vẽ tinh gọn tuyệt đối (Clean Diagram):** Tuyệt đối KHÔNG viết tiêu đề bài toán, KHÔNG chèn hộp chú thích, KHÔNG viết lời giải hoặc bình luận bên trong khung hình vẽ (SVG/PNG). Bản vẽ chỉ chứa thuần túy các yếu tố hình học (điểm, đoạn thẳng, đường cong, góc, ký hiệu bằng nhau và nhãn chữ cái A, B, C...) để giáo viên chèn trực tiếp vào đề thi/PowerPoint mà không bị rối mắt. Lời giải nếu có chỉ xuất ra ngoài (trong chat hoặc file HTML preview).
 
-## Bốn file kết quả
+## File kết quả đầu ra
 
 Ghi vào `TROLYTHIEN/11_VE_HINH/Ket_qua/`.
 **Quy tắc đặt tên file theo Tên bài tập (Naming Convention):**
-Tên file BẮT BUỘC đặt theo tên bài tập / câu hỏi trong đề của giáo viên, không dấu, nối bằng gạch dưới `_` để dễ quan sát và quản lý (ví dụ: `Bai_1_Hinh_Binh_Hanh_ABCD`, `Bai_2_Tam_Giac_ABC_Vuong_Tai_A`, `Cau_3_Hinh_Chop_S_ABCD`...).
+Tên file BẮT BUỘC đặt theo tên bài tập / câu hỏi trong đề của giáo viên, không dấu, nối bằng gạch dưới `_` để dễ quan sát và quản lý (ví dụ: `Bai_1_Hinh_Binh_Hanh_ABCD.png`, `Bai_2_Tam_Giac_ABC_Vuong_Tai_A.png`, `Cau_3_Hinh_Chop_S_ABCD.png`...).
 
-1. `Bai_X_[Ten_Hinh].png` — ảnh PNG độ phân giải cao nền trắng sắc nét, chèn trực tiếp ngay vào Word, PowerPoint, bài kiểm tra, Zalo mà không cần đổi đuôi.
-2. `Bai_X_[Ten_Hinh].svg` — SVG độc lập, có `viewBox`, nền trắng, nét đen, vector sắc nét không vỡ hạt.
-3. `Bai_X_[Ten_Hinh]_geogebra.txt` — mỗi dòng một lệnh GeoGebra: `Point`, `Segment`, `Circle`, `Intersect`, `Polygon`, `PerpendicularLine`, `Midpoint`. Cạnh dùng `Segment`, không dùng `Line` vô hạn. Đường phụ đặt tên `aux_` rồi `SetVisibleInView(aux_, 1, false)`. Không ghi chú thích `//` hay `#`.
-4. `Bai_X_[Ten_Hinh].html` — một file mở bằng trình duyệt, nhúng đúng SVG, có nút tải PNG, nút tải SVG và nút copy lệnh GeoGebra.
+- **Chỉ xuất ĐÚNG 1 file ảnh PNG duy nhất:** `Bai_X_[Ten_Hinh].png` — ảnh PNG độ phân giải cao 300 DPI, nền trắng sắc nét, chèn trực tiếp ngay vào Word, PowerPoint, đề kiểm tra mà không vỡ hạt.
+- Tuyệt đối KHÔNG tự ý sinh các file phụ (`.svg`, `.html`, `_geogebra.txt`) để tránh làm chậm tiến trình và không làm rác thư mục, trừ khi giáo viên có yêu cầu riêng.
 
 ## Dọn dẹp file rác
 Bất cứ khi nào giáo viên muốn làm sạch các file cache, file tách PDF tạm thời:
