@@ -209,6 +209,17 @@ Quy chuẩn xử lý âm thanh:
   2. `[Ten_File].txt`: tệp văn bản thuần UTF-8 hỗ trợ sao chép nhanh sang Zalo, email hay các tài liệu khác.
 - Chat phản hồi ngắn 2–3 dòng: đã bóc tách xong, đường dẫn tệp Word và Text, trích dẫn 1 câu mở đầu để nhận diện nội dung.
 
+## 11. KIẾN TRÚC MỘT ENGINE DUY NHẤT CHO MỖI LOẠI TÁC VỤ (SINGLE UNIVERSAL ENGINE ARCHITECTURE)
+> **NGHIÊM CẤM TỰ Ý TẠO FILE .PY RÁC LẺ TẺ TRONG TOÀN BỘ REPO!**
 
+Toàn bộ logic xử lý, kiểm định, render của Trợ lý Sư phạm Hoàng Thiên được quy tụ về đúng 1 Engine duy nhất cho mỗi loại tác vụ, đặt tập trung tại `TROLYTHIEN/engine/`:
+1. **Tạo bài tập / bài dạy HTML (`2_TAO_BAI_TAP`):** `TROLYTHIEN/engine/builder_bai_day_html.py`.
+2. **Tạo bài giảng điện tử 16:9 (`10_BAI_GIANG_HTML`):** `TROLYTHIEN/engine/builder_bai_giang_html.py`.
+3. **Thẩm định & Duyệt giáo án (`3_DUYET_GIAO_AN`):** `TROLYTHIEN/engine/duyet_giao_an_engine.py`.
+4. **Vẽ hình học giải tích chuẩn GDPT 2018 (`11_VE_HINH`):** `TROLYTHIEN/engine/ve_hinh_engine.py`.
+5. **Cắt tách PDF SGK từng bài (`cat_pdf_sgk.py`):** `TROLYTHIEN/engine/cat_pdf_sgk.py` (quản lý mục lục tập trung tại `TROLYTHIEN/engine/configs/sgk_configs.json`).
 
-
+**Kỷ luật bất biến khi hoạt động trên mọi máy tính:**
+- **Tuyệt đối không sinh script `.py` riêng lẻ** theo từng bài học (như `build_bai_04.py`, `build_bai_12.py`, `verify_bai_12.py`...) hay theo từng giáo viên (`inspect_duong_quang_tung.py`, `duyet_hoang_xuan_anh.py`...).
+- **Nạp dữ liệu qua tham số / file cấu hình:** Dữ liệu bài học, slide, nội dung đề bài được nạp qua JSON, text hoặc tham số CLI vào Engine trung tâm.
+- **Thư mục chạy nháp tạm:** Nếu thực sự cần chạy script kiểm tra nhanh, bắt buộc lưu tại thư mục scratch của agent (`<appDataDir>/brain/<conversation-id>/scratch/`) và **xóa sạch ngay lập tức** sau khi thực thi. Không để lại bất kỳ file `.py` rác nào trong repository.

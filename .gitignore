@@ -14,13 +14,16 @@ js/*.bundle-*.js
 docs/handoff/.lock
 GIAO AN/**/*.pdf
 
-# Trợ lý Thiên: Bỏ qua dữ liệu nạp vào và kết quả sinh ra, giữ lại hướng dẫn và cấu trúc thư mục
-TROLYTHIEN/**/Dau_vao/*
-!TROLYTHIEN/**/Dau_vao/.gitkeep
-!TROLYTHIEN/**/Dau_vao/*.md
+# Trợ lý Thiên: Bỏ qua các file PDF đầu vào nặng (kể cả trong thư mục con giáo viên), giữ lại script build, templates và hướng dẫn
+TROLYTHIEN/**/Dau_vao/*.pdf
+TROLYTHIEN/**/Dau_vao/*.PDF
+TROLYTHIEN/**/Dau_vao/**/*.pdf
+TROLYTHIEN/**/Dau_vao/**/*.PDF
+TROLYTHIEN/**/Dau_vao/**/**/*.pdf
+TROLYTHIEN/**/Dau_vao/**/**/*.PDF
 TROLYTHIEN/**/Ket_qua/*
 !TROLYTHIEN/**/Ket_qua/.gitkeep
-TROLYTHIEN/**/Ket_qua/*.md
+!TROLYTHIEN/**/Ket_qua/*.md
 !TROLYTHIEN/*.md
 !TROLYTHIEN/*/*.md
 !TROLYTHIEN/**/*.js
@@ -40,9 +43,22 @@ __pycache__/
 *.class
 *.pyc
 
-# Scripts nháp và file tạm phát sinh trong TROLYTHIEN
-TROLYTHIEN/**/*.py
+# Tệp âm thanh ghi âm nặng (tránh phình Git hàng chục MB)
+*.m4a
+*.mp3
+*.wav
+*.aac
+*.ogg
+
+# Tệp nén lưu trữ nặng
+*.rar
+*.7z
+*.tar.gz
+
+# Thư mục ảnh cắt tạm & debug phát sinh trong quá trình xử lý
 TROLYTHIEN/**/pdf_pages/
+TROLYTHIEN/**/Ket_qua/debug_pages/
+tools/temp_pdf_pages/
 
 # Ứng dụng Desktop PySide6 & Bản đóng gói (tránh nặng GitHub)
 app_trolythien/

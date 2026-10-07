@@ -142,7 +142,7 @@ Slide HTML được thiết kế để giáo viên hoàn toàn làm chủ lớp 
       <div class="solution-content">
         <p>Phương trình đã cho: ...</p>
         <p>Nên ... hoặc ...</p>
-        <p><strong>Kết luận:</strong> Vậy tập nghiệm của phương trình là $S = \{...\}$</p>
+        <p><strong>Kết luận:</strong> Vậy phương trình đã cho có các nghiệm là $x_1 = ..., x_2 = ...$</p>
 
         <!-- ⚠️ CẢNH BÁO CẠM BẪY & BÌNH LUẬN SƯ PHẠM -->
         <div class="pitfall-box">
@@ -180,3 +180,11 @@ Khi bấm **`[🖨️ In Phiếu Bài Tập (A4)]`** (hoặc `Ctrl + P`):
 
 - **Template chuẩn bắt buộc kế thừa:** `TROLYTHIEN/2_TAO_BAI_TAP/templates/master_bai_day_html_template.html`.
 - **Lưu file kết quả tại:** `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/[Ten_Bai_Day].html`.
+
+---
+
+## 8. Kiến Trúc Single Universal Engine (`TROLYTHIEN/engine/builder_bai_day_html.py`)
+
+- **BẮT BUỘC SỬ DỤNG ENGINE DUY NHẤT:** Toàn bộ quá trình thẩm định dữ liệu bài học và render HTML được thực hiện thông qua module `TROLYTHIEN/engine/builder_bai_day_html.py`.
+- **CẤM TUYỆT ĐỐI SINH FILE `.PY` RÁC:** Không tạo script python riêng cho từng bài học (`build_bai_04.py`, `build_bai_12.py`, `verify_bai_12.py`...). Dữ liệu bài học được nạp trực tiếp qua JSON hoặc function dictionary.
+- Khi cần kiểm tra nhanh, chỉ dùng scratch space và tự xóa ngay lập tức.

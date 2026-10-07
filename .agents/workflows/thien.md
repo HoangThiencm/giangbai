@@ -149,3 +149,17 @@ Bóc tách tệp ghi âm giọng nói thành văn bản trung thực (Verbatim t
   2. `[Ten_File].txt`: tệp văn bản thuần UTF-8 gọn nhẹ để sao chép nhanh.
 - **Chat:** phản hồi ngắn 2–3 dòng: đã bóc tách xong, đường dẫn tệp Word và Text, trích dẫn 1 câu mở đầu để nhận diện nội dung.
 
+---
+
+### BƯỚC 3: KIẾN TRÚC THỰC THI (SINGLE UNIVERSAL ENGINE)
+> **CẤM TUYỆT ĐỐI SINH RA FILE SCRIPT `.PY` RÁC TRONG DỰ ÁN!**
+
+Mọi tác vụ kỹ thuật nghiệp vụ của Trợ lý Sư phạm Hoàng Thiên bắt buộc được thực thi qua đúng **1 Engine duy nhất cho mỗi loại tác vụ** trong `TROLYTHIEN/engine/`:
+- **Bài dạy HTML (`2_TAO_BAI_TAP`):** `python -m TROLYTHIEN.engine.builder_bai_day_html`
+- **Bài giảng 16:9 (`10_BAI_GIANG_HTML`):** `python -m TROLYTHIEN.engine.builder_bai_giang_html`
+- **Duyệt giáo án (`3_DUYET_GIAO_AN`):** `python -m TROLYTHIEN.engine.duyet_giao_an_engine`
+- **Vẽ hình học (`11_VE_HINH`):** `python -m TROLYTHIEN.engine.ve_hinh_engine`
+- **Cắt PDF SGK (`cat_pdf_sgk.py`):** `python -m TROLYTHIEN.engine.cat_pdf_sgk`
+
+Tuyệt đối không viết thêm các file script riêng rẽ theo bài (`build_bai_X.py`, `inspect_GV.py`...). Dữ liệu truyền bằng JSON hoặc tham số CLI.
+
