@@ -88,5 +88,11 @@ flowchart TD
 | **Lỗi `dots` / `\frac`** | Engine khôi phục `\v` (Vertical Tab) thành `\vdots` và `\f` (Form Feed) thành `\frac` trước khi xuất Equation. |
 | **Bài bị tóm tắt, cắt cụt** | Chạy cơ chế Batch Loop (lần lượt từng bài riêng biệt), mỗi bài có trọn vẹn context và token để đạt độ dài chuẩn 5 – 8 trang Word. |
 | **Đề bài nhắc hình nhưng thiếu hình vẽ** | Quy chuẩn bắt buộc: Mọi bài tập/ví dụ có trích dẫn "Hình X.XX" đều được tự động cắt trực tiếp từ PDF SGK (300 DPI) hoặc vẽ vector toán học và đính kèm ngay tại đề bài. Tuyệt đối không để sót hình. |
+| **Hình vẽ sai lệch so với SGK (ngược hướng, sai ký hiệu điểm)** | Quy chuẩn AI: Khi phục dựng ảnh bằng AI (`generate_image`), BẮT BUỘC dùng cơ chế Image-to-Image truyền trực tiếp ảnh gốc SGK (`ImagePaths`). Tuyệt đối cấm tạo bằng Text-to-Image tự do để tránh AI vẽ ngược hướng lâu đài hoặc sai ký hiệu điểm $P', H, P, M, N$. |
+| **Hình vẽ cụt nóc / dính chữ rác SGK** | Quy chuẩn: Cắt chuẩn xác từng pixel hoặc ưu tiên phục dựng AI bám sát ảnh gốc SGK: sắc nét, chuẩn phối cảnh toán học, nền trắng tinh, không dính logo/chữ rác. |
+| **Lộ đường dẫn / mã thẻ ảnh trong câu văn** | Quy chuẩn: Cấm viết `![...]` trong câu văn mô tả. Chỉ dùng lời văn sư phạm tự nhiên. Thẻ ảnh chỉ đứng dòng độc lập. Engine có bộ lọc phòng vệ tự động làm sạch triệt để. |
+| **Trùng lặp thông tin hành chính / Header rườm rà (Bản vá V2.1)** | Tiêu đề đầu bài chỉ gồm 2 dòng căn giữa tinh gọn theo chuẩn Ảnh 2: Dòng 1: `Tiết X, Y, Z - BÀI XX: TÊN BÀI DẠY` (In hoa đậm); Dòng 2: *Thời lượng thực hiện: XX tiết (YY phút)* (In nghiêng). Bỏ hẳn bảng Trường/Giáo viên và khối thông tin hành chính lặp lại. Đi thẳng vào `I. MỤC TIÊU` -> `1. Về kiến thức`. |
+| **Cứng nhắc phân bổ số tiết trong hoạt động (Bản vá V2.1)** | Bỏ hoàn toàn số tiết trong tiêu đề hoạt động ở Mục III (ví dụ: `2. Hoạt động 2.2: Giải tam giác vuông (30 phút)`, không ghi `(Tiết 5: 30 phút)`), giúp giáo viên tự chủ điều phối tiến độ dạy học linh hoạt theo thực tế từng lớp. |
 | **Lỗi định dạng Word, vỡ bảng** | Tự động sử dụng engine `export_khbd_engine.js` đã được tinh chỉnh lề ô 0pt, font chữ chuẩn, hình vẽ toán học sắc nét. |
+
 

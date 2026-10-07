@@ -1,4 +1,4 @@
-# HỆ THỐNG SOẠN KẾ HOẠCH BÀI DẠY (KHBD) CHUẨN CÔNG VĂN 5512 - PHIÊN BẢN TINH GỌN (V2.0)
+# HỆ THỐNG SOẠN KẾ HOẠCH BÀI DẠY (KHBD) CHUẨN CÔNG VĂN 5512 - BẢN VÁ V2.1 (TINH GỌN)
 ## QUY TRÌNH TỰ ĐỘNG HÓA KHI NGƯỜI DÙNG YÊU CẦU: "SOẠN KHBD"
 
 > **Cách kích hoạt:** Sau này giáo viên chỉ cần đặt:
@@ -18,6 +18,16 @@ Hãy tự động đọc và trích xuất dữ liệu từ các tệp trong th�
 Dựa trên nguyên tắc sư phạm TINH GỌN - THỰC CHẤT - KHẢ THI (không nhồi nhét, không thừa trang), hãy thực hiện soạn KHBD theo đúng các quy chuẩn sau:
 
 ================================================================================
+0. BẢN VÁ V2.1: QUY CHUẨN HEADER TÀI LIỆU TINH GỌN (ẢNH 2)
+================================================================================
+* BỎ HOÀN TOÀN bảng "Trường... Giáo viên..." ở đầu trang.
+* BỎ HOÀN TOÀN khối thông tin hành chính trùng lặp (Kế hoạch bài dạy chuẩn CV 5512, Trường, Tổ, Họ và tên giáo viên, Lớp, Chủ đề, Phân phối chương trình, Bộ sách...).
+* Tiêu đề đầu bài chỉ gồm đúng 2 dòng căn giữa:
+  - Dòng 1: Tiết X, Y, Z - BÀI XX: TÊN BÀI DẠY (In hoa đậm, font 13pt/26 half-points).
+  - Dòng 2: Thời lượng thực hiện: XX tiết (YY phút) (In nghiêng, font 13pt).
+* Sau 2 dòng tiêu đề, đi thẳng ngay vào "# I. MỤC TIÊU" -> "## 1. Về kiến thức".
+
+================================================================================
 I. MỤC TIÊU TINH GỌN (THEO CHUẨN THÔNG TƯ 32 & KHUNG NLS/AI)
 ================================================================================
 1. Về kiến thức: Nêu đơn giản, ngắn gọn (1 - 2 gạch đầu dòng) mục tiêu theo chuẩn Thông tư 32/2018/TT-BGDĐT.
@@ -32,10 +42,11 @@ I. MỤC TIÊU TINH GỌN (THEO CHUẨN THÔNG TƯ 32 & KHUNG NLS/AI)
 ================================================================================
 II. TIÊU ĐỀ TIẾN TRÌNH DẠY HỌC & CẤU TRÚC THEO TỪNG LOẠI TIẾT DẠY
 ================================================================================
-* QUY TẮC TIÊU ĐỀ TIẾN TRÌNH: Tiêu đề Mục III chỉ ghi duy nhất:
-  "# III. TIẾN TRÌNH DẠY HỌC"
-  Tuyệt đối KHÔNG kèm "(01 TIẾT — 45 PHÚT)" hay "(X TIẾT — Y PHÚT)" ở tiêu đề này.
-  Chỉ cần đảm bảo tổng thời lượng ở các hoạt động A, B, C, D khớp đúng thời gian (45 phút cho 1 tiết, 90 phút cho 2 tiết...).
+* QUY TẮC TIÊU ĐỀ TIẾN TRÌNH (BẢN VÁ V2.1):
+  - Tiêu đề Mục III chỉ ghi duy nhất: "# III. TIẾN TRÌNH DẠY HỌC".
+    Tuyệt đối KHÔNG kèm "(01 TIẾT — 45 PHÚT)" hay "(X TIẾT — Y PHÚT)" ở tiêu đề này.
+  - TIÊU ĐỀ CÁC HOẠT ĐỘNG: BỎ HOÀN TOÀN số tiết trong tiêu đề hoạt động (ví dụ: "2. Hoạt động 2.2: Giải tam giác vuông (30 phút)", TUYỆT ĐỐI KHÔNG GHI "(Tiết 5: 30 phút)"). Lý do sư phạm: Để giáo viên tự chủ điều phối tiến độ dạy học linh hoạt theo tình hình thực tế từng lớp (lớp nhanh, lớp chậm).
+  - Chỉ cần đảm bảo tổng thời lượng ở các hoạt động A, B, C, D khớp đúng thời lượng bài học (45 phút cho 1 tiết, 90 phút cho 2 tiết, 135 phút cho 3 tiết).
 
 
 LOẠI 1: TIẾT LÝ THUYẾT / HÌNH THÀNH KIẾN THỨC MỚI (CHỦ ĐỀ 2 TIẾT = 90 PHÚT)
@@ -84,13 +95,21 @@ III. QUY CHUẨN ĐỊNH DẠNG BẢNG BIỂU VÀ TRANG IN TRONG WORD (.DOCX)
      + CẤM KẾT LUẬN TẬP NGHIỆM S: Tuyệt đối không dùng ký hiệu tập hợp  = \{...\}$ hay  = (...)$. Chỉ kết luận đúng chuẩn SGK THCS: 'Vậy phương trình có nghiệm là  = ...$' (hoặc 'nghiệm  = ...$ và  = ...$'); 'Vậy nghiệm của bất phương trình là  > ...$'.
      + Dấu chia hết dùng  \vdots b$ (⋮), không chia hết dùng \not\vdots hoặc \nmid (∤). Cấm \ \vdots \, cấm chữ dots, cấm form feed trong \frac.
 
-   - BẢN VÁ QUY CHUẨN ĐỒNG BỘ HÌNH VẼ MINH HỌA VỚI ĐỀ BÀI (CỰC KỲ QUAN TRỌNG):
-     + Mọi bài tập, ví dụ, hoạt động có trích dẫn hình vẽ SGK (như "Hình X.XX", "H.X.XX" hoặc "trong hình sau"...) BẮT BUỘC phải đính kèm hình ảnh minh họa tương ứng ngay tại hoạt động đó trong KHBD (cắt trực tiếp từ trang PDF SGK độ nét cao 300 DPI hoặc vẽ đồ họa vector chuẩn).
-     + Tuyệt đối CẤM tình trạng lời văn trong giáo án viện dẫn "Hình X.XX" mà trong giáo án lại vắng bóng hình ảnh đó. Mọi hình xuất hiện trong đề bài phải có ảnh hiển thị rõ ràng để học sinh và giáo viên cùng quan sát.
+   - BẢN VÁ QUY CHUẨN ĐỒNG BỘ VÀ CHUẨN HÓA HÌNH VẼ MINH HỌA (CỰC KỲ QUAN TRỌNG):
+     + Mọi bài tập, ví dụ, hoạt động có trích dẫn hình vẽ SGK (như "Hình X.XX", "H.X.XX" hoặc "trong hình sau"...) BẮT BUỘC phải đính kèm hình ảnh minh họa tương ứng ngay tại hoạt động đó trong KHBD (cắt trực tiếp từ trang PDF SGK độ nét cao 300 DPI hoặc vẽ đồ họa vector chuẩn). Tuyệt đối CẤM tình trạng lời văn trong giáo án viện dẫn "Hình X.XX" mà trong giáo án lại vắng bóng hình ảnh đó.
+     + QUY TẮC PHỤC DỰNG ẢNH BẰNG AI (IMAGE-TO-IMAGE REMASTER):
+       * Khi cần phục dựng ảnh bài toán thực tế cho sắc nét, bắt buộc phải dùng tính năng `generate_image` với tham số `ImagePaths` truyền trực tiếp file ảnh gốc SGK để AI phục dựng bám sát 100% bố cục nguyên bản.
+       * TUYỆT ĐỐI CẤM tạo ảnh AI bằng lời nhắc văn bản thuần (Text-to-Image) tự do, vì AI sẽ tự tưởng tượng làm đảo ngược vị trí (ví dụ: lật lâu đài sang trái, đảo lộn thứ tự hai giác kế $M, N$, làm sai lệch hệ thống ký hiệu $P', H, P$ so với đề bài SGK).
+       * Ảnh phục dựng phải chuẩn từng ký hiệu toán học, màu sắc tươi sáng, nền trắng tinh khiết (#FFFFFF), không răng cưa, không dính bất kỳ logo mờ hay chữ rác nào.
+     + NẾU CẮT TRỰC TIẾP TỪ SGK: Bắt buộc phải tinh chỉnh tọa độ pixel chuẩn xác 100%, giữ trọn vẹn đỉnh/nóc hình, cắt sạch hoàn toàn dòng chữ đề bài phía trên và dòng tên hình/logo chìm bên dưới.
+     + TUYỆT ĐỐI CẤM ĐỂ LỘ ĐƯỜNG DẪN / MÃ THẺ ẢNH TRONG CÂU VĂN: Cấm viết `![Tên hình](id)` hoặc `![Tên hình](khbd-ill:id)` lơ lửng trong các câu chữ mô tả ở mục b) Nội dung hay trong bảng. Trong câu văn chỉ dùng lời văn sư phạm tự nhiên (ví dụ: "Quan sát hình vẽ minh họa hệ thức lượng giữa cạnh và góc trong tam giác vuông"). Thẻ ảnh chỉ xuất hiện duy nhất dưới dạng một dòng độc lập riêng biệt để engine kết xuất thành hình ảnh đẹp trong Word. Đồng thời engine `export_khbd_engine.js` có bộ lọc tự động làm sạch phòng vệ vĩnh viễn.
 
 Checklist trước khi xuất bài:
 - [ ] Đã đối chiếu cột Ghi chú PPCT chưa? (Có mã -> tích hợp in đậm nghiêng; trống -> không có mục NLS/AI).
 - [ ] Đã kiểm tra mọi bài tập/ví dụ nhắc tên "Hình X.XX" đều ĐÃ CÓ ĐẦY ĐỦ HÌNH MINH HỌA tương ứng đính kèm chưa? (Cấm sót hình).
+- [ ] Hình vẽ có bị sai lệch so với SGK không? (Bố cục, hướng nhìn, ký hiệu điểm $P', H, P, M, N$ phải khớp 100% đề bài SGK; nếu dùng AI phải dùng cơ chế Image-to-Image truyền ImagePaths).
+- [ ] Hình vẽ cắt từ SGK đã cắt chuẩn xác chưa? (Không cụt nóc, không dính chữ rác SGK bên dưới).
+- [ ] Đã quét sạch đường dẫn / mã thẻ ảnh `![...]` trong các câu văn chưa? (Tuyệt đối không để lộ mã kỹ thuật ra Word).
 - [ ] Bài số học lý thuyết có bị chèn hình không? (Cấm).
 - [ ] Tiết luyện tập chung / ôn tập đã có Mindmap ở Hoạt động 2.1 chưa?
 - [ ] Đã quét sạch lỗi dots, \vdots và \frac chưa?

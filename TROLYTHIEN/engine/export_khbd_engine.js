@@ -35,10 +35,50 @@ function sanitizeKhbdMathSource(text) {
   source = source.replace(/(?<=\d|[a-zA-Z])\s*(?:\\dots|\bdots\b)\s*(?=\d|[a-zA-Z])/g, " \\vdots ");
   source = source.replace(/(?<=\d|[a-zA-Z])\s*\\vdots\s*(?=\d|[a-zA-Z])/g, " \\vdots ");
 
-  // 3. Quy chuẩn Sư phạm THCS (GDPT 2018): Cấm dấu tương đương <=> và \Leftrightarrow
-  source = source.replace(/\\(?:Leftrightarrow|iff|leftrightarrow)\b/g, "\\text{ hay }");
+  // 3. BẢN VÁ V2.2: Quy chuẩn Sư phạm THCS & Xử lý triệt để ký hiệu suy ra, tương đương
+  source = source.replace(/\\implies\b/g, " \\Rightarrow ");
+  source = source.replace(/implies(?=[A-Z\\góc])/g, " \\Rightarrow ");
+  source = source.replace(/(?<=[a-zà-ỹ])implies/gi, " \\Rightarrow ");
+  source = source.replace(/\bimplies\b/gi, " \\Rightarrow ");
+  source = source.replace(/\\iff\b/g, "\\text{ hay }");
+  source = source.replace(/\\(?:Leftrightarrow|leftrightarrow)\b/g, "\\text{ hay }");
   source = source.replace(/<=>/g, " hay ");
   source = source.replace(/⇔/g, " hay ");
+  source = source.replace(/(?<![<=!])=>/g, " \\Rightarrow ");
+
+  // Đảm bảo các ký hiệu toán/hình học luôn có khoảng cách an toàn, chống dính chữ
+  source = source.replace(/\\Rightarrow(?=[^\s])/g, "\\Rightarrow ");
+  source = source.replace(/(?<=[^\s])\\Rightarrow/g, " \\Rightarrow");
+  source = source.replace(/\\perp(?=[^\s])/g, "\\perp ");
+  source = source.replace(/(?<=[^\s])\\perp/g, " \\perp");
+  source = source.replace(/\\parallel(?=[^\s])/g, "\\parallel ");
+  source = source.replace(/(?<=[^\s])\\parallel/g, " \\parallel");
+  source = source.replace(/\\triangle(?=[^\s])/g, "\\triangle ");
+  source = source.replace(/(?<=[^\s])\\triangle/g, " \\triangle");
+
+  // 4. BẢN VÁ PHÒNG VỆ: Quét sạch mã thẻ ảnh inline lọt vào câu văn (loại bỏ hoàn toàn đường dẫn/mã rác kỹ thuật)
+  source = source.split('\n').map(line => {
+    const trimmed = line.trim();
+    // Dòng độc lập chứa thẻ ảnh hợp lệ thì giữ nguyên để engine chèn ảnh
+    if (/^!\[[^\]]*\]\((?:khbd-ill:)?[^)]+\)$/.test(trimmed)) {
+      return line;
+    }
+    // Dòng văn bản bình thường có dính `![Caption](id)` hoặc ![Caption](id) thì bóc tách lấy caption sạch
+    return line
+      .replace(/`!\[([^\]]*)\]\((?:khbd-ill:)?[^)]+\)`/g, '$1')
+      .replace(/!\[([^\]]*)\]\((?:khbd-ill:)?[^)]+\)/g, '$1');
+  }).join('\n');
+
+  // 5. BẢN VÁ V2.1: BỎ HOÀN TOÀN KHỐI THÔNG TIN HÀNH CHÍNH LẶP LẠI TRƯỚC "I. MỤC TIÊU"
+  const mucTieuIdx = source.search(/(?:^|\n)#+\s*I\.\s*MỤC TIÊU/i);
+  if (mucTieuIdx !== -1) {
+    source = source.slice(mucTieuIdx).replace(/^\n+/, "");
+  }
+
+  // 6. BẢN VÁ V2.1: BỎ SỐ TIẾT TRONG TIÊU ĐỀ HOẠT ĐỘNG (Ví dụ: "(Tiết 5: 30 phút)" -> "(30 phút)", "(Tiết 4)" -> "")
+  source = source.replace(/\(\s*Tiết\s*[\d,\s-]+[:;\-–—]?\s*(\d+\s*phút)\s*\)/gi, "($1)");
+  source = source.replace(/\s*\(\s*Tiết\s*[\d,\s-]+\s*\)/gi, "");
+
   return source;
 }
 
@@ -91,6 +131,52 @@ function createKhbdDocx({ mdFilePath, outputDocxPath, lessonInfo, illustrations 
     : path.resolve(__dirname, '../js/khbd-docx.js');
   const { DocxGenerator } = require(khbdDocxPath);
   const generator = new DocxGenerator();
+
+  // BẢN VÁ V2.1: Chuẩn hóa Header tài liệu theo đúng Ảnh 2 (cực kỳ tinh gọn)
+  // Bỏ hoàn toàn bảng Trường/Giáo viên và khối thông tin hành chính trùng lặp.
+  // Chỉ gồm đúng 2 dòng căn giữa:
+  // Dòng 1: Tiết X, Y, Z - BÀI XX: TÊN BÀI DẠY (In hoa đậm, cỡ 13pt / size 26)
+  // Dòng 2: Thời lượng thực hiện: XX tiết (YY phút) (In nghiêng, cỡ 13pt)
+  generator.createDocumentHeader = function (info = {}) {
+    const { Paragraph, TextRun, AlignmentType } = global.window.docx;
+    const normInfo = { ...info };
+    if (!normInfo.lessonScope && normInfo.ppct) {
+      const m = normInfo.ppct.match(/Tiết\s*[\d,\s-]+/i);
+      if (m) normInfo.lessonScope = m[0].trim();
+    }
+    let title = this.formatTietBaiHeading(normInfo)
+      .replace(/\s*\(\s*\d+\s*tiết\s*\)\s*$/i, "")
+      .replace(/^TIẾT\b/i, "Tiết")
+      .trim();
+    let durationText = this.formatDurationLine(normInfo.duration) || `Thời lượng thực hiện: ${normInfo.duration || "01 tiết (45 phút)"}`;
+
+    return [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 0, after: 60, line: this.lineSpacing, lineRule: this.lineRule },
+        children: [
+          new TextRun({
+            text: title,
+            font: this.fontFamily,
+            size: 26,
+            bold: true
+          })
+        ]
+      }),
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 0, after: 140, line: this.lineSpacing, lineRule: this.lineRule },
+        children: [
+          new TextRun({
+            text: durationText,
+            font: this.fontFamily,
+            size: this.fontSizeBody,
+            italics: true
+          })
+        ]
+      })
+    ];
+  };
 
   // Override createIllustrationParagraphs
   generator.createIllustrationParagraphs = function (altText, illustrationId) {

@@ -172,6 +172,7 @@
           "\\emptyset": "∅", "\\infty": "∞", "\\forall": "∀", "\\exists": "∃",
           "\\perp": "⊥", "\\parallel": "∥", "\\angle": "∠", "\\triangle": "△",
           "\\degree": "°", "^{\\circ}": "°", "\\rightarrow": "→", "\\Rightarrow": "⇒",
+          "\\implies": " ⇒ ", "\\iff": " ⇔ ", "\\to": " → ",
           "\\mid": "∣", "\\vert": "|", "\\Vert": "‖", "\\colon": ":", "\\setminus": "∖",
           "\\vdots": "⋮", "\\not\\vdots": "∤", "\\nmid": "∤",
           "\\backsimeq": "⋍", "\\backsim": "∽", "\\sim": "∽",
@@ -207,7 +208,7 @@
         source = source.replace(/(?<=\d|[a-zA-Z])\s*(?:\\dots|\bdots\b)\s*(?=\d|[a-zA-Z])/g, " \\vdots ");
         source = source.replace(/(?<=\d|[a-zA-Z])\s*\\vdots\s*(?=\d|[a-zA-Z])/g, " \\vdots ");
         const supportedCommands = [
-          "Leftrightarrow", "Rightarrow", "leftarrow", "rightarrow", "overrightarrow", "subseteq", "supseteq",
+          "Leftrightarrow", "Rightarrow", "implies", "iff", "leftarrow", "rightarrow", "overrightarrow", "subseteq", "supseteq",
           "emptyset", "parallel", "triangle", "varepsilon", "displaystyle", "overline", "widehat",
           "backsimeq", "backsim", "wideparen", "overarc",
           "mathbb", "mathcal", "mathfrak", "mathrm", "mathbf", "textrm", "textit", "textbf",
@@ -346,7 +347,7 @@
           omega: "ω", Omega: "Ω", phi: "φ", Phi: "Φ", psi: "ψ", rho: "ρ", mu: "μ", nu: "ν",
           in: "∈", notin: "∉", ni: "∋", neq: "≠", ne: "≠", le: "≤", leq: "≤", ge: "≥", geq: "≥",
           times: "×", cdot: "·", div: "÷", pm: "±", mp: "∓", ast: "∗", circ: "∘", bullet: "•",
-          to: "→", rightarrow: "→", leftarrow: "←", Rightarrow: "⇒", Leftrightarrow: "⇔",
+          to: "→", rightarrow: "→", leftarrow: "←", Rightarrow: "⇒", Leftrightarrow: "⇔", implies: "⇒", iff: "⇔",
           triangle: "△", angle: "∠", parallel: "∥", perp: "⊥", cup: "∪", cap: "∩",
           emptyset: "∅", infty: "∞", forall: "∀", exists: "∃", partial: "∂", nabla: "∇",
           subset: "⊂", subseteq: "⊆", supset: "⊃", sim: "∽", backsim: "∽", backsimeq: "⋍", approx: "≈", equiv: "≡",
@@ -625,12 +626,55 @@
         return inherited || undefined;
       }
     
+      cleanPlainTextMath(text) {
+        if (!text || typeof text !== "string") return text;
+        let s = text;
+        // BẢN VÁ V2.2: Triệt tiêu hoàn toàn rò rỉ lệnh LaTeX và token toán ra văn bản thông thường
+        s = s.replace(/\\implies\b/g, " ⇒ ");
+        s = s.replace(/\\iff\b/g, " ⇔ ");
+        s = s.replace(/\\Rightarrow\b/g, " ⇒ ");
+        s = s.replace(/\\rightarrow\b/g, " → ");
+        s = s.replace(/\\to\b/g, " → ");
+        s = s.replace(/\\Leftarrow\b/g, " ⇐ ");
+        s = s.replace(/\\leftarrow\b/g, " ← ");
+        s = s.replace(/\\Leftrightarrow\b/g, " ⇔ ");
+        s = s.replace(/(?<![<=!])=>/g, " ⇒ ");
+        s = s.replace(/\\perp\b/g, " ⊥ ");
+        s = s.replace(/\\parallel\b/g, " ∥ ");
+        s = s.replace(/\\triangle\b/g, " △ ");
+        s = s.replace(/\\angle\b/g, " ∠ ");
+        s = s.replace(/\\widehat\{([^}]+)\}/g, "góc $1");
+        s = s.replace(/\\widehat\b/g, "góc ");
+        s = s.replace(/\^\{\\circ\}/g, "°");
+        s = s.replace(/\^\\circ/g, "°");
+        s = s.replace(/\\circ\b/g, "°");
+        s = s.replace(/\\degree\b/g, "°");
+        s = s.replace(/\\(?:le|leq)\b/g, " ≤ ");
+        s = s.replace(/\\(?:ge|geq)\b/g, " ≥ ");
+        s = s.replace(/\\(?:ne|neq)\b/g, " ≠ ");
+        s = s.replace(/\\approx\b/g, " ≈ ");
+        s = s.replace(/\\pm\b/g, " ± ");
+        s = s.replace(/\\times\b/g, " × ");
+        s = s.replace(/\\cdot\b/g, " · ");
+        s = s.replace(/\\in\b/g, " ∈ ");
+        s = s.replace(/\\notin\b/g, " ∉ ");
+        s = s.replace(/\\subset\b/g, " ⊂ ");
+        s = s.replace(/\\cup\b/g, " ∪ ");
+        s = s.replace(/\\cap\b/g, " ∩ ");
+        s = s.replace(/implies(?=[A-Z\\góc])/g, " ⇒ ");
+        s = s.replace(/(?<=[a-zà-ỹ])implies/gi, " ⇒ ");
+        s = s.replace(/\bimplies\b/gi, " ⇒ ");
+        s = s.replace(/\biff\b/gi, " ⇔ ");
+        return s;
+      }
+
       coloredTextRun(text, extras = {}) {
         const docxApi = (typeof window !== "undefined" && window.docx) || (typeof require !== "undefined" ? require("docx") : {});
         const { TextRun, ShadingType } = docxApi || {};
         if (typeof TextRun !== "function") return { text };
+        const cleanedText = this.cleanPlainTextMath(text);
         const props = {
-          text,
+          text: cleanedText,
           font: extras.font || this.fontFamily,
           size: extras.size || this.fontSizeBody
         };
