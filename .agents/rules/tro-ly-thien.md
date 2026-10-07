@@ -154,23 +154,19 @@ Khi cần sửa tương tác trên canvas, cung cấp https://www.hoangthiencm.i
 
 ## 7. Quy chuẩn cho Tính năng 9 thuộc Nhánh 3 (Tạo bài dạy HTML từ PDF bài học / bài tập)
 Khi chọn "9. ⭐ Xuất bài dạy HTML (Dạy thêm, phụ đạo, bồi dưỡng - Phân dạng & Giải từng bước)":
-- **Mục đích:** Phục vụ trực tiếp cho việc Dạy thêm, dạy kèm, phụ đạo học sinh yếu/mất gốc, bồi dưỡng học sinh khá/giỏi và kết hợp chữa bài tập trên lớp.
-- **Đầu vào:** File PDF bài học hoặc PDF chuyên đề bài tập (khoảng 5–10 trang) đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`.
-- **Cơ chế xử lý 2 kịch bản đầu vào:**
-  + **Nếu là PDF Bài tập / Chuyên đề:** Tôn trọng 100% cấu trúc tác giả, tạo slide theo đúng trật tự từng bài, từng dạng toán có sẵn trong tài liệu.
-  + **Nếu là PDF SGK / Bài học lý thuyết:** Tự động tổng hợp và phân loại các bài tập/luyện tập thành 3–4 dạng toán có hệ thống từ cơ bản đến nâng cao.
-- **Cấu trúc thuần tuý toán học 100% (Đủ nhiều bài tập để cày kỹ năng):**
-  + Tuyệt đối không nói nhảm, không chèn slide bìa hay khẩu hiệu rườm rà.
-  + **Mỗi Dạng toán bắt buộc có từ 4 bài tập rèn luyện trở lên** (tổng số 12–16 bài/chuyên đề) để học sinh thực sự rèn luyện thành thạo kỹ năng làm bài.
-  + Cấu trúc: `Dạng N: Tên dạng` $\rightarrow$ `Cách giải` $\rightarrow$ `Bài 1` $\rightarrow$ `Bài 2` $\rightarrow$ `Bài 3` $\rightarrow$ `Bài 4`... (kèm hình vẽ và bài giải).
-- **Quy chuẩn Hình học:**
-  + Vẽ hình SVG giải tích cực kỳ chuẩn xác, sạch (Clean Diagram), không viết lời giải thích trong hình.
-  + Bố cục bài hình dạng **2 cột ngang (Side-by-Side)**: Cột trái ghim hình vẽ SVG chuẩn 1:1, cột phải chứa đề bài và bài giải từng bước.
-- **Thiết kế Điều khiển Linh động Khi Đứng Lớp & In Phiếu A4:**
-  + **Phím Mũi tên phải (`→`) / Nút `Tiếp ▶`:** Luôn luôn chuyển ngay sang bài tiếp theo (cho phép giáo viên bỏ qua bài giải nếu học sinh đã làm tốt mà không bị kẹt).
-  + **Phím `Space` / Phím `Enter` / Nút `💡 Hiện Bài Giải`:** Chỉ khi giáo viên cần giảng giải mới bấm để mở bài giải.
-  + **Thanh Mục Lục Chọn Bài Nhanh:** Cho phép giáo viên click nhảy cóc trực tiếp đến bất kỳ bài nào trong tích tắc.
-  + **In Phiếu Bài Tập A4:** Khi in (Ctrl+P), tự động gom toàn bộ bài tập về văn bản A4 chuẩn (Times New Roman), dàn trang liên tục, thuần tuý Đề bài + Hình vẽ + Dòng kẻ chấm chấm để học sinh làm bài; ẩn 100% toàn bộ Bài giải và Cách giải.
+- **Tôn chỉ sư phạm:** Đóng vai trò **Nhà nghiên cứu giáo dục toán học & Tác giả viết sách chuyên khảo kinh điển** (phong cách Thầy Vũ Hữu Bình, Nguyễn Ngọc Đạm, Tôn Thân...). Tuyệt đối không làm thợ chép nhặt SGK máy móc.
+- **5 Trụ cột học thuật cốt tử:**
+  1. **Lý thuyết bản chất & Bổ đề mở rộng:** Khái quát triết lý toán học, công thức giải nhanh và tính chất suy rộng quan trọng SGK không nói rõ nhưng thi cử hay gặp.
+  2. **Phân loại dạng bài khoa học:** Tên dạng chuẩn xác $\rightarrow$ Dấu hiệu nhận biết đặc trưng (quét đề trong 3s) $\rightarrow$ Thuật toán tư duy 3–4 bước.
+  3. **Phân tích tìm hướng giải (Thinking-Aloud — `.analysis-box`):** Vạch trần con đường tư duy, chỉ ra mấu chốt tại sao lại nghĩ ra phép biến đổi; có nút toggle `🧭 Hướng Giải` (Phím `H`).
+  4. **Lời giải mẫu mực & Đánh giá sư phạm:** Lời giải chuẩn SGK (cấm $\iff$) $\rightarrow$ Cảnh báo cạm bẫy học sinh thường mất điểm oan (`.pitfall-box`) $\rightarrow$ Khai thác, mở rộng và phát triển bài toán (`.extension-box`).
+  5. **Phân tầng đánh giá năng lực:** Bài tập phân rõ 3 tầng nhận thức: Mức 1 (Củng cố kỹ năng) $\rightarrow$ Mức 2 (Biến thể & Cài bẫy) $\rightarrow$ Mức 3 (Vận dụng cao & Thực tế).
+- **Thiết kế điều khiển đứng lớp & In ấn A4:**
+  + Phím `H` / `🧭 Hướng Giải`: Mở gợi mở tư duy cho học sinh trước khi xem giải.
+  + Phím `Space` / `Enter` / `💡 Lời Giải`: 1-chạm bật/tắt lời giải mẫu mực hoàn chỉnh.
+  + Phím mũi tên `→` / `Sau ▶`: Chuyển ngay sang bài tiếp theo không bị kẹt.
+  + Công cụ giảng dạy: Lazer quang học (`L`), Bút vẽ (`P`), Bảng viết toàn màn hình (`W`), Chèn chữ live note (`T`), Máy tính Casio fx-580 (`C`), Cỡ chữ tivi $\ge 40\text{px}$.
+  + Phiếu in A4: Tự động gom thành tài liệu chuyên đề chuẩn sách bài tập: Tóm tắt phương pháp $\rightarrow$ Ví dụ mẫu $\rightarrow$ Bài tập phân tầng 3 mức $\rightarrow$ Bảng rubric tự đánh giá năng lực; ẩn toàn bộ lời giải và cạm bẫy.
 - **Đầu ra:** Xuất file HTML duy nhất tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/[Ten_Bai_Day].html`.
 - Tuân thủ quy chuẩn chi tiết tại `.agents/rules/tao-bai-day-html.md`.
 

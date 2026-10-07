@@ -4,43 +4,35 @@
 FAIL
 
 ## Đối chiếu scope
-1. **Khóa toàn bộ tính năng khi chưa kích hoạt:**
-   - Chưa đạt trọn vẹn trên bản thực thi thực tế của người dùng:
-     + File thực thi `app_trolythien/dist/TroLyHoangThien/TroLyHoangThien.exe` chưa được đóng gói lại (vẫn là bản cũ được biên dịch từ Phase 3), nên khi người dùng nhấp chạy file `.exe` thì ứng dụng vẫn chạy code cũ chưa có cơ chế khóa.
-     + Trong mã nguồn `app_trolythien/ui/main_window.py`: hàm `open_module` chưa kiểm tra `if self._app_locked: return` (khiến người dùng click vào thẻ trên Dashboard vẫn chuyển trang được); luồng `_apply_status` khi preflight xong vẫn gọi `model_combo.setEnabled(...)` ghi đè trạng thái khóa.
-2. **Tiêu đề và nhận diện:**
-   - Mã nguồn đã đổi thành «Trợ lý sư phạm», nhưng bản `.exe` cũ vẫn hiện tiêu đề dài dòng cũ.
-3. **Mô hình AI:**
-   - Mã nguồn đã nạp động từ `agy models`.
-4. **Bản quyền Online:**
-   - Đã có `api/license.php` và tab trên `admin.html`.
+1. **Kiểm tra API trên máy chủ trực tuyến `https://hoangthiencm.id.vn/api/license.php`:**
+   - Kết quả: **FAIL** (Máy chủ trả về HTTP 404 Not Found).
+   - Tệp `api/license.php` mới chỉ tồn tại ở mã nguồn cục bộ trong thư mục dự án trên máy tính, chưa được đẩy (commit/push hoặc upload FTP/Hosting) lên hosting thực tế `hoangthiencm.id.vn`.
+2. **Kiểm tra giao diện trang quản trị trực tuyến `https://hoangthiencm.id.vn/admin.html`:**
+   - Kết quả: **FAIL** (Giao diện web trực tuyến chưa có tab «Bản Quyền App Desktop»).
+   - Nguyên nhân do tệp `admin.html` đã sửa ở local nhưng chưa được đồng bộ/upload lên hosting của Thầy.
+3. **Ứng dụng Desktop kết nối trực tuyến:**
+   - Khi mở app hoặc bấm «Kích hoạt Online», app gọi đến `https://hoangthiencm.id.vn/api/license.php` nhưng do máy chủ hosting chưa có tệp này (404) nên không thể đăng ký máy và không kích hoạt được qua web.
 
 ## Test đã chạy
-- Kiểm tra tệp `.exe`: `app_trolythien/dist/TroLyHoangThien/TroLyHoangThien.exe` có thời gian tạo là `10/6/2026 19:38`, trước khi triển khai Phase 4.
-- Kiểm tra logic `ui/main_window.py`:
-  + `open_module()` thiếu `if self._app_locked: return`.
-  + `_apply_status()` kích hoạt lại `model_combo` khi `_app_locked` đang là `True`.
+- Gửi HTTP POST request trực tiếp đến `https://hoangthiencm.id.vn/api/license.php` với payload `{"action":"verify","email":"test@example.com","device_id":"TLHT-AAAA-BBBB-CCCC"}`:
+  + Kết quả trả về: `(404) Not Found`.
+- Kiểm tra mã nguồn cục bộ:
+  + `api/license.php` đã được viết và sẵn sàng trong thư mục `api/`.
+  + `admin.html` đã được tích hợp tab và bảng quản lý bản quyền desktop.
+  + Nhưng toàn bộ thay đổi này chưa được cập nhật lên máy chủ live.
 
 ## Pass / Fail từng tiêu chí
-- [ ] File thực thi `.exe` được đóng gói cập nhật cơ chế khóa bản quyền: **FAIL**
-- [ ] Chặn triệt để điều hướng từ Dashboard (`open_module`) khi ứng dụng đang khóa: **FAIL**
-- [ ] Giữ khóa `model_combo` khi preflight kết nối xong nếu chưa có bản quyền: **FAIL**
-- [x] Tiêu đề và thương hiệu tối giản trong mã nguồn: **PASS**
-- [x] Mô hình AI nạp động từ `agy models`: **PASS**
-- [x] API bản quyền `api/license.php` và giao diện `admin.html`: **PASS**
+- [ ] Tệp `api/license.php` hoạt động trực tiếp trên `https://hoangthiencm.id.vn`: **FAIL** (404 Not Found do chưa deploy lên hosting)
+- [ ] Giao diện quản lý `admin.html` trực tuyến hiển thị mục duyệt bản quyền: **FAIL** (chưa đồng bộ lên hosting)
+- [ ] Kích hoạt trực tuyến từ App Desktop thành công qua web thật: **FAIL** (bị chặn do API web trả 404)
+- [x] Logic API và mã nguồn `api/license.php` cục bộ: **PASS**
+- [x] Logic Client Desktop (`app_trolythien/core/license.py`) cục bộ: **PASS**
 
 ## Bug
-- Lỗi 1: File thực thi `TroLyHoangThien.exe` chưa được build lại sau khi sửa code Phase 4, khiến người dùng mở app vẫn thấy giao diện cũ và chưa bị khóa.
-  + Tái hiện: Chạy `app_trolythien\dist\TroLyHoangThien\TroLyHoangThien.exe`.
-  + File liên quan: `app_trolythien/build_exe.bat`, `app_trolythien/dist/TroLyHoangThien/TroLyHoangThien.exe`.
-  + Cách sửa: Chạy lại `build_exe.bat` để cập nhật bản phân phối `.exe`.
-
-- Lỗi 2: Trong `ui/main_window.py`, người dùng có thể nhấp vào các nút thẻ trên Dashboard để chuyển tab vì `open_module` không kiểm tra `_app_locked`.
-  + Tái hiện: Mở app ở trạng thái chưa kích hoạt, nhấp vào thẻ "Vẽ hình học" trên Dashboard, app vẫn chuyển tab sang vẽ hình.
-  + File liên quan: `app_trolythien/ui/main_window.py`.
-  + Cách sửa: Thêm `if self._app_locked: return` vào đầu hàm `open_module(self, key: str, label: str)`.
-
-- Lỗi 3: Khi preflight xong, hàm `_apply_status` mở lại `model_combo` ngay cả khi `_app_locked == True`.
-  + Tái hiện: Đợi 1-2 giây sau khi mở app khi có kết nối Agy, combobox mô hình AI sáng trở lại.
-  + File liên quan: `app_trolythien/ui/main_window.py`.
-  + Cách sửa: Trong `_apply_status`, đặt `self.model_combo.setEnabled(not self._app_locked and (ready or self.model_combo.count() > 0))`.
+- Lỗi 1: Máy chủ web `https://hoangthiencm.id.vn` trả về lỗi 404 Not Found khi truy cập `api/license.php`.
+  + Tái hiện: Gọi `Invoke-RestMethod -Uri "https://hoangthiencm.id.vn/api/license.php" -Method Post`.
+  + File liên quan: `api/license.php`, `admin.html`.
+  + Hướng xử lý: Cần deploy / upload các tệp mới từ thư mục local lên hosting `hoangthiencm.id.vn` (qua GitHub push nếu có tự động deploy, hoặc qua File Manager / FTP của hosting):
+    1. `api/license.php`
+    2. `admin.html`
+    3. Thư mục `api/storage/` (cấp quyền ghi để tạo file `licenses.json`).

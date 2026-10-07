@@ -787,6 +787,108 @@
     }
 
     /* ==========================================================================
+       CÁC KHỐI SƯ PHẠM CHUYÊN SÂU — TẦM VÓC NHÀ NGHIÊN CỨU & TÁC GIẢ VIẾT SÁCH
+       ========================================================================== */
+    /* 1. Khối Phân tích tìm hướng giải (Thinking-Aloud / Gợi mở tư duy) */
+    .analysis-box {
+      display: none;
+      background: #f0f9ff;
+      border: 2px solid #7dd3fc;
+      border-left: 6px solid #0284c7;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-top: 10px;
+      animation: slideDown 0.2s ease-out;
+    }
+    .analysis-box.is-revealed {
+      display: block;
+    }
+    .analysis-header {
+      font-size: calc(var(--tv-font-size) * 0.85);
+      font-weight: 800;
+      color: #0369a1;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .analysis-content {
+      font-size: calc(var(--tv-font-size) * 0.82);
+      line-height: 1.65;
+      color: #0f172a;
+    }
+    .analysis-content p { margin-bottom: 8px; }
+    .analysis-content p:last-child { margin-bottom: 0; }
+    .analysis-content ul { margin-left: 22px; margin-bottom: 8px; }
+
+    /* 2. Khối Cảnh báo cạm bẫy & Sai lầm thường gặp */
+    .pitfall-box, .comment-box {
+      background: #fffbeb;
+      border: 1.5px solid #fde68a;
+      border-left: 5px solid #d97706;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-top: 12px;
+      font-size: calc(var(--tv-font-size) * 0.8);
+      line-height: 1.6;
+      color: #78350f;
+    }
+    .pitfall-header {
+      font-weight: 800;
+      color: #b45309;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 3. Khối Khai thác & Phát triển bài toán */
+    .extension-box {
+      background: #faf5ff;
+      border: 1.5px solid #e9d5ff;
+      border-left: 5px solid #9333ea;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-top: 12px;
+      font-size: calc(var(--tv-font-size) * 0.8);
+      line-height: 1.6;
+      color: #581c87;
+    }
+    .extension-header {
+      font-weight: 800;
+      color: #7e22ce;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 4. Huy hiệu phân tầng mức độ nhận thức */
+    .level-badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-left: 8px;
+      vertical-align: middle;
+      letter-spacing: 0.3px;
+    }
+    .level-1 { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .level-2 { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+    .level-3 { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+    /* 5. Nút điều khiển nav-btn.info */
+    .nav-btn.info {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: #ffffff;
+    }
+    .nav-btn.info:hover { background: #0369a1; }
+
+    /* ==========================================================================
        THANH CÔNG CỤ CHÈN CHỮ & CÔNG THỨC TOÁN TRỰC TIẾP
        ========================================================================== */
     .live-text-toolbar {
@@ -1891,6 +1993,7 @@
       <button type="button" class="nav-btn" onclick="prevSlide()" title="Phím mũi tên trái">◀ Trước</button>
       <div id="slideCounter" class="slide-counter">1 / __TOTAL_SLIDES__</div>
       <button type="button" class="nav-btn primary" onclick="nextSlide()" title="Phím mũi tên phải">Sau ▶</button>
+      <button type="button" class="nav-btn info" id="btnTopAnalysis" onclick="toggleCurrentAnalysis()" title="Bật/Tắt hướng giải / gợi mở tư duy (Phím H)" style="display:none;">🧭 Hướng giải</button>
       <button type="button" class="nav-btn success" id="btnTopSolution" onclick="toggleCurrentSolution()" title="Bật/Tắt lời giải (Phím Space hoặc Enter)">💡 Lời giải</button>
     </div>
     <div class="bar-cluster">
@@ -1972,96 +2075,7 @@
     </div>
   </div>
 
-  <!-- VÙNG TRÌNH CHIẾU SLIDE
-       CẤU TRÚC CHUẨN CỦA MỖI SLIDE BÀI TẬP (Mẫu tham chiếu bắt buộc khi render vào __SLIDES_HTML__):
-
-       === DẠNG 1: TOÁN ĐẠI SỐ THUẦN TÚY (Full-Width, KHÔNG có hình vẽ) ===
-       <section class="slide-card[ active]" data-slide="{num}" data-problem-id="{pid}">
-         <div class="slide-header">
-           <span class="slide-badge">{badge}</span>
-           <div class="slide-quick-ctrl">
-             <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
-             <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
-           </div>
-         </div>
-         <div class="slide-body-full">
-           <div class="problem-box">
-             <strong>Bài {pid}:</strong> {debai}
-           </div>
-           <div class="solution-box">
-             <div class="solution-header">
-               <span>💡 LỜI GIẢI:</span>
-               <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
-             </div>
-             <div class="solution-content">
-               <!-- Với bài có câu hỏi độc lập a), b): Phân chia vào các thẻ .sol-part: -->
-               <div class="sol-part">
-                 <strong>a) Xét ...:</strong><br>
-                 ...
-               </div>
-               <div class="sol-part">
-                 <strong>b) Xét ...:</strong><br>
-                 ...
-               </div>
-               <!-- Hoặc với bài giải thông thường: Trình bày liền mạch toán học chuẩn SGK: -->
-               <!-- <p>Phương trình đã cho: ...</p><ul><li>...</li></ul><p><strong>Kết luận:</strong> ...</p> -->
-             </div>
-           </div>
-         </div>
-       </section>
-
-       === DẠNG 2: TOÁN HÌNH HỌC HOẶC BÀI TOÁN CÓ HÌNH VẼ (2 Cột Grid) ===
-       <section class="slide-card[ active]" data-slide="{num}" data-problem-id="{pid}">
-         <div class="slide-header">
-           <span class="slide-badge">{badge}</span>
-           <div class="slide-quick-ctrl">
-             <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
-             <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>
-           </div>
-         </div>
-         <div class="slide-body-grid">
-           <div class="diagram-panel" id="diagramPanel_{pid}" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, {pid})">
-             <div class="diagram-dock-header" id="diagramHeader_{pid}" title="Giữ chuột tại đây để kéo hình tự do khắp màn hình">
-               <span class="dock-header-title">📐 Kéo di chuyển hình</span>
-               <div class="dock-header-btns">
-                 <button type="button" class="btn-dock-ctrl btn-pos-toggle" onclick="toggleDiagramUnderProblem({pid})" title="Chuyển hình vẽ xuống phía dưới đề bài">⬇️ Dưới đề</button>
-                 <button type="button" class="btn-dock-ctrl btn-float-toggle" onclick="toggleFloatDiagram({pid})" title="Tách hình nổi tự do">🆓 Tách nổi</button>
-               </div>
-             </div>
-             <div class="diagram-wrapper" id="diagramWrapper_{pid}" ondblclick="zoomActiveSlideDiagram({pid})" title="Kéo chuột để di chuyển • Cuộn chuột để phóng to">
-               <div class="diagram-scalable" id="diagramScale_{pid}">
-                 {SVG_VIEWBOX_MIN_480x260_WITH_SAFE_PADDING}
-               </div>
-             </div>
-             <div class="image-actions-bar">
-               <button type="button" class="img-btn-zoom" onclick="zoomSlideDiagram({pid}, 0.2)">🔍+ To</button>
-               <button type="button" class="img-btn-zoom" onclick="zoomSlideDiagram({pid}, -0.2)">🔍- Nhỏ</button>
-               <button type="button" class="img-btn-action" id="btnPos_{pid}" onclick="toggleDiagramUnderProblem({pid})">⬇️ Dưới đề</button>
-               <button type="button" class="img-btn-action" id="btnFloat_{pid}" onclick="toggleFloatDiagram({pid})">🆓 Tách nổi</button>
-               <button type="button" class="img-btn-action" onclick="toggleExpandDiagram({pid})">↔️ Rộng</button>
-               <button type="button" class="img-btn-action" onclick="resetSlideDiagram({pid})">↺ Đặt lại</button>
-               <button type="button" class="img-btn-action" onclick="zoomActiveSlideDiagram({pid})">⛶ Toàn cảnh</button>
-               <label class="img-btn-upload">📁 Tải Ảnh<input type="file" id="fileInput_{pid}" accept="image/*" style="display:none" onchange="handleImageUpload(event, {pid})"></label>
-               <button type="button" class="img-btn-action" onclick="alert('Thầy hãy chụp màn hình (Win + Shift + S) rồi bấm Ctrl + V để dán ảnh!')">📋 Dán</button>
-               <button type="button" class="img-btn-remove" id="btnRemoveImg_{pid}" style="display:none" onclick="removeCustomImage({pid})">❌ Hình Gốc</button>
-             </div>
-             <div class="drop-hint">💡 Giữ thanh trên để kéo tự do • Bấm ⬇️ Dưới đề để chuyển xuống dưới đề bài • Cuộn chuột để phóng to</div>
-           </div>
-           <div class="content-panel">
-             <div class="problem-box"><strong>Bài {pid}:</strong> {debai}</div>
-             <div class="solution-box">
-               <div class="solution-header">
-                 <span>💡 LỜI GIẢI:</span>
-                 <button type="button" class="btn-close-sol" onclick="hideCurrentSolution(event)" title="Đóng lời giải (Space)">✕ Đóng</button>
-               </div>
-               <div class="solution-content">
-                 <!-- Lời giải toán học trực diện, ngắn gọn, chuẩn SGK -->
-               </div>
-             </div>
-           </div>
-         </div>
-       </section>
-  -->
+  <!-- VÙNG TRÌNH CHIẾU SLIDE -->
   <main class="slides-container">
     __SLIDES_HTML__
   </main>
@@ -2110,6 +2124,7 @@
       document.getElementById('jumpSelect').value = currentSlide;
 
       updateSolutionButtons(activeCard);
+      updateAnalysisButtons(activeCard);
 
       if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
     }
@@ -2810,6 +2825,72 @@
       solBox.classList.remove('is-revealed');
       solBox.classList.remove('reveal-all');
       updateSolutionButtons(activeCard);
+    }
+
+    // --- CÁC HÀM ĐIỀU KHIỂN HƯỚNG GIẢI / PHÂN TÍCH TƯ DUY (HEURISTIC) ---
+    function updateAnalysisButtons(activeCard) {
+      if (!activeCard) activeCard = document.querySelector(`.slide-card[data-slide="${currentSlide}"]`);
+      if (!activeCard) return;
+
+      const anaBox = activeCard.querySelector('.analysis-box');
+      const topBtn = document.getElementById('btnTopAnalysis');
+      const slideBtn = activeCard.querySelector('.btn-analysis-toggle');
+
+      if (!anaBox) {
+        if (topBtn) topBtn.style.display = 'none';
+        return;
+      } else {
+        if (topBtn) topBtn.style.display = '';
+      }
+
+      const isRevealed = anaBox.classList.contains('is-revealed');
+      const slideLabel = isRevealed ? '✖ Ẩn Hướng Giải' : '🧭 Hướng Giải';
+      const topLabel = isRevealed ? '✖ Ẩn hướng giải' : '🧭 Hướng giải';
+
+      if (topBtn) {
+        topBtn.innerHTML = topLabel;
+        if (isRevealed) {
+          topBtn.classList.remove('info');
+          topBtn.classList.add('warn');
+        } else {
+          topBtn.classList.remove('warn');
+          topBtn.classList.add('info');
+        }
+      }
+      if (slideBtn) {
+        slideBtn.innerHTML = slideLabel;
+        if (isRevealed) {
+          slideBtn.classList.remove('info');
+          slideBtn.classList.add('warn');
+        } else {
+          slideBtn.classList.remove('warn');
+          slideBtn.classList.add('info');
+        }
+      }
+    }
+
+    function toggleCurrentAnalysis() {
+      const activeCard = document.querySelector(`.slide-card[data-slide="${currentSlide}"]`);
+      if (!activeCard) return;
+
+      const anaBox = activeCard.querySelector('.analysis-box');
+      if (!anaBox) return;
+
+      anaBox.classList.toggle('is-revealed');
+      updateAnalysisButtons(activeCard);
+      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+    }
+
+    function hideCurrentAnalysis(ev) {
+      if (ev) ev.stopPropagation();
+      const activeCard = document.querySelector(`.slide-card[data-slide="${currentSlide}"]`);
+      if (!activeCard) return;
+
+      const anaBox = activeCard.querySelector('.analysis-box');
+      if (!anaBox) return;
+
+      anaBox.classList.remove('is-revealed');
+      updateAnalysisButtons(activeCard);
     }
 
     // =========================================================================
@@ -4595,6 +4676,13 @@ function casioRenderNatural(expr) {
       if (e.key === 't' || e.key === 'T') {
         e.preventDefault();
         toggleLiveTextToolbar();
+        return;
+      }
+
+      // Phím H: Bật/Tắt hướng giải / Gợi mở tư duy
+      if (e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        toggleCurrentAnalysis();
         return;
       }
 

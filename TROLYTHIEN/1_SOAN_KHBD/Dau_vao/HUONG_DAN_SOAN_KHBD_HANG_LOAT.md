@@ -83,6 +83,10 @@ flowchart TD
 | Rủi ro thường gặp | Quy trình 2 pha khắc phục thế nào? |
 | :--- | :--- |
 | **Soạn nhầm bài / lộn xộn tiết** | AI đọc ảnh PPCT trước, chốt danh sách và gán số thứ tự cố định `01_` đến `08_`. Không thể nhảy cóc. |
-| **Gán sai mã NLS / AI** | AI đã trích xuất trực tiếp mã từ ảnh PPCT ở Pha 1 và lưu vào bộ nhớ, không bịa mã mới. |
+| **Gán sai mã NLS / AI** | Chỉ tích hợp khi cột Ghi chú PPCT có mã. Cột trống thì không tạo mục I.2.c/d và không chèn dòng Mục III. |
+| **Chèn hình vào bài số học** | Bài số học lý thuyết không có ảnh. Mindmap chỉ ở Hoạt động 2.1 của tiết luyện tập chung / ôn tập chương. |
+| **Lỗi `dots` / `\frac`** | Engine khôi phục `\v` (Vertical Tab) thành `\vdots` và `\f` (Form Feed) thành `\frac` trước khi xuất Equation. |
 | **Bài bị tóm tắt, cắt cụt** | Chạy cơ chế Batch Loop (lần lượt từng bài riêng biệt), mỗi bài có trọn vẹn context và token để đạt độ dài chuẩn 5 – 8 trang Word. |
+| **Đề bài nhắc hình nhưng thiếu hình vẽ** | Quy chuẩn bắt buộc: Mọi bài tập/ví dụ có trích dẫn "Hình X.XX" đều được tự động cắt trực tiếp từ PDF SGK (300 DPI) hoặc vẽ vector toán học và đính kèm ngay tại đề bài. Tuyệt đối không để sót hình. |
 | **Lỗi định dạng Word, vỡ bảng** | Tự động sử dụng engine `export_khbd_engine.js` đã được tinh chỉnh lề ô 0pt, font chữ chuẩn, hình vẽ toán học sắc nét. |
+

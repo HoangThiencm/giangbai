@@ -152,8 +152,14 @@
              .replace(/_4/g, "₄").replace(/_5/g, "₅").replace(/_6/g, "₆").replace(/_7/g, "₇")
              .replace(/_8/g, "₈").replace(/_9/g, "₉").replace(/_\{([0-9a-zA-Z+-]+)\}/g, "_($1)");
     
-        // Ký hiệu chia hết, không chia hết
-        s = s.replace(/\\not\s*\\vdots/g, "∤").replace(/\\not\s*\\mid/g, "∤");
+        s = s.replace(/\u000bdots/g, "\\vdots");
+        s = s.replace(/\u000crac/g, "\\frac");
+        s = s.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "");
+        s = s.replace(/(?<!\\)\b(?:frac|rac)(?=\{)/g, "\\frac");
+        s = s.replace(/\\not\s*\\vdots/g, "∤").replace(/\\not\s*\\mid/g, "∤").replace(/\\nmid/g, "∤");
+        s = s.replace(/\\\s+\\vdots\s+\\/g, "\\vdots");
+        s = s.replace(/(?<=\d|[a-zA-Z])\s*(?:\\dots|\bdots\b)\s*(?=\d|[a-zA-Z])/g, " ⋮ ");
+        s = s.replace(/(?<=\d|[a-zA-Z])\s*\\vdots\s*(?=\d|[a-zA-Z])/g, " ⋮ ");
 
         // Các ký hiệu toán học phổ biến
         const mathDict = {
@@ -192,7 +198,14 @@
        */
       normalizeLatexForMath(latex) {
         let source = String(latex || "");
-        source = source.replace(/\\not\s*\\vdots/g, "∤").replace(/\\not\s*\\mid/g, "∤");
+        source = source.replace(/\u000bdots/g, "\\vdots");
+        source = source.replace(/\u000crac/g, "\\frac");
+        source = source.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "");
+        source = source.replace(/(?<!\\)\b(?:frac|rac)(?=\{)/g, "\\frac");
+        source = source.replace(/\\not\s*\\vdots/g, "\\nmid").replace(/\\not\s*\\mid/g, "\\nmid");
+        source = source.replace(/\\\s+\\vdots\s+\\/g, "\\vdots");
+        source = source.replace(/(?<=\d|[a-zA-Z])\s*(?:\\dots|\bdots\b)\s*(?=\d|[a-zA-Z])/g, " \\vdots ");
+        source = source.replace(/(?<=\d|[a-zA-Z])\s*\\vdots\s*(?=\d|[a-zA-Z])/g, " \\vdots ");
         const supportedCommands = [
           "Leftrightarrow", "Rightarrow", "leftarrow", "rightarrow", "overrightarrow", "subseteq", "supseteq",
           "emptyset", "parallel", "triangle", "varepsilon", "displaystyle", "overline", "widehat",

@@ -123,6 +123,28 @@ const lessons = [
   }
 ];
 
+const HINH_DIR = path.resolve(__dirname, '../TROLYTHIEN/engine/hinh_ve_sgk');
+
+function loadIll(id, caption, filename, width, height) {
+  const p = path.join(HINH_DIR, filename);
+  if (!fs.existsSync(p)) return null;
+  const b64 = fs.readFileSync(p).toString('base64');
+  return {
+    id,
+    caption,
+    dataUrl: `data:image/png;base64,${b64}`,
+    width,
+    height
+  };
+}
+
+const allIllustrations = [
+  loadIll('mindmap-01-thu-tu-phep-tinh', 'Sơ đồ tư duy Thứ tự thực hiện các phép tính', 'mindmap_01_thu_tu_phep_tinh.png', 480, 230),
+  loadIll('mindmap-02-tong-hop-chuong-1', 'Sơ đồ tư duy Tổng hợp kiến thức Chương I', 'mindmap_02_tong_hop_chuong_1.png', 480, 240),
+  loadIll('hinh-05-so-do-phan-tich', 'Sơ đồ cây và Sơ đồ cột dọc phân tích ra thừa số nguyên tố (SGK Toán 6)', 'so_do_cay_va_cot_so_nguyen_to.png', 480, 215),
+  loadIll('mindmap-06-so-nguyen-to', 'Sơ đồ tư duy Số nguyên tố - Hợp số - Phân tích thừa số nguyên tố', 'mindmap_06_so_nguyen_to.png', 480, 230)
+].filter(Boolean);
+
 async function run() {
   console.log('--- BẮT ĐẦU XUẤT 8 BÀI WORD KHBD CHUẨN CV 5512 V2.0 ---');
   for (let i = 0; i < lessons.length; i++) {
@@ -133,8 +155,12 @@ async function run() {
     const res = await createKhbdDocx({
       mdFilePath: mdPath,
       outputDocxPath: docxPath,
-      lessonInfo: item.info
+      lessonInfo: item.info,
+      illustrations: allIllustrations
     });
+    if (/_Moi\.docx$/i.test(res.path)) {
+      console.warn(`CẢNH BÁO: ${item.fileName}.docx đang bị Word khóa. Đã ghi ${path.basename(res.path)}. Đóng Word rồi chạy lại.`);
+    }
     console.log(`=> THÀNH CÔNG: ${path.basename(res.path)} (${res.size} bytes)`);
   }
   console.log('--- HOÀN TẤT TRỌN VẸN 8/8 BÀI GIẢNG KHBD WORD ---');

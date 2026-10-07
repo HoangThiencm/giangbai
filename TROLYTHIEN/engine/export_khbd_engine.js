@@ -10,6 +10,38 @@
 const fs = require('fs');
 const path = require('path');
 
+/**
+ * Khôi phục lệnh LaTeX bị escape thành ký tự điều khiển, rồi chuẩn hoá chia hết.
+ * `\v` -> VT làm `\vdots` thành `dots`; `\f` -> FF làm `\frac` thành `rac`.
+ */
+function sanitizeKhbdMathSource(text) {
+  let source = String(text || "");
+  // 1. Khôi phục các ký tự điều khiển ASCII bị nuốt dấu gạch chéo
+  source = source.replace(/\u0008egin/g, "\\begin");
+  source = source.replace(/\u000bdots/g, "\\vdots");
+  source = source.replace(/\u000crac/g, "\\frac");
+  source = source.replace(/\u0009ext/g, "\\text");
+  source = source.replace(/\u0009imes/g, "\\times");
+  source = source.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "");
+
+  // 2. Khôi phục các lệnh LaTeX bị rụng gạch chéo phổ biến
+  source = source.replace(/(?<!\\)\b(?:frac|rac)(?=\{)/g, "\\frac");
+  source = source.replace(/(?<!\\)\bbegin(?=\{|\b)/g, "\\begin");
+  source = source.replace(/(?<!\\)\bext(?=\{)/g, "\\text");
+  source = source.replace(/(?<!\\)\bimes\b/g, "\\times");
+  source = source.replace(/\\not\s*\\vdots/g, "\\nmid");
+  source = source.replace(/\\not\s*\\mid/g, "\\nmid");
+  source = source.replace(/\\\s+\\vdots\s+\\/g, "\\vdots");
+  source = source.replace(/(?<=\d|[a-zA-Z])\s*(?:\\dots|\bdots\b)\s*(?=\d|[a-zA-Z])/g, " \\vdots ");
+  source = source.replace(/(?<=\d|[a-zA-Z])\s*\\vdots\s*(?=\d|[a-zA-Z])/g, " \\vdots ");
+
+  // 3. Quy chuẩn Sư phạm THCS (GDPT 2018): Cấm dấu tương đương <=> và \Leftrightarrow
+  source = source.replace(/\\(?:Leftrightarrow|iff|leftrightarrow)\b/g, "\\text{ hay }");
+  source = source.replace(/<=>/g, " hay ");
+  source = source.replace(/⇔/g, " hay ");
+  return source;
+}
+
 function loadDocx() {
   try { return require('docx'); } catch (e) {
     const runtimeModule = path.join(process.env.USERPROFILE || '', '.cache', 'codex-runtimes', 'codex-primary-runtime', 'dependencies', 'node', 'node_modules', 'docx');
@@ -208,7 +240,7 @@ function createKhbdDocx({ mdFilePath, outputDocxPath, lessonInfo, illustrations 
     });
   };
 
-  const markdownContent = fs.readFileSync(mdFilePath, 'utf8');
+  let markdownContent = sanitizeKhbdMathSource(fs.readFileSync(mdFilePath, 'utf8'));
   const headerElements = generator.createDocumentHeader(lessonInfo);
   const footerElements = generator.createDocumentFooter(lessonInfo);
   const bodyElements = generator.parseMarkdownToDocxElements(markdownContent);
@@ -253,6 +285,7 @@ function createKhbdDocx({ mdFilePath, outputDocxPath, lessonInfo, illustrations 
         const ext = path.extname(finalPath);
         finalPath = finalPath.replace(ext, `_Moi${ext}`);
         fs.writeFileSync(finalPath, buffer);
+        console.warn(`CẢNH BÁO: File Word đang mở nên không ghi đè được. Đã ghi sang ${finalPath}. Hãy đóng Word rồi xuất lại.`);
       } else {
         throw err;
       }
@@ -271,4 +304,4 @@ function createKhbdDocx({ mdFilePath, outputDocxPath, lessonInfo, illustrations 
   });
 }
 
-module.exports = { createKhbdDocx, loadDocx };
+module.exports = { createKhbdDocx, loadDocx, sanitizeKhbdMathSource };

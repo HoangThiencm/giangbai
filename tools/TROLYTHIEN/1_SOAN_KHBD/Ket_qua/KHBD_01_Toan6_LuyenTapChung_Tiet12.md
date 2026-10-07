@@ -70,7 +70,10 @@
 - Hệ thống hóa toàn bộ các dạng bài tính toán qua Sơ đồ tư duy trực quan và phân tích kỹ các bước giải mẫu trong Ví dụ 1, Ví dụ 2.
 
 #### b) Nội dung:
+- Quan sát và hệ thống hóa kiến thức thông qua Sơ đồ tư duy: Thứ tự thực hiện các phép tính.
 - Phân tích cách giải Ví dụ 1 SGK trang 27.
+
+![Sơ đồ tư duy Thứ tự thực hiện các phép tính](khbd-ill:mindmap-01-thu-tu-phep-tinh)
 
 #### c) Sản phẩm:
 - Vở ghi bài tóm tắt các bước giải Ví dụ 1: $120 + [55 - (11 - 3 \cdot 2)^2] + 2^3 = 158$.

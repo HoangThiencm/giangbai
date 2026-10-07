@@ -91,16 +91,19 @@
 - Nắm vững 2 cách phân tích: theo sơ đồ cây và theo sơ đồ cột; viết gọn kết quả dưới dạng tích các lũy thừa.
 
 #### b) Nội dung:
-- Quan sát Ví dụ 2, Ví dụ 3 SGK trang 40; thực hành phân tích số 60 và 84.
+- Quan sát Sơ đồ cây (phân tích số 24) và Sơ đồ cột dọc (phân tích số 30) trong SGK trang 40.
+- Hoàn thành các ô tròn điền khuyết (?) và thực hành phân tích các số 60, 84 ra thừa số nguyên tố.
+
+![Sơ đồ cây và Sơ đồ cột dọc phân tích ra thừa số nguyên tố (SGK Toán 6)](khbd-ill:hinh-05-so-do-phan-tich)
 
 #### c) Sản phẩm:
-- Kết quả phân tích: $60 = 2^2 \cdot 3 \cdot 5$; $84 = 2^2 \cdot 3 \cdot 7$.
+- Kết quả điền khuyết: $30 : 2 = 15$; $5 : 5 = 1$. Kết quả phân tích: $24 = 2^3 \cdot 3$; $30 = 2 \cdot 3 \cdot 5$; $60 = 2^2 \cdot 3 \cdot 5$; $84 = 2^2 \cdot 3 \cdot 7$.
 
 #### d) Tổ chức thực hiện:
 
 | Hoạt động của GV và HS | Nội dung |
 | :--- | :--- |
-| + Bước 1: Chuyển giao nhiệm vụ:<br>- **GV:** Nêu định nghĩa: Phân tích một số tự nhiên lớn hơn 1 ra thừa số nguyên tố là viết số đó dưới dạng một tích các thừa số nguyên tố.<br>- **GV:** Hướng dẫn 2 cách thực hiện:<br>1. Sơ đồ cây (tách dần thành các tích).<br>2. Sơ đồ cột (chia liên tiếp cho các số nguyên tố từ nhỏ đến lớn).<br>- **HS:** Theo dõi ví dụ mẫu phân tích số 60.<br>+ Bước 2: Thực hiện nhiệm vụ:<br>- **HS:** Thực hành phân tích số 84 theo sơ đồ cột vào vở.<br>- **GV:** Nhắc nhở chia theo thứ tự các số nguyên tố: 2, 3, 5, 7... cho đến khi được thương là 1.<br>+ Bước 3: Báo cáo, thảo luận:<br>- **HS:** Trình bày trên bảng: $84 : 2 = 42$; $42 : 2 = 21$; $21 : 3 = 7$; $7 : 7 = 1$. Kết quả $84 = 2^2 \cdot 3 \cdot 7$.<br>+ Bước 4: Kết luận, nhận định:<br>- **GV:** Khẳng định: Dù phân tích theo sơ đồ cây hay sơ đồ cột thì kết quả phân tích cuối cùng ra thừa số nguyên tố của một số là duy nhất (chỉ khác thứ tự thừa số). | **2. PHÂN TÍCH RA THỪA SỐ NGUYÊN TỐ:**<br><br>- **Định nghĩa:** Phân tích một số tự nhiên lớn hơn 1 ra thừa số nguyên tố là viết số đó dưới dạng một tích các thừa số nguyên tố.<br><br>- **Phương pháp sơ đồ cột (Ví dụ số 60):**<br>$$egin{array}{r|l} 60 & 2 \ 30 & 2 \ 15 & 3 \ 5 & 5 \ 1 & \end{array}$$<br>Ta viết: $60 = 2 \cdot 2 \cdot 3 \cdot 5 = 2^2 \cdot 3 \cdot 5$.<br><br>- **Nhận xét:** Trong cách viết, các thừa số nguyên tố thường được viết theo thứ tự từ bé đến lớn và các thừa số giống nhau được viết dưới dạng lũy thừa. |
+| + Bước 1: Chuyển giao nhiệm vụ:<br>- **GV:** Nêu định nghĩa: Phân tích một số tự nhiên lớn hơn 1 ra thừa số nguyên tố là viết số đó dưới dạng một tích các thừa số nguyên tố.<br>- **GV:** Trình chiếu hình ảnh minh họa 2 phương pháp chuẩn SGK:<br>1. Sơ đồ cây (phân nhánh phân tích số 24).<br>2. Sơ đồ cột dọc (chia liên tiếp phân tích số 30 với các ô điền khuyết).<br>- **HS:** Quan sát hình ảnh và chuẩn bị thực hành.<br>+ Bước 2: Thực hiện nhiệm vụ:<br>- **HS:** Thảo luận cặp đôi hoàn thành các ô dấu hỏi (?) trong sơ đồ cột của số 30 và thực hành phân tích số 84 theo sơ đồ cột vào vở.<br>- **GV:** Nhắc nhở quy tắc chia theo thứ tự các số nguyên tố tăng dần: 2, 3, 5, 7... cho đến khi thương bằng 1.<br>+ Bước 3: Báo cáo, thảo luận:<br>- **HS:** Đại diện lên bảng điền: $30 : 2 = 15$; $5 : 5 = 1$. Phân tích số 84: $84 : 2 = 42$; $42 : 2 = 21$; $21 : 3 = 7$; $7 : 7 = 1$. Kết quả $84 = 2^2 \cdot 3 \cdot 7$.<br>+ Bước 4: Kết luận, nhận định:<br>- **GV:** Khẳng định: Dù phân tích theo sơ đồ cây hay sơ đồ cột thì kết quả phân tích cuối cùng ra thừa số nguyên tố của một số là duy nhất (chỉ khác thứ tự thừa số). | **2. PHÂN TÍCH RA THỪA SỐ NGUYÊN TỐ:**<br><br>- **Định nghĩa:** Phân tích một số tự nhiên lớn hơn 1 ra thừa số nguyên tố là viết số đó dưới dạng một tích các thừa số nguyên tố.<br><br>- **Cách 1: Sơ đồ cây (Ví dụ số 24):**<br>Tách dần: $24 = 4 \cdot 6 = (2 \cdot 2) \cdot (2 \cdot 3)$.<br>Kết quả: $24 = 2^3 \cdot 3$.<br><br>- **Cách 2: Sơ đồ cột dọc (Ví dụ số 30):**<br>Chia liên tiếp cho các ước nguyên tố tăng dần:<br>+ $30 : 2 = 15$ (điền 15 vào ô trống bên trái)<br>+ $15 : 3 = 5$<br>+ $5 : 5 = 1$ (điền 5 vào ô trống bên phải, kết thúc khi thương là 1)<br>Kết quả: $30 = 2 \cdot 3 \cdot 5$.<br><br>- **Ví dụ phân tích số 60:**<br>Chia liên tiếp: $60 : 2 = 30$; $30 : 2 = 15$; $15 : 3 = 5$; $5 : 5 = 1$.<br>Kết quả: $60 = 2^2 \cdot 3 \cdot 5$.<br><br>- **Nhận xét:** Trong cách viết, các thừa số nguyên tố thường được viết theo thứ tự từ bé đến lớn và các thừa số giống nhau được viết dưới dạng lũy thừa. |
 
 ---
 
