@@ -54,7 +54,10 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
 - **2/ Tạo bài tập:**
   + File đầu vào (PDF bài học, PDF chuyên đề bài tập 5-10 trang, SGK trọn cuốn): đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`
   + File kết quả (File Word đề thi, OLM, Game, File HTML bài dạy tương tác `[Ten_Bai_Day].html` khi chọn mục 9, hoặc trọn bộ PDF từng bài khi chọn mục 10): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`
-  + Khi chọn mục 9 (Xuất bài dạy HTML): Tuân thủ quy chuẩn riêng tại `.agents/rules/tao-bai-day-html.md`.
+  + Khi chọn mục 9 (Xuất bài dạy HTML): Tuân thủ quy chuẩn riêng tại `.agents/rules/tao-bai-day-html.md`:
+    * Đóng vai chuyên gia sư phạm THCS, mục tiêu tạo bài tập gom nhóm rèn kỹ năng thực chất cho học sinh, không đưa toán HSG/Olympic xa rời thực tế.
+    * Tỉ lệ ma trận nhận thức: **80% cho học sinh Trung bình — Khá** (gom nhóm rèn kỹ thuật giải và vận dụng vừa sức); **20% mở rộng cho Khá — Giỏi** theo từng dạng toán.
+    * Bắt buộc tuân thủ nguyên tắc giới hạn vùng kiến thức cấp học: Cấp 2 chỉ dùng kiến thức cấp 2 trở xuống; TUYỆT ĐỐI CẤM đưa kiến thức cấp 3 (Định lý Sin, Định lý Côsin, công thức cộng góc, cực trị phức tạp, v.v.); không lấy kiến thức lớp 9 cho bài lớp 6, 7, 8.
   + Khi chọn mục 10 (Cắt PDF SGK thành từng bài học):
     * Đọc cuốn SGK/SBT PDF trong `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`.
     * Tự động xác định độ lệch số trang in vs số trang PDF (Offset).
@@ -160,8 +163,7 @@ Khi chọn "9. ⭐ Xuất bài dạy HTML (Dạy thêm, phụ đạo, bồi dư�
   2. **Phân loại dạng bài khoa học:** Tên dạng chuẩn xác $\rightarrow$ Dấu hiệu nhận biết đặc trưng (quét đề trong 3s) $\rightarrow$ Thuật toán tư duy 3–4 bước.
   3. **Phân tích tìm hướng giải (Thinking-Aloud — `.analysis-box`):** Vạch trần con đường tư duy, chỉ ra mấu chốt tại sao lại nghĩ ra phép biến đổi; có nút toggle `🧭 Hướng Giải` (Phím `H`).
   4. **Lời giải mẫu mực & Đánh giá sư phạm:** Lời giải chuẩn SGK (cấm $\iff$) $\rightarrow$ Cảnh báo cạm bẫy học sinh thường mất điểm oan (`.pitfall-box`) $\rightarrow$ Khai thác, mở rộng và phát triển bài toán (`.extension-box`).
-  5. **Phân tầng đánh giá năng lực:** Bài tập phân rõ 3 tầng nhận thức: Mức 1 (Củng cố kỹ năng) $\rightarrow$ Mức 2 (Biến thể & Cài bẫy) $\rightarrow$ Mức 3 (Vận dụng cao & Thực tế).
-- **Thiết kế điều khiển đứng lớp & In ấn A4:**
+  5. **Phân tầng đánh giá năng lực (Bản vá Ma trận tỷ lệ):** Phân bổ khoa học: **~40% Thông hiểu — Rèn luyện kỹ thuật giải** (thực chiến kỹ thuật giải, thành thạo thuật toán, .level-1), **~40% Vận dụng** (biến thể, cài bẫy, toán thực tiễn đời sống, .level-2), và **~20% Vận dụng cao** (ẩn phụ nâng cao, biện luận tham số $, cực trị, bồi dưỡng HSG & thi vào 10 chuyên, .level-3). Kèm Bảng rubric tự đánh giá năng lực A4.\n- **Thiết kế điều khiển đứng lớp & In ấn A4:**
   + Phím `H` / `🧭 Hướng Giải`: Mở gợi mở tư duy cho học sinh trước khi xem giải.
   + Phím `Space` / `Enter` / `💡 Lời Giải`: 1-chạm bật/tắt lời giải mẫu mực hoàn chỉnh.
   + Phím mũi tên `→` / `Sau ▶`: Chuyển ngay sang bài tiếp theo không bị kẹt.

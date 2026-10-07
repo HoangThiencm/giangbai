@@ -40,7 +40,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{TEN_BAI_HOC}}</title>
   
-  <!-- MathJax 3 Configuration -->
+  <!-- MathJax 3 Configuration with Dynamic On-Demand Typeset & Multi-CDN Resilient Loader -->
   <script>
     window.MathJax = {
       tex: {
@@ -53,11 +53,38 @@
       },
       svg: { fontCache: 'global' },
       startup: {
-        pageReady: () => MathJax.startup.defaultPageReady()
+        typeset: false,
+        ready: () => {
+          MathJax.startup.defaultReady();
+          window.mathJaxLoaded = true;
+          if (typeof renderCurrentSlideMath === 'function') {
+            renderCurrentSlideMath();
+          }
+        }
       }
     };
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" id="MathJax-script" async></script>
+  <script>
+    (function() {
+      const cdns = [
+        "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js",
+        "https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.js",
+        "https://unpkg.com/mathjax@3/es5/tex-svg.js"
+      ];
+      let loaded = false;
+      function loadNext(idx) {
+        if (idx >= cdns.length || loaded) return;
+        const s = document.createElement('script');
+        s.src = cdns[idx];
+        s.id = 'MathJax-script';
+        s.async = true;
+        s.onload = () => { loaded = true; };
+        s.onerror = () => { loadNext(idx + 1); };
+        document.head.appendChild(s);
+      }
+      loadNext(0);
+    })();
+  </script>
 
   <style>
     :root {
@@ -80,8 +107,16 @@
       overflow: hidden;
     }
 
-    mjx-container { display: inline-block !important; }
-    mjx-container svg { display: inline !important; vertical-align: middle !important; margin: 0 !important; }
+    mjx-container[display="true"] {
+      display: block !important;
+      text-align: center;
+      margin: 0.8em 0 !important;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+    mjx-container:not([display="true"]) {
+      display: inline-block;
+    }
 
     /* ==========================================================================
        THANH ĐIỀU KHIỂN PHÂN NHÓM THÔNG MINH (GROUPED TOP TOOLBAR)
@@ -417,7 +452,7 @@
     /* Layout 2 cột: Cột trái Hình ảnh / SVG, Cột phải Đề bài & Lời giải */
     .slide-body-grid {
       display: grid;
-      grid-template-columns: 460px 1fr;
+      grid-template-columns: minmax(360px, auto) 1fr;
       gap: 24px;
       flex: 1;
       transition: grid-template-columns 0.25s ease;
@@ -471,6 +506,11 @@
       justify-content: space-between;
       position: relative;
       transition: border-color 0.2s, background-color 0.2s;
+      resize: both;
+      overflow: hidden;
+      min-width: 320px;
+      min-height: 250px;
+      max-width: 85vw;
     }
     /* Chế độ kéo hình tự do khắp màn hình */
     .diagram-panel.is-floating {
@@ -1935,9 +1975,9 @@
       </div>
       <div class="edit-modal-body">
         <div class="edit-instructions">
-          💡 <strong>Hướng dẫn cho Thầy Cô:</strong> Nhập văn bản bình thường. Công thức Toán chỉ cần kẹp giữa 2 dấu <code>$</code> (Ví dụ: <code>$AB = 5\text{ cm}$</code>, <code>$\sin B = \frac{AC}{BC} = 0.6$</code>). Xuống dòng để ngắt ý. Tuyệt đối không cần gõ mã HTML phức tạp!
+          💡 <strong>Hướng dẫn cho Thầy Cô:</strong> Nhập văn bản bình thường. Công thức Toán chỉ cần kẹp giữa 2 dấu đô la <code>&#36;...&#36;</code> (Ví dụ: <code>$AB = 5\text{ cm}$</code>, <code>$\sin B = \frac{AC}{BC} = 0.6$</code>). Xuống dòng để ngắt ý. Tuyệt đối không cần gõ mã HTML phức tạp!
         </div>
-        <textarea id="editTextarea" class="edit-textarea" placeholder="Nhập chữ và công thức trong cặp $...$ hoặc $$...$$" oninput="scheduleEditPreview()"></textarea>
+        <textarea id="editTextarea" class="edit-textarea" placeholder="Nhập chữ và công thức trong cặp &#36;...&#36; hoặc &#36;&#36;...&#36;&#36;" oninput="scheduleEditPreview()"></textarea>
         <div class="edit-preview-wrap">
           <div class="edit-preview-label">Xem trước công thức</div>
           <div id="editPreview" class="edit-preview"></div>
@@ -2033,12 +2073,12 @@
     <div class="live-text-bar-header">
       <div class="live-text-title">
         <span>📝 CHÈN CHỮ &amp; CÔNG THỨC TOÁN TRỰC TIẾP</span>
-        <span class="live-text-sub">Kẹp công thức giữa cặp $...$ (VD: $x = 2$, $\frac{1}{2}$, $x^2 + 1 = 0$)</span>
+        <span class="live-text-sub">Kẹp công thức giữa cặp &#36;...&#36; (VD: $x = 2$, $\frac{1}{2}$, $x^2 + 1 = 0$)</span>
       </div>
       <button type="button" class="live-text-close-btn" onclick="toggleLiveTextToolbar(false)" title="Đóng thanh (Esc)">✕</button>
     </div>
     <div class="live-text-body">
-      <textarea id="liveTextInput" class="live-text-textarea" placeholder="Nhập lời giảng, ghi chú hoặc công thức Toán (VD: Đặt $x = 3$, suy ra $y = 6$)..." oninput="updateLiveTextPreview()"></textarea>
+      <textarea id="liveTextInput" class="live-text-textarea" placeholder="Nhập lời giảng, ghi chú hoặc công thức Toán (VD: Đặt &#36;x = 3&#36;, suy ra &#36;y = 6&#36;)..." oninput="updateLiveTextPreview()"></textarea>
       
       <!-- Thanh phím ký hiệu toán nhanh -->
       <div class="live-text-quick-symbols">
@@ -2111,6 +2151,41 @@
     const fontSizes = ["28px", "32px", "36px", "40px", "44px", "24px"];
     const originalSvgs = __ORIGINAL_SVGS_JSON__;
 
+    function typesetElementMath(target) {
+      if (!target) return;
+      if (window.MathJax && MathJax.typesetPromise) {
+        const nodes = Array.isArray(target) ? target : (target instanceof NodeList ? Array.from(target) : [target]);
+        const validNodes = nodes.filter(Boolean);
+        if (validNodes.length > 0) {
+          MathJax.typesetPromise(validNodes).catch(function(err) {
+            console.warn('MathJax typeset error:', err);
+          });
+        }
+      }
+    }
+
+    function renderCurrentSlideMath() {
+      const activeCard = document.querySelector(`.slide-card[data-slide="${currentSlide}"]`);
+      if (!activeCard) return;
+      const targets = [];
+      const prob = activeCard.querySelector('.problem-box');
+      if (prob) targets.push(prob);
+      const theory = activeCard.querySelector('.theory-box');
+      if (theory) targets.push(theory);
+      const diag = activeCard.querySelector('.diagram-panel');
+      if (diag) targets.push(diag);
+      const sol = activeCard.querySelector('.solution-box.is-revealed');
+      if (sol) targets.push(sol);
+      const ana = activeCard.querySelector('.analysis-box.is-revealed');
+      if (ana) targets.push(ana);
+
+      if (targets.length > 0) {
+        typesetElementMath(targets);
+      } else {
+        typesetElementMath(activeCard);
+      }
+    }
+
     function showSlide(index) {
       if (index < 1) index = 1;
       if (index > totalSlides) index = totalSlides;
@@ -2126,7 +2201,7 @@
       updateSolutionButtons(activeCard);
       updateAnalysisButtons(activeCard);
 
-      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+      renderCurrentSlideMath();
     }
 
     function nextSlide() {
@@ -2792,10 +2867,10 @@
         solBox.classList.add('is-revealed');
         solBox.classList.add('reveal-all');
         solBox.querySelectorAll('.step-card').forEach(c => c.classList.add('is-revealed'));
+        typesetElementMath(solBox);
       }
 
       updateSolutionButtons(activeCard);
-      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
     }
 
     function revealAllSteps(ev) {
@@ -2811,7 +2886,7 @@
       solBox.querySelectorAll('.step-card').forEach(c => c.classList.add('is-revealed'));
 
       updateSolutionButtons(activeCard);
-      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+      typesetElementMath(solBox);
     }
 
     function hideCurrentSolution(ev) {
@@ -2878,7 +2953,9 @@
 
       anaBox.classList.toggle('is-revealed');
       updateAnalysisButtons(activeCard);
-      if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+      if (anaBox.classList.contains('is-revealed')) {
+        typesetElementMath(anaBox);
+      }
     }
 
     function hideCurrentAnalysis(ev) {
@@ -4964,6 +5041,10 @@ function casioRenderNatural(expr) {
       resizeDrawCanvas();
       resizeBlackboard();
       syncToolbarOffset();
+    });
+    window.addEventListener('beforeprint', () => {
+      const printWrapper = document.querySelector('.print-handout-wrapper');
+      if (printWrapper) typesetElementMath(printWrapper);
     });
     bindDrawCanvas();
     bindBlackboard();

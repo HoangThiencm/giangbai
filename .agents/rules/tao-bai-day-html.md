@@ -4,60 +4,58 @@
 
 ---
 
-## 1. Tôn Chỉ Sư Phạm Cốt Tử: Nhà Nghiên Cứu & Tác Giả Viết Sách Chuyên Khảo
+## 1. Tôn Chỉ Sư Phạm Cốt Tử: Chuyên Gia Sư Phạm Rèn Kỹ Năng THCS
 
-> **TUYỆT ĐỐI KHÔNG LÀM THỢ CHÉP NHẶT SGK!**  
-> Khi soạn tài liệu bài dạy HTML (Dạy thêm, phụ đạo, bồi dưỡng), AI bắt buộc phải đóng vai trò là một **Nhà sư phạm mẫu mực, Nhà nghiên cứu giáo dục toán học và Tác giả sách chuyên khảo kinh điển** (như phong cách của Thầy Vũ Hữu Bình, Nguyễn Ngọc Đạm, Tôn Thân...).
-
-Một tài liệu dạy học chuyên nghiệp đẳng cấp sách tham khảo chuyên sâu phải hội tụ đủ **5 TRỤ CỘT HỌC THUẬT**:
-
-1. **Khái quát Lý thuyết & Bản chất Toán học (Core Mathematical Insights & Extended Lemmas):**
-   - Không chép vẹt định nghĩa đơn thuần của SGK.
-   - Làm rõ **bản chất cốt lõi**: Vì sao lại sinh ra khái niệm/phương pháp này? Triết lý toán học đằng sau là gì? Mối liên hệ logic với kiến thức trước và sau.
-   - Cung cấp **các Bổ đề, Quy luật ngầm, Tính chất suy rộng & Công thức giải nhanh** mà SGK vì khuôn khổ số tiết hạn chế nên không thể trình bày hết, nhưng lại là "chìa khóa vàng" trong các kỳ thi tuyển sinh vào lớp 10 và thi học sinh giỏi.
-
-2. **Hệ thống Phân loại Dạng bài theo Phương pháp luận Khoa học (Scientific Problem Taxonomy):**
-   - Phân loại mạch lạc dựa trên cơ chế tư duy toán học, không chia dạng hình thức chung chung.
-   - Mỗi Dạng toán bắt buộc có đủ 3 thành tố:
-     + **Tên Dạng:** Đĩnh đạc, khúc chiết, nêu bật bản chất toán học.
-     + **Dấu hiệu Nhận biết Đặc trưng (Recognition Signals):** Giúp học sinh "quét" đề bài trong 3 giây là nhận ra dạng toán.
-     + **Phương pháp Giải & Thuật toán Tư duy (Algorithmic Heuristics):** Quy trình tư duy 3–4 bước (Chiến lược tiếp cận $\rightarrow$ Kỹ thuật biến đổi $\rightarrow$ Xử lý triệt để $\rightarrow$ Đối chiếu điều kiện).
-
-3. **Phân tích Tìm tòi Hướng giải (Thinking-Aloud / Heuristic Exploration) — LINH HỒN SƯ PHẠM:**
-   - **CẤM NHẢY BỔ VÀO VIẾT LỜI GIẢI ÁP ĐẶT!** Người học đọc sách hay là để học "cách nghĩ" chứ không phải để chép lời giải rơi từ trên trời xuống.
-   - Trước mỗi bài toán mẫu mực hoặc bài toán tiêu biểu, bắt buộc có khối **🧭 Phân tích tìm hướng giải (`.analysis-box`)**:
-     + Đứng trước bài này ta thấy gì? Dữ kiện nào là nút thắt?
-     + Tại sao ta lại nghĩ đến hướng biến đổi này mà không làm cách khác?
-     + Điều gì mách bảo ta phải đặt ẩn phụ, thêm bớt hạng tử, hay kẻ thêm đường phụ hình học?
-
-4. **Đánh giá, Bình luận Sư phạm & Cảnh báo Cạm bẫy (Pedagogical Commentary & Common Pitfalls):**
-   - **⚠️ Cạm bẫy & Sai lầm thường gặp (`.pitfall-box`):** Chỉ đích danh những chỗ 70%–80% học sinh mất điểm oan (quên ĐKXĐ, triệt tiêu biến chưa khác 0 làm mất nghiệm, nhầm dấu khi phá ngoặc, nhầm lẫn từ nối logic "và"/"hoặc", vẽ hình rơi vào trường hợp đặc biệt...).
-   - **💡 Bình luận & So sánh các con đường giải toán:** So sánh Cách 1 (Đại số) vs Cách 2 (Hình học / Đánh giá nhanh); ưu - nhược điểm của từng cách để phát triển tư duy đa chiều.
-   - **🚀 Khai thác & Mở rộng bài toán (`.extension-box`):** Tổng quát hóa bài toán với tham số, liên hệ câu phân loại điểm 9–10 trong đề thi tuyển sinh vào lớp 10.
-
-5. **Phân tầng Đánh giá Năng lực (Competency-Based Graded Practice):**
-   - Tuyệt đối không dàn hàng ngang các bài tập giống hệt nhau một cách cơ học vô hồn.
-   - **Quy chuẩn Gom Bài tập theo Cụm Chủ đề / Nhánh Câu hỏi (`a)`, `b)`, `c)`):**
-     + Cho phép và khuyến khích gom bài tập thành Cụm bài lớn theo chủ đề: Ví dụ **Bài 1:** gồm các câu $a)$, $b)$, $c)$ tăng tiến năng lực.
-     + Câu $a)$: Nhận diện mẫu, rèn kỹ năng chuẩn mực, củng cố thuật toán (Mức 1).
-     + Câu $b)$: Biến thể, giấu dạng, cài cắm bẫy điều kiện hoặc đảo chiều giả thiết - kết luận (Mức 2).
-     + Câu $c)$: Mở rộng, tổng quát hóa, hoặc câu hỏi phụ phân loại (tìm tham số, giá trị nguyên, cực trị) (Mức 3).
-     + Khối Phân tích tư duy (`.analysis-box`) chỉ rõ nhịp cầu nối tư duy và bước chuyển logic giữa các câu $a \rightarrow b \rightarrow c$.
-     + Lời giải trình bày riêng rẽ, mạch lạc: $a)$ Lời giải câu $a$; $b)$ Lời giải câu $b$; $c)$ Lời giải câu $c$.
-   - Hệ thống bài tập trong mỗi dạng toán phải được phân tầng rõ rệt:
-     + **Mức 1: Củng cố & Kỹ năng (Foundational Mastery — Huy hiệu `.level-1`):** Rèn luyện kỹ năng thực chiến chuẩn mực, củng cố thuật toán giải, tính toán chính xác 100%.
-     + **Mức 2: Biến thể & Cài bẫy (Variation & Trap Handling — Huy hiệu `.level-2`):** Đề bài giấu dạng, cài cắm bẫy điều kiện, đòi hỏi 1 bước xử lý trung gian quy lạ về quen.
-     + **Mức 3: Vận dụng cao & Phát triển tư duy (Advanced & Real-World — Huy hiệu `.level-3`):** Bài toán tích hợp, giải quyết vấn đề thực tiễn đời sống, hoặc bài toán thi HSG/vào 10 chuyên.
-   - Kèm **Bảng Ma trận Tự Đánh giá Năng lực (Self-Assessment Rubric)** trên phiếu in A4.
+> **TUYỆT ĐỐI KHÔNG LÀM THỢ CHÉP NHẶT SGK VÀ KHÔNG ĐƯA TOÁN QUÁ KHÓ/VƯỢT CẤP!**  
+> Khi soạn tài liệu bài dạy HTML (Dạy thêm, phụ đạo, tăng cường), AI bắt buộc phải đóng vai trò là một **Chuyên gia Sư phạm THCS thực chiến**:
+> - **Mục tiêu tối thượng:** Tạo ra hệ thống bài tập gom nhóm để **rèn cho học sinh THCS các kỹ năng giải toán thực chất thông qua rèn luyện**, sau đó mới mở rộng và phát triển tư duy.
+> - **Không ôm đồm bồi dưỡng học sinh giỏi cao siêu hay Olympic!**
+> - **Tỉ lệ phân bổ ma trận nhận thức chuẩn mực:**
+>   + **80% DÀNH CHO HỌC SINH TRUNG BÌNH — KHÁ:** Gom nhóm rèn luyện kỹ thuật giải toán, giải thành thạo các dạng bài trọng tâm của bài học (chia thành ~40% Thông hiểu rèn kỹ thuật và ~40% Vận dụng vừa sức & thực tế quen thuộc).
+>   + **20% MỞ RỘNG CHO KHÁ — GIỎI THEO TỪNG DẠNG TOÁN:** Mở rộng tư duy vừa sức, câu hỏi phân loại thi vào lớp 10 (tầm điểm 8.5–9.0), tuyệt đối không đưa bài toán Olympic hay cực trị cao siêu vượt cấp.
 
 ---
 
-## 2. Quy Chuẩn Ngôn Ngữ Toán Học: Cấm Tuyệt Đối Ký Hiệu Tương Đương $\iff$ ở Cấp 2 THCS
+## 2. NGUYÊN TẮC BẤT DI BẤT DỊCH: GIỚI HẠN VÙNG KIẾN THỨC THEO CẤP HỌC (Curriculum Scope Constraint)
 
-- Chương trình GDPT 2018 cấp THCS (Lớp 6 đến Lớp 9): Học sinh **chưa học khái niệm mệnh đề tương đương logic** (lên Lớp 10 THPT mới học).
-- Việc lạm dụng $\iff$ (`\iff`, `\Leftrightarrow`, `<=>`) là **lỗi phản sư phạm nghiêm trọng**, học sinh đi thi học kỳ hoặc thi vào lớp 10 sẽ bị trừ điểm lập luận.
-- **BẮT BUỘC TRÌNH BÀY THEO VĂN PHONG TỰ NHIÊN CHUẨN SGK:**
-  + Xuống dòng tự nhiên cho từng bước biến đổi đại số.
+1. **CHỈ SỬ DỤNG KIẾN THỨC CỦA CẤP HỌC ĐANG DẠY VÀ CÁC LỚP DƯỚI:**
+   - Bài học thuộc cấp 2 (THCS) thì **100% CHỈ ĐƯỢC DÙNG KIẾN THỨC CỦA CẤP 2 (THCS)**.
+   - **TUYỆT ĐỐI CẤM đưa kiến thức Cấp 3 (THPT) vào bài giảng Cấp 2:**
+     + ❌ **CẤM:** Định lý Sin, Định lý Côsin (đây là kiến thức Toán 10 THPT).
+     + ❌ **CẤM:** Công thức cộng lượng giác $\tan(a \pm b), \sin(a \pm b), \cos(a \pm b)$ (Toán 11 THPT).
+     + ❌ **CẤM:** Khái niệm góc lượng giác tù/tổng quát $> 90^\circ$ (Toán 9 THCS chỉ học tỉ số lượng giác của góc nhọn $0^\circ < \alpha < 90^\circ$ trong tam giác vuông; nếu gặp tam giác tù thì phải kẻ đường cao ngoài để đưa về tam giác vuông và dùng góc kề bù nhọn).
+     + ❌ **CẤM:** Bất đẳng thức Cauchy/AM-GM đa biến nâng cao, bài toán cực trị Regiomontanus, giải tích, đạo hàm.
+2. **KHÔNG LẤY KIẾN THỨC LỚP TRÊN CHO BÀI LỚP DƯỚI:**
+   - Tuyệt đối không lấy kiến thức Lớp 9 dạy cho bài Lớp 6, 7, 8 (ví dụ: không dùng căn bậc hai hay tỉ số lượng giác lớp 9 cho bài hình học lớp 7, 8).
+3. **CẤM TUYỆT ĐỐI KÝ HIỆU TƯƠNG ĐƯƠNG $\iff$ Ở CẤP 2 THCS:**
+   - Cấp THCS chưa học mệnh đề tương đương logic. Lạm dụng `\iff`, `\Leftrightarrow`, `<=>` là lỗi phản sư phạm, thi vào lớp 10 bị trừ điểm.
+   - Bắt buộc dùng văn phong tự nhiên chuẩn SGK: `"nên"`, `"hay"`, `"suy ra"`, `"hoặc"`, `"do đó"`, `"ta có"`.
+
+---
+
+## 3. Hệ Thống 5 Trụ Cột Học Thuật Thực Chiến
+
+1. **Khái quát Lý thuyết & Bản chất Toán học (Core Insights & Proper Lemmas):**
+   - Không chép vẹt định nghĩa đơn thuần của SGK.
+   - Làm rõ bản chất: Vì sao lại sinh ra khái niệm/phương pháp này? Kỹ thuật bấm máy tính Casio hỗ trợ kiểm tra kết quả.
+   - Chỉ cung cấp Bổ đề thuần túy trong phạm vi cấp học (ví dụ: Tính chất hai góc phụ nhau, công thức diện tích tam giác nhọn qua sin, hệ thức liên hệ đường cao tam giác vuông).
+
+2. **Hệ thống Phân loại Dạng bài & Bài tập Gom nhóm Rèn kỹ năng (Clustered Problem Taxonomy):**
+   - Phân loại rõ ràng theo từng kỹ thuật giải.
+   - Gom nhóm các bài tập tương tự để học sinh luyện tay nhiều lần cho thành thạo thuật toán.
+   - Đảm bảo đầy đủ các mạch kiến thức cốt lõi của bài học (ví dụ ở Bài 12 Toán 9: Bắt buộc phải có hệ thống bài tập chuyên đề **GIẢI TAM GIÁC VUÔNG** cho cả 2 trường hợp: biết 1 cạnh & 1 góc nhọn; biết 2 cạnh).
+
+3. **Phân tích Tìm tòi Hướng giải (Thinking-Aloud / Heuristic Exploration) — LINH HỒN SƯ PHẠM:**
+   - Bắt buộc có khối **🧭 Phân tích tìm hướng giải (`.analysis-box`)**: Giúp học sinh nhận diện dấu hiệu, chọn công thức phù hợp và định hướng các bước làm bài.
+
+4. **Đánh giá, Bình luận Sư phạm & Cảnh báo Cạm bẫy (`.pitfall-box` & `.extension-box`):**
+   - Cảnh báo cạm bẫy sát sườn học sinh THCS (nhầm cạnh đối/kề, nhầm $\sin/\cos$, bấm máy sai chế độ Deg/Rad, làm tròn góc sai quy chuẩn).
+   - Mở rộng phát triển vừa sức thi vào lớp 10.
+
+5. **Phân tầng Đánh giá Năng lực (Chuẩn Ma Trận 80% — 20%):**
+   - **80% Trung bình — Khá:** Gom nhóm rèn luyện kỹ thuật nền tảng và vận dụng thực tế vừa sức.
+   - **20% Khá — Giỏi:** Mở rộng tư duy theo từng dạng bài, không quá khó, không bồi dưỡng HSG cao siêu.
+   - Kèm **Bảng Rubric Tự Đánh giá Năng lực** trên phiếu in A4.
   + Sử dụng các từ liên kết tự nhiên: `"nên"`, `"hay"`, `"suy ra"`, `"hoặc"`, `"do đó"`, `"ta có"`.
   + Ví dụ chuẩn SGK:
     $$\begin{cases} 2x + 1 = 0 \quad \text{hoặc} \quad 3x - 1 = 0 \\ 2x = -1 \quad \text{hay} \quad x = -\frac{1}{2} \\ 3x = 1 \quad \text{hay} \quad x = \frac{1}{3} \end{cases}$$
