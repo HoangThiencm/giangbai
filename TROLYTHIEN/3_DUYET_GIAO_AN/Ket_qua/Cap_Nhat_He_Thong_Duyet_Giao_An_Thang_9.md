@@ -29,13 +29,13 @@
 
 ---
 
-## 2. THẦY TRẦN LONG HẢI (MÔN TOÁN 8)
+## 2. THẦY TRẦN LONG HẢI (MÔN TOÁN 8 — 20 TIẾT, 89 TRANG)
 
 ### A. PHÂN MÔN HÌNH HỌC 8 (49 TRANG — 6 BÀI):
 
-* **Bài 10: Tứ giác (Tiết 1, 2 — Trang 1-8)**: [KHÔNG DUYỆT / TRẢ HỒ SƠ]
+* **Bài 10: Tứ giác (Tiết 1, 2 — Trang 1-8)**: [ĐẠT / DUYỆT (TỐT)]
   > **👉 Nhận xét hệ thống (Copy & Paste):**  
-  > `TRẢ HỒ SƠ do có sai sót nghiêm trọng về kiến thức và ký hiệu toán học tại Trang 5: (1) Mất dấu mũ góc ở toàn bộ các công thức (viết trần A, B, C, D); (2) Sai bản chất định lý tổng các góc: viết H + E + F - G = 360° (nhầm dấu trừ); (3) Sai quy tắc chuyển vế và thứ tự phép tính: viết D = 360° - A + B + C = 50° và F = 360° - H - E + G = 125°. Đề nghị đính chính chuẩn xác ký hiệu góc và biểu thức toán học, in đậm nghiêng NLS 1.1, 5.3 trước khi duyệt.`
+  > `Kế hoạch bài dạy Bài 10 đã sửa lại hoàn hảo: định lý tổng các góc tứ giác và các phép tính góc tại Ví dụ, Luyện tập 2 chuẩn xác 100%; ký hiệu góc hiển thị dấu mũ góc rõ nét, chuẩn mực; chỉ báo NLS (1.1 và 5.3) đã được in đậm, nghiêng đúng quy định. Đảm bảo tiến độ và 4 hoạt động CV 5512. Duyệt.`
 
 * **Bài 11: Hình thang cân (Tiết 3, 4 — Trang 9-18)**: [ĐẠT / DUYỆT]
   > `Soạn tốt, đủ 4 hoạt động theo CV 5512. Ký hiệu góc và các bước chứng minh tính chất hình thang cân chuẩn xác. Tiến độ đúng PPCT. Duyệt.`
@@ -52,16 +52,21 @@
 * **Bài 13: Hình chữ nhật (Tiết 9, 10 — Trang 41-49)**: [ĐẠT / DUYỆT]
   > `Soạn vượt tiến độ tuần 5, nội dung định nghĩa, tính chất và dấu hiệu nhận biết hình chữ nhật rất chuẩn xác, khoa học. Duyệt.`
 
-* **Nhận xét chung gói nộp Hình học 8 (Nếu duyệt theo gói/tệp)**: [KHÔNG DUYỆT / TRẢ HỒ SƠ]
-  > `TRẢ LẠI HỒ SƠ. Yêu cầu thầy Trần Long Hải đính chính dứt điểm toàn bộ lỗi kiến thức định lý và ký hiệu góc tại Trang 5 Bài 10, in đậm nghiêng NLS trước khi phê duyệt toàn tệp.`
+* **Nhận xét chung gói nộp Hình học 8 (Nếu duyệt theo gói/tệp)**: [ĐẠT / DUYỆT (TỐT)]
+  > **👉 Nhận xét hệ thống (Copy & Paste):**  
+  > `DUYỆT GÓI HÌNH HỌC 8. Hồ sơ gồm 10 tiết (49 trang), đảm bảo tiến độ tháng 9 và vượt tuần 5. Giáo viên đã khắc phục triệt để và hoàn hảo toàn bộ lỗi toán học và ký hiệu góc tại Bài 10; tích hợp NLS in đậm nghiêng đúng quy định. Cấu trúc bài soạn công phu, chuẩn mực.`
 
 ### B. PHÂN MÔN ĐẠI SỐ 8 (40 TRANG — 6 BÀI):
 
 * **Bài 1, 2, LTC 6, Bài 4, Bài 5**: [ĐẠT / DUYỆT]
-* **Bài 3: Phép cộng và phép trừ đa thức (Tiết 5)**: [DUYỆT CÓ LƯU Ý]
-  > `Phương pháp rèn kỹ năng quy tắc dấu ngoặc khi trừ đa thức chặt chẽ. Có tích hợp NLS (5.3.TC2a) khớp Phụ lục 3. Lưu ý: Cần in đậm, nghiêng câu mô tả năng lực số theo đúng quy định chuyên môn.`
-* **Nhận xét chung gói nộp Đại số 8**: [ĐẠT YÊU CẦU]
-  > `ĐẠT YÊU CẦU. Kế hoạch bài dạy soạn đầy đủ 10 tiết, đúng PPCT và vượt tiến độ. Nhắc nhở giáo viên in đậm, nghiêng câu mô tả năng lực số tại Bài 3 theo đúng quy định.`
+* **Bài 3: Phép cộng và phép trừ đa thức (Tiết 5)**: [ĐẠT / DUYỆT (TỐT)]
+  > `Phương pháp rèn kỹ năng quy tắc dấu ngoặc khi trừ đa thức chặt chẽ. Đã tích hợp NLS (5.3.TC2a) khớp Phụ lục 3 và IN ĐẬM, NGHIÊNG đúng quy định chuyên môn. Duyệt.`
+* **Nhận xét chung gói nộp Đại số 8**: [ĐẠT YÊU CẦU / DUYỆT]
+  > `ĐẠT YÊU CẦU. Kế hoạch bài dạy soạn đầy đủ 10 tiết, đúng PPCT và vượt tiến độ. Tích hợp NLS in đậm, nghiêng chuẩn mực. Duyệt.`
+
+### • Nhận xét chung toàn bộ hồ sơ Thầy Trần Long Hải (Duyệt theo gói): [DUYỆT - XẾP LOẠI TỐT]
+> **👉 Nhận xét hệ thống (Copy & Paste):**  
+> `DUYỆT TOÀN BỘ HỒ SƠ (Xếp loại Tốt). Hồ sơ giáo án nộp đầy đủ 20 tiết (89 trang) môn Toán 8 (Đại số và Hình học). Đảm bảo 100% tiến độ Tháng 9 và vượt tuần 5 ở cả hai phân môn. Giáo viên đã khắc phục triệt để và hoàn hảo toàn bộ sai sót toán học và ký hiệu góc tại Bài 10 Hình 8; tích hợp NLS in đậm nghiêng đúng quy định. Biểu dương tinh thần cầu thị và trách nhiệm nghề nghiệp của thầy Hải.`
 
 ---
 
@@ -162,3 +167,23 @@
 ### • Nhận xét chung toàn bộ hồ sơ Thầy Dương Quang Tùng (Duyệt theo gói): [DUYỆT - XẾP LOẠI TỐT]
 > **👉 Nhận xét hệ thống (Copy & Paste):**  
 > `DUYỆT TOÀN BỘ HỒ SƠ (Xếp loại Tốt). Hồ sơ giáo án nộp đầy đủ 17 tiết (115 trang PDF) thuộc 4 khối lớp Tin học 6, 7, 8, 9. Đảm bảo 100% tiến độ Tháng 9 và vượt tuần 5 ở khối 9. Tích hợp Năng lực số và AI trong cả 4 khối lớp rất mẫu mực, 100% câu mô tả đều in đậm, nghiêng, màu tím nổi bật và khớp Phụ lục 3. Thể thức và tiến trình CV 5512 chuẩn mực. Biểu dương tinh thần tiên phong ứng dụng công nghệ của thầy Tùng.`
+
+---
+
+## 7. THẦY HOÀNG XUÂN ÁNH (MÔN TOÁN 7, HĐTN 6 — 29 TIẾT, 80 TRANG)
+
+### • Phân môn Đại số 7 (31 trang — 09 tiết: Bài 1, 2, LTC, Bài 3): [ĐẠT / DUYỆT (TỐT)]
+> **👉 Nhận xét hệ thống (Copy & Paste):**  
+> `Kế hoạch bài dạy soạn tốt, đủ 09 tiết đảm bảo 100% tiến độ tháng 9 và vượt tuần 5. Cấu trúc 4 hoạt động CV 5512 rõ ràng, các bước thực hiện phép tính số hữu tỉ và lũy thừa chính xác, bài tập củng cố phong phú. Duyệt.`
+
+### • Phân môn Hình học 7 (31 trang — 08 tiết: Bài 8, 9, LTC, Bài 10): [ĐẠT / DUYỆT (TỐT)]
+> **👉 Nhận xét hệ thống (Copy & Paste):**  
+> `Soạn đủ 08 tiết đảm bảo đúng tiến độ tháng 9. Kiến thức góc ở vị trí đặc biệt, tia phân giác, hai đường thẳng song song và tiên đề Euclid đầy đủ, logic. Ký hiệu góc và quan hệ hình học hiển thị dấu mũ góc chuẩn xác, không lỗi font. Duyệt.`
+
+### • Phân môn Hoạt động trải nghiệm, hướng nghiệp 6 (18 trang — 12 tiết: Chủ đề 1: Em với nhà trường): [KHÔNG DUYỆT / TRẢ HỒ SƠ]
+> **👉 Nhận xét hệ thống (Copy & Paste):**  
+> `TRẢ HỒ SƠ PHÂN MÔN HĐTN 6 do vi phạm quy chế chuyên môn: Toàn bộ câu mô tả mục tiêu chỉ báo Năng lực số (2.2.TC1a) và AI (6.C2.2) tại Trang 1, Trang 10 KHÔNG IN ĐẬM, KHÔNG IN NGHIÊNG theo quy định bắt buộc. Yêu cầu giáo viên định dạng in đậm, nghiêng chuẩn mực và nộp lại để phê duyệt.`
+
+### • Nhận xét chung toàn bộ hồ sơ Thầy Hoàng Xuân Ánh (Duyệt theo gói): [TRẢ HỒ SƠ - CHỜ ĐÍNH CHÍNH HĐTN 6]
+> **👉 Nhận xét hệ thống (Copy & Paste):**  
+> `TRẢ LẠI HỒ SƠ. Nghiệm thu đạt yêu cầu 2 phân môn Toán 7 (Đại số 7 và Hình học 7). Tạm thời trả hồ sơ phân môn HĐTN 6 do vi phạm quy định định dạng NLS/AI (không in đậm, nghiêng). Đề nghị thầy Hoàng Xuân Ánh hoàn thiện và nộp lại trước ngày 10/10/2026.`

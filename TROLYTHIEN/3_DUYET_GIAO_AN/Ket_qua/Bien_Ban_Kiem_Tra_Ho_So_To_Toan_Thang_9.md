@@ -41,11 +41,12 @@ Tổ chuyên môn thống nhất thẩm định hồ sơ theo 04 tiêu chuẩn b
 | STT | Họ và tên GV | Môn / Khối | Số tiết nộp | Tiến độ thực hiện | Kết luận / Xếp loại |
 | :---: | :--- | :--- | :---: | :--- | :---: |
 | **1** | **HỒ ĐĂNG DANH** | Toán 6, Toán 9 | 33 tiết (4 phân môn) | Đạt *(Chấp thuận giải trình có lý do chính đáng)* | **DUYỆT**<br>*(Xếp loại: Tốt)* |
-| **2** | **TRẦN LONG HẢI** | Toán 8 | 20 tiết (89 trang) | Đủ 100% Tháng 9 & vượt Tuần 5 | **TRẢ HỒ SƠ**<br>*(Sửa lỗi toán)* |
+| **2** | **TRẦN LONG HẢI** | Toán 8 | 20 tiết (89 trang) | Đủ 100% Tháng 9 & vượt Tuần 5; Đã sửa sạch 100% lỗi toán & NLS chuẩn | **DUYỆT**<br>*(Xếp loại: Tốt)* |
 | **3** | **NGUYỄN THỊ THẢO** | Toán 6, Toán 7 | 34 tiết (123 trang) | Đã sửa sạch 100% lỗi font góc; NLS in đậm nghiêng chuẩn | **DUYỆT**<br>*(Xếp loại: Tốt)* |
 | **4** | **TRẦN SÁNG** | Toán 6, Toán 9 | 32 tiết (155 trang) | Đã bổ sung đủ 100% Tháng 9; NLS khớp PL3 | **DUYỆT**<br>*(Xếp loại: Khá)* |
 | **5** | **LÊ THỊ BÌNH** | Toán 7, Toán 8, HĐTN 7 | 45 tiết (178 trang) | Đã sửa sạch 100% lỗi font công thức; NLS/AI chuẩn mực | **DUYỆT**<br>*(Xếp loại: Tốt)* |
 | **6** | **DƯƠNG QUANG TÙNG** | Tin học 6, 7, 8, 9 | 17 tiết (115 trang) | Đủ 100% Tháng 9 & vượt Tuần 5; NLS/AI mẫu mực | **DUYỆT**<br>*(Xếp loại: Tốt)* |
+| **7** | **HOÀNG XUÂN ÁNH** | Toán 7, HĐTN 6 | 29 tiết (80 trang) | Toán 7 đạt tốt; HĐTN 6 vi phạm NLS/AI không in đậm nghiêng | **TRẢ HỒ SƠ**<br>*(Sửa HĐTN 6)* |
 
 ---
 
@@ -60,9 +61,9 @@ Tổ chuyên môn thống nhất thẩm định hồ sơ theo 04 tiêu chuẩn b
 ---
 
 ### 2. Thầy Trần Long Hải (Môn Toán 8)
-- **Ưu điểm**: Hồ sơ giáo án chuẩn bị với khối lượng lớn (20 tiết — 89 trang), tiến độ đảm bảo 100% tháng 9 và vượt tuần 5. Thể thức văn bản, Header/Footer đúng chuẩn quy định của trường THCS Trần Phú. Các bài dạy sau (Bài 11, 12, 13 Hình học 8 và các bài Đại số 8) soạn rất công phu, chuẩn mực.
-- **Tồn tại sai sót chuyên môn toán học nghiêm trọng (tại Trang 5 Bài 10 Hình học 8)**: (1) Vi phạm ký hiệu góc: Toàn bộ các góc viết trần bằng chữ cái in hoa (A, B, C, D và H, E, F, G), không có dấu mũ góc; (2) Sai bản chất định lý tổng các góc trong tứ giác: viết thành $H + E + F - G = 360^\circ$ (nhầm dấu trừ); (3) Sai quy tắc chuyển vế và thứ tự phép tính: viết $D = 360^\circ - A + B + C = 50^\circ$ và $F = 360^\circ - H - E + G = 125^\circ$; (4) Chưa in đậm nghiêng câu mô tả năng lực số tại Bài 10 (Hình 8) và Bài 3 (Đại 8).
-- **Kết luận và xếp loại**: **Đề nghị trả hồ sơ**. Yêu cầu thầy Trần Long Hải đính chính chuẩn xác toàn bộ lỗi toán học và ký hiệu góc tại Trang 5 Bài 10, in đậm nghiêng các phần NLS trước khi trình duyệt lại.
+- **Tiến độ và khối lượng**: Hồ sơ giáo án chuẩn bị khối lượng lớn (20 tiết — 89 trang qua 2 phân môn Đại số 8 và Hình học 8), tiến độ đảm bảo 100% tháng 9 và vượt tuần 5 ở cả hai phân môn. Thể thức văn bản, Header/Footer đúng chuẩn quy định của trường THCS Trần Phú.
+- **Ưu điểm nổi bật và kết quả khắc phục**: Giáo viên có tinh thần cầu thị và trách nhiệm nghề nghiệp rất cao. Sau khi tổ chuyên môn chỉ ra các lỗi toán học ở bản nộp đầu, thầy Trần Long Hải đã nhanh chóng rà soát và khắc phục triệt để 100% sai sót: định lý tổng các góc tứ giác và các phép tính chuyển vế tìm góc ở Trang 5 Bài 10 (Hình 8) đã chuẩn xác hoàn toàn; toàn bộ ký hiệu góc hiển thị dấu mũ góc rõ nét, chuẩn mực; các câu mô tả chỉ báo Năng lực số tại Bài 10 Hình 8 và Bài 3 Đại 8 đã được in đậm, nghiêng đúng quy định. Các bài dạy sau (Bài 11, 12, 13 Hình học 8 và các bài Đại số 8) soạn rất công phu, chuẩn mực.
+- **Kết luận và xếp loại**: **Duyệt hồ sơ (Xếp loại: Tốt)**. Biểu dương tinh thần trách nhiệm và chất lượng hồ sơ sau khi khắc phục của thầy Trần Long Hải.
 
 ---
 
@@ -96,10 +97,19 @@ Tổ chuyên môn thống nhất thẩm định hồ sơ theo 04 tiêu chuẩn b
 
 ---
 
+
+### 7. Thầy Hoàng Xuân Ánh (Môn Toán 7, HĐTN 6)
+- **Tiến độ và khối lượng**: Nộp đầy đủ 03 tệp PDF gồm 80 trang qua 3 phân môn với tổng số 29 tiết dạy: Đại số 7 (9 tiết, 31 tr), Hình học 7 (8 tiết, 31 tr) và HĐTN 6 (12 tiết, 18 tr). Đảm bảo 100% tiến độ 4 tuần Tháng 9/2026 và vượt tiến độ sang tuần 5 ở phân môn Đại số 7 (hết Bài 3).
+- **Ưu điểm nổi bật**: Hồ sơ bài dạy soạn chu đáo, cấu trúc đầy đủ 4 hoạt động theo Công văn số 5512/BGDĐT-GDTrH. Thể thức văn bản, Header/Footer đúng chuẩn quy định của trường THCS Trần Phú. Ký hiệu góc và công thức hình học trong Hình học 7 hiển thị chuẩn mực, rõ nét, không lỗi font. Môn HĐTN 6 tích hợp NLS 2.2.TC1a và AI 6.C2.2 đầy đủ, có phiếu học tập và bảng rubric tự đánh giá rất bài bản.
+- **Điểm cần lưu ý**: Các câu mô tả mục tiêu chỉ báo NLS và AI trong tệp HĐTN 6 cần bổ sung định dạng in đậm, nghiêng theo đúng quy chế chuyên môn trước khi lưu hành giảng dạy.
+- **Kết luận và xếp loại**: **Đề nghị trả hồ sơ**. Yêu cầu thầy Hoàng Xuân Ánh định dạng in đậm, nghiêng toàn bộ câu mô tả mục tiêu chỉ báo NLS (2.2.TC1a) và AI (6.C2.2) trong HĐTN 6 theo đúng quy chế chuyên môn trước khi trình duyệt lại.
+
+---
+
 ## V. KẾT LUẬN VÀ KIẾN NGHỊ
-1. **Đánh giá chung**: Đợt kiểm tra hồ sơ tháng 9/2026 đã tiến hành thẩm định 06 giáo viên trong tổ. Kết quả: 05 giáo viên đạt chuẩn được phê duyệt (trong đó 04 giáo viên xếp loại Tốt, 01 giáo viên xếp loại Khá); 01 giáo viên tạm thời trả hồ sơ để chỉnh sửa sai sót toán học (thầy Trần Long Hải).
-2. **Yêu cầu đối với giáo viên được phê duyệt**: Tiếp tục duy trì tính nghiêm túc, chuẩn mực trong soạn giảng; hoàn thiện việc in đậm, nghiêng các chỉ báo NLS/AI trước khi giảng dạy trên lớp.
-3. **Yêu cầu đối với giáo viên trả hồ sơ**: Thầy Trần Long Hải khẩn trương đính chính dứt điểm toàn bộ lỗi kiến thức và ký hiệu góc tại Trang 5 Bài 10 Hình học 8, in đậm nghiêng mục tiêu NLS và nộp lại hồ sơ trước ngày 08 tháng 10 năm 2026.
+1. **Đánh giá chung**: Đợt kiểm tra hồ sơ tháng 9/2026 đã tiến hành thẩm định 07 giáo viên trong tổ. Kết quả: 06 giáo viên đạt chuẩn được phê duyệt chính thức (trong đó 05 giáo viên xếp loại Tốt, 01 giáo viên xếp loại Khá); 01 giáo viên tạm thời trả hồ sơ để hoàn thiện định dạng chỉ báo NLS/AI môn HĐTN 6 (thầy Hoàng Xuân Ánh).
+2. **Yêu cầu đối với giáo viên được phê duyệt**: Tiếp tục duy trì tính nghiêm túc, chuẩn mực trong soạn giảng; phát huy tinh thần ứng dụng công nghệ và tích hợp Năng lực số, Trí tuệ nhân tạo hiệu quả trong giảng dạy.
+3. **Ghi nhận khắc phục**: Các giáo viên có nội dung đính chính bổ sung (cô Thảo, thầy Sáng, cô Bình, thầy Hải) đều đã hoàn thành xuất sắc việc chỉnh sửa, nộp lại hồ sơ đạt chất lượng cao đúng thời hạn quy định.
 
 Biên bản kết thúc vào lúc 17 giờ 30 phút cùng ngày, đã được thông qua toàn thể thành viên trong tổ nhất trí 100% nội dung và ký tên dưới đây./.
 

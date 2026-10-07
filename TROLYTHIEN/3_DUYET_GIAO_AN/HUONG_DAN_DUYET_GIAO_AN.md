@@ -1,74 +1,87 @@
 # HƯỚNG DẪN DUYỆT GIÁO ÁN (KIỂM TRA HỒ SƠ CHUYÊN MÔN)
-
-Tệp này là hướng dẫn quy trình duyệt giáo án thực chiến theo chuẩn **Công văn 5512/BGDĐT-GDTrH** và quy chế chuyên môn nghiêm ngặt của nhà trường (**Trường THCS Trần Phú**).
-
----
-
-## 1. CÁCH BỐ TRÍ THƯ MỤC ĐẦU VÀO (`Dau_vao/`)
-
-Thư mục: `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/`
-
-1. **Các tệp Phụ lục chuẩn tham chiếu (đặt ở thư mục gốc `Dau_vao/`)**:
-   - `Phu-luc-3-Toan 6.docx`, `Phu-luc-3-Toan 7.docx`, `Phu-luc-3-Toan 8.docx`, `Phu-luc-3-Toan 9.docx`, `Phu-luc-3-Tin ...docx`, các tệp HĐTN.
-   *(Đây là kế hoạch giáo dục của giáo viên / PPCT chính thức, có ghi rõ phân môn và cột đăng ký Tích hợp Năng lực số NLS, Trí tuệ nhân tạo AI).*
-
-2. **Thư mục của từng Giáo viên**:
-   - Tạo thư mục con theo tên giáo viên viết hoa: ví dụ `HỒ ĐĂNG DANH/`, `TRAN SANG/`, `LE THI BINH/`...
-   - Chép toàn bộ giáo án tháng cần duyệt (`.pdf` hoặc `.docx`) của giáo viên đó vào thư mục.
+**Phiên bản: VERSION 2.0.0 (BẢN VÁ KỶ LUẬT CHUYÊN MÔN & ZERO TOLERANCE)**  
+*Áp dụng: Công văn 5512/BGDĐT-GDTrH, Nghị định 30/2020/NĐ-CP và Quy chế chuyên môn Trường THCS Trần Phú*
 
 ---
 
-## 2. QUY CHUẨN ĐÁNH GIÁ CHUYÊN MÔN NGHIÊM NGẶT
+## 1. NGUYÊN TẮC THÉP TRẢ HỒ SƠ (ZERO TOLERANCE CRITERIA)
 
-Theo đúng Hướng dẫn thực hiện Phụ lục 4 Kế hoạch bài dạy của trường:
+Tổ trưởng chuyên môn và Trợ lý Sư phạm thống nhất áp dụng **3 NGUYÊN TẮC THÉP BẮT BUỘC TRẢ HỒ SƠ 100%**:
 
-1. **Kỹ thuật trình bày & Thể thức**:
-   - Font: Times New Roman, Size: 13, In đứng, khổ giấy A4.
-   - Căn lề: Trên 1.5 cm; Dưới 1.5 cm; Trái 2.0 cm; Phải 1.5 cm.
-   - Dãn dòng: Before 0 pt, After 3 pt, Line spacing: Single.
-   - **Header bắt buộc**: Bên trái: `Trường THCS Trần Phú` (có gạch chân) | Bên phải: `Giáo viên: [Họ và tên]`.
-   - **Footer bắt buộc**: Cột trái: `Môn: [Tên môn/phân môn]` | Giữa: `Trang [X]` | Phải: `Năm học: 2026-2027` (có gạch ngang trên).
-   - Cuối tháng có phần ký duyệt của Tổ trưởng và BGH.
+```mermaid
+flowchart TD
+    A[HỒ SƠ BÀI DẠY ĐẦU VÀO] --> B{Kiểm tra 3 Tiêu chí Thép}
+    B -->|1. Sai quy chế CM: NLS/AI không in đậm nghiêng, thiếu tiết| R1[TRẢ HỒ SƠ 100%]
+    B -->|2. Sai ký hiệu: Mất mũ góc, lỗi font ký hiệu lạ| R2[TRẢ HỒ SƠ 100%]
+    B -->|3. Sai nội dung: Sai định lý, nhầm dấu, sai toán học| R3[TRẢ HỒ SƠ 100%]
+    B -->|Đạt chuẩn 100% không tì vết| P[PHÊ DUYỆT XẾP LOẠI TỐT]
+```
 
-2. **Tiến độ & Phân môn**:
-   - Đối chiếu theo đúng từng phân môn (Đại số / Số học, Hình học, Thống kê, HĐTN).
-   - Khớp số tiết, tuần dạy học theo Phụ lục 3.
-   - **Quy tắc**: Thiếu tiết mà không có lý do chính đáng được tổ chấp thuận $\rightarrow$ **TRẢ HỒ SƠ 100%**.
-
-3. **Quy định bắt buộc về Tích hợp / Lồng ghép**:
-   - Đối chiếu 1-1 cả Mã chỉ báo và Câu mô tả hành động với cột Ghi chú của Phụ lục 3.
-   - **BẮT BUỘC**: **"Nội dung tích hợp trong KHBD, GVBM phải _in đậm, nghiêng_ (`bold italic`)."**
-   - **Xử lý vi phạm**: Nếu không khớp mô tả với Phụ lục 3 hoặc chưa in đậm nghiêng -> **TRẢ HỒ SƠ** để giáo viên hoàn thiện lại đúng chuẩn.
-   - Bài nào trong Phụ lục 3 không yêu cầu tích hợp thì tuyệt đối không bắt bẻ.
-
-4. **Kiến thức & Ký hiệu Toán học (LỖI ĐỎ - KHÔNG KHOAN NHƯỢNG)**:
-   - **LỖI FONT CÔNG THỨC VÀ BIẾN DẠNG KÝ HIỆU GÓC**:
-     * Lỗi dấu góc biến thành dấu chấm trên đầu: $\dot{x}Oz, \dot{y}Oz, \dot{m}By, \dot{x}AB$...
-     * Lỗi font MathType/Equation biến thành ký tự rác vuông/perpendicular đè lên đỉnh: $D^\bot, A^\bot, B^\bot, C^\bot, H^\bot, E^\bot, F^\bot, G^\bot$...
-     * Lỗi font micro: $\mu A$...
-     * Viết chữ trần $A, B$ gây nhầm góc với đỉnh.
-     $\Rightarrow$ **TẤT CẢ CÁC TRƯỜNG HỢP NÀY BẮT BUỘC TRẢ HỒ SƠ 100%! TUYỆT ĐỐI CẤM DUYỆT (KỂ CẢ XẾP LOẠI KHÁ)!**
-   - **Lỗi kiến thức**: Sai định lý, sai phép biến đổi, tính nhẩm sai $\rightarrow$ **TRẢ HỒ SƠ NGAY**.
+### 🔴 TIÊU CHÍ 1: SAI QUY CHẾ CHUYÊN MÔN $\rightarrow$ TRẢ HỒ SƠ 100%
+1. **Hình thức tích hợp NLS / AI / STEM**:
+   - Quy định bắt buộc: Toàn bộ câu mô tả chỉ báo hành động trong Kế hoạch bài dạy phải được **IN ĐẬM, NGHIÊNG** (`bold italic`).
+   - **Xử lý vi phạm**: Nếu giáo viên chỉ bôi màu đỏ, chỉ in hoa, hoặc để chữ thường đứng mà **KHÔNG IN ĐẬM, KHÔNG IN NGHIÊNG** $\rightarrow$ **TRẢ HỒ SƠ NGAY LẬP TỨC! TUYỆT ĐỐI KHÔNG DUYỆT (KỂ CẢ DUYỆT KHÁ)**.
+2. **Nội dung tích hợp**:
+   - Mã năng lực và câu mô tả hành động không khớp 1-1 với Phụ lục 3 đã được BGH phê duyệt $\rightarrow$ **TRẢ HỒ SƠ**.
+3. **Tiến độ thực hiện chương trình**:
+   - Thiếu tiết theo phân phối chương trình của tháng mà không có giải trình chính đáng được Tổ trưởng chấp thuận $\rightarrow$ **TRẢ HỒ SƠ**.
+4. **Header & Footer**:
+   - Thiếu Header trường/GV hoặc Footer phân môn/trang/năm học $\rightarrow$ Yêu cầu đính chính dứt điểm.
 
 ---
 
-## 3. QUY TRÌNH DUYỆT CUỐN CHIẾU & KẾT QUẢ ĐẦU RA (`Ket_qua/`)
+### 🔴 TIÊU CHÍ 2: SAI CÔNG THỨC VÀ KÝ HIỆU TOÁN HỌC $\rightarrow$ TRẢ HỒ SƠ 100%
+1. **Ký hiệu góc**:
+   - Viết trần chữ cái in hoa ($A, B, C, D, H, E...$) không có dấu mũ góc $\rightarrow$ **TRẢ HỒ SƠ**.
+2. **Lỗi font công thức MathType / Equation**:
+   - Biến dạng thành dấu chấm trên đầu chữ cái: $\dot{x}Oz, \dot{y}Oz, \dot{m}By, \dot{x}AB, \dot{M}NQ...$
+   - Biến dạng đè ký tự rác vuông hoặc dấu perpendicular lên đỉnh: $D^\bot, A^\bot, B^\bot, C^\bot, H^\bot, E^\bot...$
+   - Ký tự font micro: $\mu A...$
+   $\Rightarrow$ **PHÁT HIỆN BẤT KỲ LỖI NÀO LẬP TỨC TRẢ HỒ SƠ 100%**.
+3. **Biến dạng công thức**:
+   - Lỗi font phân số, căn thức, lũy thừa, ký hiệu tập hợp biến dạng rác $\rightarrow$ **TRẢ HỒ SƠ**.
 
-Thư mục: `TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/`
+---
 
-1. **Biên bản kiểm tra hồ sơ giáo án Tổ chuyên môn (`Bien_Ban_Kiem_Tra_Ho_So_To_Toan_Thang_[X].docx` & `.md`)**:
-   - Biên bản hành chính trang trọng lưu hồ sơ tổ và nộp BGH phê duyệt.
-   - Bảng tổng hợp toàn bộ giáo viên trong tổ (STT 1, 2, 3...) nối tiếp nhau.
-   - Mục nhận xét đánh giá từng giáo viên theo văn phong hành chính chuẩn mực (Ưu điểm, Tồn tại, Kết luận/Xử lý).
-   - **LƯU Ý**: KHÔNG chèn các đoạn văn mẫu copy-paste hệ thống vào Biên bản này để giữ thể thức trang trọng.
+### 🔴 TIÊU CHÍ 3: SAI VỀ NỘI DUNG CHUYÊN MÔN $\rightarrow$ TRẢ HỒ SƠ 100%
+1. **Sai định lý toán học**:
+   - Nhầm lẫn bản chất định lý (ví dụ: viết nhầm dấu trừ trong định lý tổng các góc trong tứ giác $\widehat{H} + \widehat{E} + \widehat{F} - \widehat{G} = 360^\circ$)... $\rightarrow$ **TRẢ HỒ SƠ**.
+2. **Sai quy tắc biến đổi đại số**:
+   - Sai quy tắc chuyển vế, sai quy tắc dấu ngoặc, sai thứ tự thực hiện phép tính $\rightarrow$ **TRẢ HỒ SƠ**.
+3. **Sai kiến thức chuyên môn**:
+   - Sai kết quả bài toán, sai hình vẽ minh họa $\rightarrow$ **TRẢ HỒ SƠ**.
 
-2. **Tệp Cập nhật Hệ thống duyệt giáo án (`Cap_Nhat_He_Thong_Duyet_Giao_An_Thang_[X].docx` & `.md`)**:
-   - Tệp chuyên dụng để Tổ trưởng mở sẵn khi đăng nhập hệ thống duyệt trực tuyến (vnEdu, SMAS, K12Online).
-   - Chứa kết luận và mẫu nhận xét chi tiết của TỪNG BÀI DẠY / PHÂN MÔN / GÓI NỘP để **Copy & Paste** ngay lập tức.
-   - Phân biệt rõ:
-     * `[ĐẠT / DUYỆT (XUẤT SẮC / TỐT / KHÁ)]`
-     * `[KHÔNG DUYỆT / TRẢ HỒ SƠ]` (nêu rõ lý do thiếu tiết, lỗi font góc, hoặc sai toán học).
+---
 
-3. **Phiếu nhận xét cá nhân (`Phieu_Nhan_Xet_Ho_So_[TenGV]_Thang_[X].docx`)**:
-   - Bản chi tiết từng phân môn, số tiết, chỉ rõ từng trang/bài có lỗi công thức/ký hiệu để gửi riêng cho giáo viên chỉnh sửa.
-   - Màu sắc nhận diện: Khung kết luận XANH LÁ nếu Duyệt; Khung kết luận ĐỎ RỰC nếu Trả hồ sơ.
+## 2. CHUẨN HÓA THỂ THỨC VĂN BẢN ĐẦU RA (NGHỊ ĐỊNH 30/2020/NĐ-CP)
+
+Toàn bộ tài liệu xuất bản trong thư mục `TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/` bắt buộc tuân thủ 100%:
+1. **Phông chữ**: `Times New Roman`, bảng mã Unicode.
+2. **Cỡ chữ nội dung**: **ĐỒNG NHẤT 13pt** (Không để xen lẫn 10.5pt, 11pt, 12pt ở phần văn bản nội dung).
+3. **Thụt đầu dòng**: **BẮT BUỘC 1,27 cm (0.5 inch)** (`first_line_indent = Inches(0.5)`) cho tất cả các đoạn văn, điểm, khoản.
+4. **Căn lề & Dãn dòng**: Căn đều hai bên (`JUSTIFY`), dãn dòng cố định **1.2 line**, `space_before = 2pt`, `space_after = 2 - 3pt`.
+5. **Định lề trang A4**:
+   - Lề trên (Top): `20 mm` (0.79 inch)
+   - Lề dưới (Bottom): `20 mm` (0.79 inch)
+   - Lề trái (Left): `30 mm` (1.18 inch)
+   - Lề phải (Right): `15 mm` (0.59 inch)
+6. **Bảng biểu**:
+   - Đóng khung kín 4 cạnh viền ngoài và các đường chia ô bên trong (`val="single"`, `sz="4"`, màu đen `000000`).
+   - Cỡ chữ trong bảng: `10.5pt`.
+7. **Khung nhận diện kết luận (Callout)**:
+   - **DUYỆT**: Viền trái màu xanh lá `#16A34A`, nền `#F0FDF4`.
+   - **TRẢ HỒ SƠ**: Viền trái màu đỏ tươi `#DC2626`, nền `#FEF2F2`.
+
+---
+
+## 3. BA NHÓM TÀI LIỆU ĐẦU RA BẮT BUỘC
+
+1. **Biên bản kiểm tra hồ sơ Tổ chuyên môn** (`Bien_Ban_Kiem_Tra_Ho_So_To_Toan_Thang_[X].docx` & `.md`):
+   - Lưu trữ hồ sơ thanh tra chuyên môn, báo cáo BGH.
+   - Bảng III tổng hợp toàn tổ và Mục IV đánh giá chi tiết từng giáo viên.
+2. **Tài liệu nộp hệ thống trực tuyến** (`Cap_Nhat_He_Thong_Duyet_Giao_An_Thang_[X].docx` & `.md`):
+   - Chuyên dụng để Tổ trưởng Copy & Paste vào phần mềm vnEdu, SMAS, K12Online.
+   - Chia rõ từng phân môn và gói nộp chung.
+3. **Phiếu nhận xét cá nhân** (`Phieu_Nhan_Xet_Ho_So_[TenGV]_Thang_[X].docx`):
+   - Số hiệu: `[STT]/PĐG-TT`.
+   - Gửi trực tiếp cho từng giáo viên để nắm rõ ưu điểm và các lỗi bắt buộc phải khắc phục.
