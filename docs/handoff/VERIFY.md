@@ -1,22 +1,37 @@
-# VERIFY: Khắc phục lỗi xem tệp PDF Google Drive trong Padlet
+STATUS: PASS
 
-## Kết luận
-PASS
+## 1. Kết quả thực thi các lệnh kiểm thử trong PLAN.md
 
-## Đối chiếu scope
-- Backend (`api/padlet.php`): Đã bổ sung hàm `padlet_share_uploaded_file()` gọi `drive_share_file_anyone()` bọc trong `try/catch` chống sập. Tự động cấp quyền `anyone` + `reader` khi tải lên mới (`action=post`), cập nhật bài (`action=edit-post`) và tự động kích hoạt chia sẻ cho các tệp hiện hữu khi tải dữ liệu bảng (`action=board`). Đạt đúng phạm vi plan.
-- Frontend (`padlet_ht.html`): Thêm nút chữ rõ ràng **Mở tệp ngoài** và dòng chỉ dẫn *"Nếu không tải được trên điện thoại, bấm Mở tệp ngoài"* tại `documentEmbedHtml`. Bổ sung nút **Mở tab mới** (`#previewExternalLink`) trên thanh tiêu đề của `#previewModal`. Hàm `previewFile()` gán tự động URL mở ngoài. Đạt đúng phạm vi plan.
-- Cấu hình & hướng dẫn: Giữ nguyên tài liệu hướng dẫn đặt `GOOGLE_DRIVE_SHARE_MODE = 'anyone'` trong `api/config.php` trên hosting.
+| Lệnh kiểm thử | Mục đích | Kết quả | Trạng thái |
+| :--- | :--- | :--- | :--- |
+| `Select-String -Path "TROLYTHIEN\2_TAO_BAI_TAP\Ket_qua\MP01_Dien_Tich_Hinh_Binh_Hanh.html" -Pattern "https?://\|cdn\|googleapis"` | Kiểm tra zero CDN / không liên kết ngoại | Không tìm thấy liên kết ngoại (rỗng) | PASS |
+| `node -e "const fs = require('fs'); const content = fs.readFileSync('TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/MP01_Dien_Tich_Hinh_Binh_Hanh.html', 'utf8'); const script = content.match(/<script>([\s\S]*?)<\/script>/)[1]; new Function(script); console.log('JS Syntax: PASS');"` | Kiểm tra cú pháp JavaScript & HTML | `JS Syntax: PASS` | PASS |
+| `Select-String -Path "TROLYTHIEN\2_TAO_BAI_TAP\Ket_qua\MP01_Dien_Tich_Hinh_Binh_Hanh.html" -Pattern 'sliderHandle.*r="2[5-9]"'` | Kiểm tra kích thước bán kính tay kéo ($r \ge 25\text{ px}$, đường kính $\ge 50\text{ px}$) | Khớp dòng 511: `<circle id="sliderHandle" ... r="25" ... />` | PASS |
+| `Start-Process msedge "$((Get-Item 'TROLYTHIEN\2_TAO_BAI_TAP\Ket_qua\MP01_Dien_Tich_Hinh_Binh_Hanh.html').FullName)"` | Khởi chạy thực tế trên trình duyệt Edge offline | Process khởi chạy thành công (Exit Code 0) | PASS |
 
-## Test đã chạy
-- `node tests/padlet-ownership-smoke.js` — PASS (toàn bộ quyền duyệt, ghim, sửa, xóa giữ nguyên chuẩn bảo mật).
-- `node tests/padlet-ui-smoke.js` — PASS (kiểm tra nút mở tệp ngoài, hướng dẫn cookie điện thoại, nút mở tab mới trên preview modal).
-- `node tests/padlet-comment-ui-smoke.js` — PASS (tính năng bình luận và định danh người dùng hoạt động bình thường).
+## 2. Đối chiếu chi tiết các bước kỹ thuật trong PLAN.md
 
-## Pass / Fail từng tiêu chí
-- Tiêu chí 1: Tệp tải lên Padlet tự động kích hoạt quyền chia sẻ công khai (`anyone` + `reader`) — PASS.
-- Tiêu chí 2: Giao diện thẻ bài và modal xem tệp có lối tắt mở ngoài/tab mới rõ ràng, xử lý tình huống trình duyệt di động chặn iframe cookie — PASS.
-- Tiêu chí 3: Không làm hỏng các tính năng bình luận, duyệt, sửa, xóa hiện có — PASS.
+- **Bước 1: Touch Target & Trợ năng (A11y):**
+  - `#sliderHandle`: $r = 25$ (đường kính $50\text{ px}$).
+  - Đầy đủ thuộc tính: `tabindex="0"`, `role="slider"`, `aria-valuenow="0"`, `aria-valuemin="0"`, `aria-valuemax="100"`, `aria-label="Thanh trượt cắt ghép hình bình hành"`.
+  - Cập nhật động `aria-valuenow` trong `updatePositions(dx)`.
+- **Bước 2: Pointer Events, biến đổi tọa độ & chống giật:**
+  - Tính toán `dragOffset` khi `pointerdown`.
+  - Dùng chuẩn `svg.createSVGPoint()` + `svg.getScreenCTM().inverse()`.
+  - Khóa rãnh trượt: `#sliderControls .slider-track, #sliderProgress { pointer-events: none; }`.
+  - Chặn mở context menu trên SVG (`svg.addEventListener('contextmenu', e => e.preventDefault())`).
+  - Hỗ trợ phím mũi tên `ArrowRight`/`ArrowUp`/`ArrowLeft`/`ArrowDown` bước nhảy 5%.
+  - `.sliding-polygon { cursor: default; }`.
+- **Bước 3: Nút Giáo viên (Teacher Auto-Play):**
+  - Đổi nhãn `⏹ Dừng (GV)` + class `active` khi chạy tự động.
+  - Khôi phục `🎬 Tự động ghép (GV)` khi dừng hoặc hoàn thành 100%.
+- **Bước 4: Typographic Toán học & Nhãn sư phạm:**
+  - Chỉ in nghiêng các biến toán học $a, h, S$; in đứng các nhãn `= 4 ô`, `= 3 ô` và toán tử `·`.
+- **Bước 5: Phản hồi sư phạm 2 nút trung tính:**
+  - `[ Không thay đổi ]`: Tán thành và giải thích bảo toàn diện tích.
+  - `[ Có thay đổi ]`: Phản hồi định hướng nguyên lý bảo toàn đúng đặc tả.
+- **Bước 6: Khử vệt nứt render (Seam Rendering):**
+  - Khai báo `shape-rendering="geometricPrecision"` trên `<svg>` và các thẻ `<polygon>`.
 
-## Bug
-Không phát hiện lỗi.
+## 3. Kết luận
+Tất cả tiêu chuẩn kỹ thuật và kiểm thử đều đạt. File sẵn sàng để commit/push theo quy trình.

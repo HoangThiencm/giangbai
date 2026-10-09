@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Mô phỏng MP-04: Tâm đối xứng — Toán 6 KNTT</title>
+  <!-- Phiên bản: v1.5.0 (Bản chuẩn triển khai thực nghiệm MVP — Trợ lý Sư phạm Hoàng Thiên) -->
+  <style>
+    /* ==========================================================================
+       CSS RESET & CẤU TRÚC GIAO DIỆN SƯ PHẠM
+       ========================================================================== */
+    :root {
+      --primary: #1e40af;
+      --primary-light: #eff6ff;
+      --active-shape: #ea580c;
+      --active-stroke: #c2410c;
+      --ghost-stroke: #2563eb;
+      --center-pin: #facc15;
+      --center-border: #b45309;
+      --handle-color: #dc2626;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --border: #cbd5e1;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 840px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ==========================================================================
+       KHỐI 1: HEADER & CHỌN MẪU HÌNH
+       ========================================================================== */
+    header {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary);
+      background: var(--primary-light);
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 6px;
+      border: 1px solid #bfdbfe;
+    }
+
+    h1 {
+      font-size: clamp(1.1rem, 2.8vw, 1.4rem);
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.3;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Thanh chọn mẫu chong chóng */
+    .tabs-container {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #f1f5f9;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: #ffffff;
+      color: var(--text);
+      font-size: 15px;
+      font-weight: 600;
+      padding: 10px 18px;
+      min-height: 48px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .tab-btn:hover {
+      border-color: #94a3b8;
+      background: #f8fafc;
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      box-shadow: 0 3px 10px rgba(30, 64, 175, 0.25);
+    }
+
+    /* ==========================================================================
+       KHỐI 2: KHUNG VẼ TƯƠNG TÁC VECTOR SVG
+       ========================================================================== */
+    .canvas-wrapper {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #ffffff 0%, #f8fafc 100%);
+      padding: 10px 0;
+      touch-action: none;
+    }
+
+    svg.sim-svg {
+      width: 100%;
+      max-width: 540px;
+      height: auto;
+      aspect-ratio: 1 / 1;
+      touch-action: none;
+      display: block;
+    }
+
+    /* Định dạng thành phần SVG */
+    .ghost-blade {
+      fill: none;
+      stroke: var(--ghost-stroke);
+      stroke-width: 2.5;
+      stroke-dasharray: 8, 5;
+      stroke-linejoin: round;
+      opacity: 0.55;
+    }
+
+    .active-blade {
+      fill: var(--active-shape);
+      fill-opacity: 0.92;
+      stroke: var(--active-stroke);
+      stroke-width: 2.2;
+      stroke-linejoin: round;
+    }
+
+    .guide-arc-bg {
+      fill: none;
+      stroke: #cbd5e1;
+      stroke-width: 3;
+      stroke-dasharray: 6, 6;
+    }
+
+    .guide-arc-active {
+      fill: none;
+      stroke: #ea580c;
+      stroke-width: 4.5;
+      stroke-linecap: round;
+    }
+
+    .center-pin {
+      fill: var(--center-pin);
+      stroke: var(--center-border);
+      stroke-width: 3;
+    }
+
+    .center-dot {
+      fill: #78350f;
+    }
+
+    .center-label {
+      font-size: 22px;
+      font-weight: 800;
+      fill: #1e293b;
+      font-family: inherit;
+    }
+
+    .handle-glow {
+      fill: transparent;
+      stroke: none;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .handle-glow:active {
+      cursor: grabbing;
+    }
+
+    .handle-visual {
+      fill: var(--handle-color);
+      stroke: #ffffff;
+      stroke-width: 3.5;
+      filter: drop-shadow(0 2px 5px rgba(220, 38, 38, 0.4));
+      pointer-events: none;
+    }
+
+    .arc-text {
+      font-size: 14px;
+      font-weight: 600;
+      fill: #64748b;
+      font-family: inherit;
+    }
+
+    /* ==========================================================================
+       KHỐI 3: HỘP KHÁM PHÁ SƯ PHẠM & CÂU HỎI NHẬN XÉT
+       ========================================================================== */
+    .interaction-panel {
+      padding: 16px 20px 20px;
+      background: #ffffff;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Thanh chỉ báo góc và hướng dẫn thao tác */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 16px;
+      background: #f8fafc;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      flex-wrap: wrap;
+    }
+
+    .angle-display {
+      font-size: 17px;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .angle-value {
+      color: var(--active-shape);
+      font-size: 20px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .instruction-text {
+      font-size: 14px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* Hộp câu hỏi nhận xét khi đạt 180° (màu sắc trung tính, không báo trước kết quả) */
+    .question-box {
+      background: #f8fafc;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      animation: fadeIn 0.25s ease-out;
+    }
+
+    .question-box.hidden {
+      display: none;
+    }
+
+    .question-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1e293b;
+      line-height: 1.4;
+    }
+
+    .choices-row {
+      display: flex;
+      gap: 14px;
+    }
+
+    .btn-choice {
+      flex: 1;
+      min-height: 50px;
+      font-size: 17px;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 2px solid;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+      background: #ffffff;
+    }
+
+    .btn-yes {
+      color: #1e40af;
+      border-color: #93c5fd;
+    }
+    .btn-yes:hover {
+      background: #eff6ff;
+      border-color: #3b82f6;
+    }
+
+    .btn-no {
+      color: #334155;
+      border-color: #cbd5e1;
+    }
+    .btn-no:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+
+    .btn-choice.selected {
+      background: #1e293b;
+      color: #ffffff;
+      border-color: #0f172a;
+    }
+
+    /* Lời dẫn quan sát sư phạm (sau khi chọn) */
+    .obs-card {
+      margin-top: 4px;
+      padding: 14px 16px;
+      background: #ffffff;
+      border-radius: 10px;
+      border-left: 5px solid;
+      font-size: 15px;
+      line-height: 1.55;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .obs-card.obs-match {
+      border-left-color: #16a34a;
+      background: #f0fdf4;
+    }
+
+    .obs-card.obs-guide {
+      border-left-color: #2563eb;
+      background: #eff6ff;
+    }
+
+    .obs-conclusion {
+      font-weight: 700;
+      color: #0f172a;
+      padding-top: 6px;
+      border-top: 1px dashed #cbd5e1;
+    }
+
+    /* Thanh nút công cụ dưới cùng */
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+
+    .btn-action {
+      min-height: 44px;
+      padding: 8px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+
+    .btn-reset {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid var(--border);
+    }
+    .btn-reset:hover {
+      background: #e2e8f0;
+    }
+
+    .btn-teacher {
+      background: #ffffff;
+      color: #475569;
+      border: 1px dashed #94a3b8;
+      font-size: 13px;
+    }
+    .btn-teacher:hover {
+      background: #f8fafc;
+      color: #1e293b;
+      border-color: #64748b;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="app-container">
+    <!-- KHỐI 1: HEADER & CHỌN MẪU HÌNH -->
+    <header>
+      <span class="badge">Toán 6 — Bài 22: Hình có tâm đối xứng</span>
+      <h1>Khám phá Tâm đối xứng qua chuyển động quay nửa vòng</h1>
+      <p class="subtitle">Kéo tay quay quanh điểm O để đối chiếu hình với bóng mờ vị trí ban đầu</p>
+    </header>
+
+    <nav class="tabs-container" aria-label="Chọn mẫu hình chong chóng">
+      <button type="button" class="tab-btn active" data-shape="wings2">Chong chóng 2 cánh</button>
+      <button type="button" class="tab-btn" data-shape="wings3">Chong chóng 3 cánh</button>
+      <button type="button" class="tab-btn" data-shape="wings4">Chong chóng 4 cánh</button>
+    </nav>
+
+    <!-- KHỐI 2: KHUNG VẼ TƯƠNG TÁC VECTOR SVG -->
+    <section class="canvas-wrapper">
+      <svg id="simSvg" class="sim-svg" viewBox="0 0 600 600" aria-label="Mô phỏng chuyển động quay quanh tâm O">
+        <defs>
+          <!-- Đường cong cánh chong chóng chuẩn SGK vươn thẳng đứng lên trên (12 giờ) -->
+          <path id="baseBlade" d="M 0 0 C 15 -30 45 -80 35 -140 C 25 -175 0 -185 0 -185 C 0 -185 -25 -175 -35 -140 C -45 -80 -15 -30 0 0 Z" />
+        </defs>
+
+        <!-- 1. CUNG RAY DẪN HƯỚNG BÁN KÍNH R=210px (TỪ 12h ĐẾN 6h THEO CHIỀU KIM ĐỒNG HỒ) -->
+        <g id="guideLayer">
+          <!-- Đường ray nền nét đứt -->
+          <path class="guide-arc-bg" d="M 300 90 A 210 210 0 0 1 300 510" />
+          <!-- Cung ray tích lũy theo góc quay hiện tại -->
+          <path id="activeArc" class="guide-arc-active" d="M 300 90 A 210 210 0 0 1 300 90" />
+
+          <!-- Mốc 0° (12 giờ) -->
+          <circle cx="300" cy="90" r="4" fill="#94a3b8" />
+          <text x="300" y="74" text-anchor="middle" class="arc-text">0° (Ban đầu)</text>
+
+          <!-- Mốc 90° (3 giờ) -->
+          <circle cx="510" cy="300" r="3.5" fill="#cbd5e1" />
+          <text x="525" y="305" text-anchor="start" class="arc-text">90°</text>
+
+          <!-- Mốc 180° (6 giờ) -->
+          <circle cx="300" cy="510" r="4" fill="#94a3b8" />
+          <text x="300" y="534" text-anchor="middle" class="arc-text">180° (Nửa vòng)</text>
+        </g>
+
+        <!-- 2. LỚP BÓNG MỜ VỊ TRÍ BAN ĐẦU (TĨNH TẠI GÓC 0°) -->
+        <g id="ghostLayer" transform="translate(300, 300)">
+          <!-- Các cánh bóng mờ nét đứt màu xanh sẽ được sinh tự động bằng JS -->
+        </g>
+
+        <!-- 3. LỚP HÌNH THỰC THAO TÁC (QUAY QUANH TÂM O) -->
+        <g id="activeLayer" transform="translate(300, 300) rotate(0)">
+          <!-- Các cánh chong chóng màu cam đỏ -->
+        </g>
+
+        <!-- 4. TÂM O CỐ ĐỊNH CHÍNH GIỮA (300, 300) -->
+        <g id="centerPinLayer">
+          <circle cx="300" cy="300" r="10" class="center-pin" />
+          <circle cx="300" cy="300" r="3.5" class="center-dot" />
+          <text x="316" y="307" class="center-label">O</text>
+        </g>
+
+        <!-- 5. TAY KÉO CẢM ỨNG DI CHUYỂN TRÊN CUNG RAY -->
+        <g id="handleLayer">
+          <!-- Vòng tròn hiển thị -->
+          <circle id="handleVisual" cx="300" cy="90" r="13" class="handle-visual" />
+          <!-- Vùng bắt cảm ứng tàng hình kích thước lớn (đường kính 56px) -->
+          <circle id="handleTouch" cx="300" cy="90" r="28" class="handle-glow" />
+        </g>
+      </svg>
+    </section>
+
+    <!-- KHỐI 3: HỘP KHÁM PHÁ SƯ PHẠM & CÂU HỎI NHẬN XÉT -->
+    <section class="interaction-panel">
+      <!-- Thanh chỉ báo góc và hướng dẫn thao tác -->
+      <div class="status-bar">
+        <div class="angle-display">
+          <span>Góc quay:</span>
+          <span id="angleText" class="angle-value">0°</span>
+          <span style="color:#64748b; font-size:15px; font-weight:500;">/ 180°</span>
+        </div>
+        <div id="instructionText" class="instruction-text">
+          Chạm kéo điểm tròn đỏ theo cung tròn để quay nửa vòng quanh điểm O.
+        </div>
+      </div>
+
+      <!-- Hộp câu hỏi nhận xét (khi góc đạt 180°) -->
+      <div id="questionBox" class="question-box hidden">
+        <div class="question-title">
+          Sau khi quay nửa vòng quanh tâm O, hình có chồng khít lên bóng mờ ban đầu không?
+        </div>
+        <div class="choices-row">
+          <button type="button" id="btnYes" class="btn-choice btn-yes">
+            <span>[ CÓ ] — Chồng khít</span>
+          </button>
+          <button type="button" id="btnNo" class="btn-choice btn-no">
+            <span>[ KHÔNG ] — Không khớp</span>
+          </button>
+        </div>
+
+        <!-- Lời dẫn dắt quan sát sư phạm (xuất hiện sau khi chọn) -->
+        <div id="feedbackContainer"></div>
+      </div>
+
+      <!-- Thanh công cụ điều khiển -->
+      <footer class="toolbar">
+        <button type="button" id="btnReset" class="btn-action btn-reset" title="Đặt lại về vị trí ban đầu">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+          </svg>
+          Đặt lại 0°
+        </button>
+
+        <button type="button" id="btnAutoPlay" class="btn-action btn-teacher" title="Chế độ giáo viên trình chiếu">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          Tự động quay (GV)
+        </button>
+      </footer>
+    </section>
+  </main>
+
+  <!-- ==========================================================================
+       JAVASCRIPT THUẦN — ĐIỀU KHIỂN HÌNH HỌC VÀ MÁY TRẠNG THÁI SƯ PHẠM
+       ========================================================================== -->
+  <script>
+    (function () {
+      'use strict';
+
+      // 1. CẤU HÌNH DỮ LIỆU 3 MẪU CHONG CHÓNG
+      // Quy ước: Hướng 0° là 12 giờ (trục âm y), góc tăng theo chiều kim đồng hồ.
+      const SHAPE_CONFIGS = {
+        wings2: {
+          id: 'wings2',
+          name: 'Chong chóng 2 cánh',
+          // 2 cánh thẳng hàng đối xứng qua O (đúng Hình 5.6 SGK): 1 cánh 12h, 1 cánh 6h
+          angles: [0, 180],
+          hasCenterSymmetry: true
+        },
+        wings3: {
+          id: 'wings3',
+          name: 'Chong chóng 3 cánh',
+          // 3 cánh cách đều nhau 120°, có đúng 1 cánh hướng thẳng lên 12h (Hình 5.7b SGK)
+          angles: [0, 120, 240],
+          hasCenterSymmetry: false
+        },
+        wings4: {
+          id: 'wings4',
+          name: 'Chong chóng 4 cánh',
+          // 4 cánh cách đều nhau đúng 90° (Hình 5.7c SGK)
+          angles: [0, 90, 180, 270],
+          hasCenterSymmetry: true
+        }
+      };
+
+      // 2. BIẾN TRẠNG THÁI TOÀN CỤC
+      let currentShapeId = 'wings2';
+      let currentAngle = 0; // 0° -> 180°
+      let isDragging = false;
+      let isLockedAt180 = false; // Khóa trạng thái khi đạt 180° để quan sát, không cho kéo ngược
+      let isAutoPlaying = false;
+      let autoPlayAnimId = null;
+      let studentChoice = null; // 'YES' hoặc 'NO'
+
+      // Các phần tử DOM
+      const svgEl = document.getElementById('simSvg');
+      const ghostLayer = document.getElementById('ghostLayer');
+      const activeLayer = document.getElementById('activeLayer');
+      const handleTouch = document.getElementById('handleTouch');
+      const handleVisual = document.getElementById('handleVisual');
+      const activeArc = document.getElementById('activeArc');
+      const angleText = document.getElementById('angleText');
+      const instructionText = document.getElementById('instructionText');
+      const questionBox = document.getElementById('questionBox');
+      const btnYes = document.getElementById('btnYes');
+      const btnNo = document.getElementById('btnNo');
+      const feedbackContainer = document.getElementById('feedbackContainer');
+      const btnReset = document.getElementById('btnReset');
+      const btnAutoPlay = document.getElementById('btnAutoPlay');
+      const tabButtons = document.querySelectorAll('.tab-btn');
+
+      const CENTER_X = 300;
+      const CENTER_Y = 300;
+      const HANDLE_RADIUS = 210;
+
+      // 3. KHỞI TẠO HÌNH VẼ SVG CHO MẪU HÌNH
+      function renderShape(shapeId) {
+        const config = SHAPE_CONFIGS[shapeId];
+        ghostLayer.replaceChildren();
+        activeLayer.replaceChildren();
+
+        config.angles.forEach(angle => {
+          // Cánh bóng mờ (Lớp tĩnh ban đầu)
+          const ghostUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+          ghostUse.setAttribute('href', '#baseBlade');
+          ghostUse.setAttribute('class', 'ghost-blade');
+          ghostUse.setAttribute('transform', `rotate(${angle})`);
+          ghostLayer.appendChild(ghostUse);
+
+          // Cánh hình thực (Lớp quay thao tác)
+          const activeUse = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+          activeUse.setAttribute('href', '#baseBlade');
+          activeUse.setAttribute('class', 'active-blade');
+          activeUse.setAttribute('transform', `rotate(${angle})`);
+          activeLayer.appendChild(activeUse);
+        });
+
+        resetState();
+      }
+
+      // 4. CẬP NHẬT TỌA ĐỘ VÀ GÓC QUAY
+      function setAngle(angle) {
+        // Chuẩn hóa góc an toàn trong đoạn [0, 180]
+        let deg = Math.max(0, Math.min(180, angle));
+
+        // Chuẩn hóa hiển thị khi rất gần 180° do dung sai cảm ứng (không hiệu ứng báo đáp án)
+        if (deg >= 178.5) {
+          deg = 180;
+        }
+
+        currentAngle = deg;
+
+        // Cập nhật ma trận xoay của lớp hình thực
+        activeLayer.setAttribute('transform', `translate(${CENTER_X}, ${CENTER_Y}) rotate(${deg})`);
+
+        // Cập nhật vị trí tay kéo trên cung ray bán kính R=210
+        // Hướng 0° là 12 giờ: x = 300 + R*sin(deg), y = 300 - R*cos(deg)
+        const rad = deg * Math.PI / 180;
+        const hx = CENTER_X + HANDLE_RADIUS * Math.sin(rad);
+        const hy = CENTER_Y - HANDLE_RADIUS * Math.cos(rad);
+
+        handleVisual.setAttribute('cx', hx);
+        handleVisual.setAttribute('cy', hy);
+        handleTouch.setAttribute('cx', hx);
+        handleTouch.setAttribute('cy', hy);
+
+        // Cập nhật cung ray màu cam tích lũy
+        if (deg <= 0.2) {
+          activeArc.setAttribute('d', `M ${CENTER_X} ${CENTER_Y - HANDLE_RADIUS} A ${HANDLE_RADIUS} ${HANDLE_RADIUS} 0 0 1 ${CENTER_X} ${CENTER_Y - HANDLE_RADIUS}`);
+        } else {
+          // large-arc-flag luôn bằng 0 vì deg <= 180
+          activeArc.setAttribute('d', `M ${CENTER_X} ${CENTER_Y - HANDLE_RADIUS} A ${HANDLE_RADIUS} ${HANDLE_RADIUS} 0 0 1 ${hx.toFixed(2)} ${hy.toFixed(2)}`);
+        }
+
+        // Cập nhật số đo góc hiển thị
+        angleText.textContent = `${Math.round(deg)}°`;
+
+        // Quản lý trạng thái hiển thị câu hỏi nhận xét
+        if (deg >= 180) {
+          isLockedAt180 = true;
+          isDragging = false;
+          handleVisual.style.opacity = '0.7';
+          handleTouch.style.cursor = 'default';
+          showQuestionBox();
+        } else {
+          hideQuestionBox();
+        }
+      }
+
+      // 5. QUẢN LÝ TRẠNG THÁI HỘP CÂU HỎI & LỜI DẪN QUAN SÁT
+      function showQuestionBox() {
+        questionBox.classList.remove('hidden');
+        instructionText.textContent = 'Đã quay nửa vòng (180°). Em hãy quan sát hình và bóng mờ.';
+      }
+
+      function hideQuestionBox() {
+        questionBox.classList.add('hidden');
+        studentChoice = null;
+        feedbackContainer.replaceChildren();
+        btnYes.classList.remove('selected');
+        btnNo.classList.remove('selected');
+
+        if (currentAngle > 0 && currentAngle < 180) {
+          instructionText.textContent = 'Đang quay... Tiếp tục kéo đến mốc 180° (nửa vòng).';
+        } else {
+          instructionText.textContent = 'Chạm kéo điểm tròn đỏ theo cung tròn để quay nửa vòng quanh điểm O.';
+        }
+      }
+
+      function handleStudentChoice(choice) {
+        studentChoice = choice;
+        btnYes.classList.toggle('selected', choice === 'YES');
+        btnNo.classList.toggle('selected', choice === 'NO');
+
+        const config = SHAPE_CONFIGS[currentShapeId];
+        feedbackContainer.replaceChildren();
+
+        const card = document.createElement('div');
+        card.className = 'obs-card';
+
+        if (config.hasCenterSymmetry) {
+          // Đối với mẫu 2 cánh và 4 cánh (Có tâm đối xứng)
+          if (choice === 'YES') {
+            card.classList.add('obs-match');
+            card.innerHTML = `
+              <p><strong>Quan sát viền xanh:</strong> Toàn bộ các cánh màu đỏ đã che khít hoàn toàn viền bóng mờ nét đứt màu xanh.</p>
+              <p>&rarr; Hình này <strong>chồng khít với chính nó</strong> sau khi quay nửa vòng quanh tâm O.</p>
+              <p class="obs-conclusion">&rarr; Kết luận: Đây là hình có tâm đối xứng, điểm O là tâm đối xứng của hình.</p>
+            `;
+          } else {
+            card.classList.add('obs-guide');
+            card.innerHTML = `
+              <p><strong>Quan sát lại viền xanh:</strong> Em hãy nhìn kỹ các mút cánh, toàn bộ nét đứt màu xanh đều đã được cánh đỏ che kín, không còn phần bóng mờ nào bị lộ ra ngoài.</p>
+              <p>&rarr; Như vậy hình đã <strong>chồng khít với chính nó</strong> sau khi quay nửa vòng quanh tâm O.</p>
+              <p class="obs-conclusion">&rarr; Kết luận: Đây là hình có tâm đối xứng, điểm O là tâm đối xứng của hình.</p>
+            `;
+          }
+        } else {
+          // Đối với mẫu 3 cánh (Phản ví dụ — Không có tâm đối xứng)
+          if (choice === 'NO') {
+            card.classList.add('obs-match');
+            card.innerHTML = `
+              <p><strong>Quan sát viền xanh:</strong> Cánh phía trên khi quay nửa vòng đã chúc ngược xuống dưới, làm lộ rõ khoảng trống và đường viền xanh ban đầu ở phía trên.</p>
+              <p>&rarr; Hình <strong>không chồng khít</strong> với chính nó sau khi quay nửa vòng quanh tâm O.</p>
+              <p class="obs-conclusion">&rarr; Kết luận: Chong chóng 3 cánh <strong>không có tâm đối xứng</strong>.</p>
+            `;
+          } else {
+            card.classList.add('obs-guide');
+            card.innerHTML = `
+              <p><strong>Quan sát lại viền xanh:</strong> Em hãy nhìn khoảng trống ở phía trên, đường viền nét đứt màu xanh vẫn còn lộ ra vì cánh ban đầu đã bị đảo xuống dưới.</p>
+              <p>&rarr; Hình <strong>không chồng khít</strong> với chính nó sau khi quay nửa vòng quanh tâm O.</p>
+              <p class="obs-conclusion">&rarr; Kết luận: Chong chóng 3 cánh <strong>không có tâm đối xứng</strong>.</p>
+            `;
+          }
+        }
+
+        feedbackContainer.appendChild(card);
+      }
+
+      // 6. THUẬT TOÁN KÉO XOAY BẰNG POINTER EVENTS (TOUCH & MOUSE)
+      function getSVGPoint(event) {
+        const pt = svgEl.createSVGPoint();
+        pt.x = event.clientX;
+        pt.y = event.clientY;
+        return pt.matrixTransform(svgEl.getScreenCTM().inverse());
+      }
+
+      function updateAngleFromPointer(event) {
+        if (isLockedAt180) return;
+        const pt = getSVGPoint(event);
+        const dx = pt.x - CENTER_X;
+        const dy = pt.y - CENTER_Y;
+
+        // Tính góc so với hướng 12 giờ (trục âm y):
+        // Vector 12 giờ: (0, -1) -> atan2(dx, -dy) trả về 0 tại 12h, +90° tại 3h, +180° tại 6h, -90° tại 9h
+        let deg = Math.atan2(dx, -dy) * (180 / Math.PI);
+
+        // Chiếu góc khi ngón tay lệch sang nửa bên trái (góc âm)
+        if (deg < 0) {
+          if (deg > -90) {
+            deg = 0; // Lệch góc phần tư trên bên trái -> giữ mốc 0°
+          } else {
+            deg = 180; // Lệch góc phần tư dưới bên trái -> giữ mốc 180°
+          }
+        }
+
+        setAngle(deg);
+      }
+
+      handleTouch.addEventListener('pointerdown', (e) => {
+        if (isAutoPlaying || isLockedAt180) return;
+        isDragging = true;
+        handleTouch.setPointerCapture(e.pointerId);
+        updateAngleFromPointer(e);
+      });
+
+      handleTouch.addEventListener('pointermove', (e) => {
+        if (!isDragging || isAutoPlaying || isLockedAt180) return;
+        updateAngleFromPointer(e);
+      });
+
+      function stopDragging(e) {
+        if (!isDragging) return;
+        isDragging = false;
+        try {
+          handleTouch.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+      }
+
+      handleTouch.addEventListener('pointerup', stopDragging);
+      handleTouch.addEventListener('pointercancel', stopDragging);
+
+      // 7. CÁC NÚT ĐIỀU KHIỂN & CHỌN MẪU HÌNH
+      function resetState() {
+        if (isAutoPlaying) {
+          cancelAnimationFrame(autoPlayAnimId);
+          isAutoPlaying = false;
+        }
+        isDragging = false;
+        isLockedAt180 = false;
+        handleVisual.style.opacity = '1';
+        handleTouch.style.cursor = 'grab';
+        setAngle(0);
+      }
+
+      btnReset.addEventListener('click', resetState);
+
+      btnYes.addEventListener('click', () => handleStudentChoice('YES'));
+      btnNo.addEventListener('click', () => handleStudentChoice('NO'));
+
+      // Chế độ Tự động quay dành riêng cho giáo viên trình chiếu
+      btnAutoPlay.addEventListener('click', () => {
+        if (isAutoPlaying) return;
+        isAutoPlaying = true;
+        const startAngle = (currentAngle >= 180) ? 0 : currentAngle;
+        const targetAngle = 180;
+        const duration = 2000; // 2 giây quay chậm rãi
+        const startTime = performance.now();
+
+        function animate(now) {
+          const elapsed = now - startTime;
+          const progress = Math.min(1, elapsed / duration);
+          // Easing mượt mà nhẹ
+          const ease = 0.5 - 0.5 * Math.cos(progress * Math.PI);
+          const newAngle = startAngle + (targetAngle - startAngle) * ease;
+          setAngle(newAngle);
+
+          if (progress < 1) {
+            autoPlayAnimId = requestAnimationFrame(animate);
+          } else {
+            isAutoPlaying = false;
+            setAngle(180);
+          }
+        }
+
+        autoPlayAnimId = requestAnimationFrame(animate);
+      });
+
+      // Chuyển tab mẫu hình
+      tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          tabButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentShapeId = btn.getAttribute('data-shape');
+          renderShape(currentShapeId);
+        });
+      });
+
+      // Khởi tạo ban đầu
+      renderShape('wings2');
+    })();
+  </script>
+</body>
+</html>

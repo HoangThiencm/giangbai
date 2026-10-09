@@ -48,7 +48,7 @@
   <p class="guide"><strong>Cách dùng:</strong> bấm chọn → xem lời nhắn → <strong>Sao chép</strong> → dán và gửi trong chat Codex. Trang này không tự gửi tin nhắn vào Codex.</p>
   <section class="grid" id="menu" aria-label="Menu chức năng"></section>
   <section class="panel" id="exercisePanel" hidden aria-live="polite">
-    <h2>3. Chọn dạng bài tập</h2><p class="micro">Chọn một trong 10 dạng để tạo lời nhắn phù hợp.</p>
+    <h2>3. Chọn dạng bài tập</h2><p class="micro">Chọn một trong 11 dạng để tạo lời nhắn phù hợp.</p>
     <div class="exercise-grid" id="exerciseMenu"></div>
   </section>
   <section class="panel" id="promptPanel" hidden aria-live="polite">
@@ -77,7 +77,7 @@
     ['Chuyển ghi âm thành văn bản (iPhone / MP3)','Hãy chuyển ghi âm trong TROLYTHIEN/13_CHUYEN_GHI_AM/Dau_vao/ thành văn bản trung thực. Đọc hướng dẫn và xuất cả .docx cùng .txt UTF-8 vào Ket_qua/.']
   ];
   const exercises = [
-    'Dạng Công văn 7991 (17 câu)','Dạng Công văn 7991 (tùy chỉnh mức độ/số câu)','100% trắc nghiệm 4 lựa chọn (tùy chỉnh số câu)','Xuất game giáo dục','Chuẩn hóa import OLM / Azota','Đề 15 phút tinh gọn (8 TN + 2 TL ngắn)','Tùy chỉnh linh hoạt số câu','Bài tập tự luận','Xuất bài dạy HTML (dạy thêm, phụ đạo, bồi dưỡng — phân dạng và giải từng bước)','Tự động cắt PDF SGK thành từng bài'
+    'Dạng Công văn 7991 (17 câu)','Dạng Công văn 7991 (tùy chỉnh mức độ/số câu)','100% trắc nghiệm 4 lựa chọn (tùy chỉnh số câu)','Xuất game giáo dục','Chuẩn hóa import OLM / Azota','Đề 15 phút tinh gọn (8 TN + 2 TL ngắn)','Tùy chỉnh linh hoạt số câu','Bài tập tự luận','Xuất bài dạy HTML (dạy thêm, phụ đạo, bồi dưỡng — phân dạng và giải từng bước)','Tự động cắt PDF SGK thành từng bài học','Xây dựng mô phỏng hình học tương tác'
   ];
   const webTools = {
     5:[['Mở Game giáo dục','https://www.hoangthiencm.id.vn/trochoi.html']],
@@ -88,11 +88,44 @@
   const menu = document.querySelector('#menu'), panel = document.querySelector('#promptPanel'), prompt = document.querySelector('#prompt'), status = document.querySelector('#status'), tools = document.querySelector('#tools'), exercisePanel = document.querySelector('#exercisePanel');
   items.forEach(([name,text], index) => {
     const button = document.createElement('button'); button.type = 'button'; button.className = 'choice';
-    button.innerHTML = `<span class="num">${index + 1}</span><span><b>${name}</b><small>${index === 2 ? '10 dạng bài tập' : 'Tạo lời nhắn khởi đầu'}</small></span>`;
+    button.innerHTML = `<span class="num">${index + 1}</span><span><b>${name}</b><small>${index === 2 ? '11 dạng bài tập' : 'Tạo lời nhắn khởi đầu'}</small></span>`;
     button.addEventListener('click', () => { document.querySelectorAll('.choice').forEach(x => x.classList.remove('active')); button.classList.add('active'); if(index === 2) { exercisePanel.hidden = false; panel.hidden = true; exercisePanel.scrollIntoView({behavior:'smooth',block:'nearest'}); } else { exercisePanel.hidden = true; showPrompt(index + 1, name, text); } }); menu.append(button);
   });
-  exercises.forEach((name,index) => { const button=document.createElement('button'); button.type='button'; button.className='exercise'; button.textContent=`${index+1}. ${name}`; button.addEventListener('click',()=>showPrompt(3,`Tạo bài tập — ${name}`,`Hãy tạo bài tập theo dạng: ${name}. Đọc đúng hướng dẫn và tài liệu trong TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/, không bịa dữ liệu, rồi xuất kết quả vào TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/.`)); document.querySelector('#exerciseMenu').append(button); });
-  function showPrompt(number,title,text) { document.querySelector('#promptTitle').textContent=`${number}. ${title}`; prompt.value=text; status.textContent=''; tools.replaceChildren(); (webTools[number] || []).forEach(([label,url]) => { const a=document.createElement('a'); a.className='tool'; a.href=url; a.target='_blank'; a.rel='noopener noreferrer'; a.textContent=label; tools.append(a); }); panel.hidden=false; panel.scrollIntoView({behavior:'smooth',block:'nearest'}); prompt.focus(); }
+  exercises.forEach((name,index) => {
+    const button=document.createElement('button'); button.type='button'; button.className='exercise'; button.textContent=`${index+1}. ${name}`;
+    button.addEventListener('click',() => {
+      let msg = `Hãy tạo bài tập theo dạng: ${name}. Đọc đúng hướng dẫn và tài liệu trong TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/, không bịa dữ liệu, rồi xuất kết quả vào TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/.`;
+      let customTools = null;
+      if (index === 10) {
+        msg = `Hãy khảo sát và xây dựng mô phỏng hình học tương tác từ tài liệu trong TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/. Tuân thủ nghiêm ngặt quy chuẩn kiến trúc 2 tầng và các nguyên tắc sư phạm trong QUY_CHUAN_XAY_DUNG_MO_PHONG.md (v1.5.0). Sử dụng mẫu chuẩn đã nghiệm thu: MP-04 (Tâm đối xứng quay 180°). Lưu kết quả và sản phẩm vào TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/.`;
+        customTools = [
+          ['✨ Mở MP-04: Tâm đối xứng (Đã nghiệm thu v1.5.0)', '2_TAO_BAI_TAP/Ket_qua/MP04_Tam_Doi_Xung.html'],
+          ['📘 Xem Quy chuẩn xây dựng mô phỏng (v1.5.0)', '2_TAO_BAI_TAP/QUY_CHUAN_XAY_DUNG_MO_PHONG.md']
+        ];
+      }
+      showPrompt(3, `Tạo bài tập — ${name}`, msg, customTools);
+    });
+    document.querySelector('#exerciseMenu').append(button);
+  });
+  function showPrompt(number,title,text,customTools) {
+    document.querySelector('#promptTitle').textContent=`${number}. ${title}`;
+    prompt.value=text;
+    status.textContent='';
+    tools.replaceChildren();
+    const activeTools = customTools || (webTools[number] || []);
+    activeTools.forEach(([label,url]) => {
+      const a=document.createElement('a');
+      a.className='tool';
+      a.href=url;
+      a.target='_blank';
+      a.rel='noopener noreferrer';
+      a.textContent=label;
+      tools.append(a);
+    });
+    panel.hidden=false;
+    panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+    prompt.focus();
+  }
   document.querySelector('#copyButton').addEventListener('click', async () => { prompt.focus(); prompt.select(); let copied=false; try { if(navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(prompt.value); copied=true; } } catch (_) {} if(!copied) { try { copied=document.execCommand('copy'); } catch (_) {} } status.textContent=copied ? 'Đã sao chép. Hãy dán và gửi trong chat Codex.' : 'Chưa thể tự sao chép. Nội dung đã được bôi chọn — hãy nhấn Ctrl+C (hoặc Cmd+C).'; });
 </script>
 </body>

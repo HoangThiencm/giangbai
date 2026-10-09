@@ -1,80 +1,93 @@
-# PLAN: Khắc phục lỗi xem tệp PDF Google Drive trong Padlet ("Không thể truy cập vào Tài khoản Google của bạn")
+# KẾ HOẠCH TRIỂN KHAI (PLAN): MP-01 — MÔ PHỎNG DIỆN TÍCH HÌNH BÌNH HÀNH (MVP TẦNG 1)
 
-## Hiện trạng
-1. **Hiện tượng lỗi theo ảnh thực tế của giáo viên:**
-   - Trên điện thoại (iPhone/Safari), khi giáo viên mở bảng Padlet ("HỌP TỔ · Bảng chia sẻ", bài đăng "CONG TAC THANG 10.pdf"), khung nhúng xem tệp không hiển thị nội dung PDF mà hiện thông báo lỗi của Google:
-     > *"Không thể truy cập vào Tài khoản Google của bạn. Chúng tôi hiện không thể truy cập vào nội dung này. Hãy thử đăng nhập vào Tài khoản Google của bạn hoặc cấp quyền truy cập vào cookie để tiếp tục."*
-2. **Nguyên nhân kỹ thuật 1 (Cốt lõi phân quyền Google Drive):**
-   - Trong `api/padlet.php` (dòng 675 và 775), khi tải tệp lên chỉ gọi `drive_upload_file(...)`.
-   - Trong `api/google_drive.php`, hàm `drive_upload_response()` chỉ cấp quyền xem công khai khi hằng số `GOOGLE_DRIVE_SHARE_MODE === 'anyone'`. Mặc định hosting (hoặc mẫu `config.sample.php`) thường để `'private'`.
-   - Kết quả: Tệp trên Google Drive chỉ thuộc quyền sở hữu của Service Account, không được chia sẻ cho công chúng (`anyone` + `reader`). Khi giáo viên mở xem, Google Drive yêu cầu xác thực tài khoản có quyền truy cập.
-3. **Nguyên nhân kỹ thuật 2 (Chính sách chặn Cookie bên thứ ba trong iFrame trên di động):**
-   - Trong `padlet_ht.html` (dòng 1817), tài liệu được nhúng trực tiếp bằng thẻ:
-     `<iframe src="https://drive.google.com/file/d/{id}/preview" ...>`
-   - Trên Safari iOS (và Chrome/Firefox di động), cơ chế **Ngăn chặn theo dõi trang web chéo (Prevent Cross-Site Tracking / ITP)** chặn hoàn toàn **Third-Party Cookies** trong thẻ `<iframe>`.
-   - Khi iFrame của Google Drive không đọc được Cookie xác thực phiên đăng nhập của người dùng đối với một tệp bị khóa quyền (private), Google lập tức hiển thị màn hình từ chối xác thực như trong ảnh.
-   - Ngoài ra, nút mở ngoài hiện tại trên bài viết chỉ là icon nhỏ (`fa-external-link-alt`), modal xem tệp (`#previewModal`) thiếu nút mở ngoài trực tiếp, khiến giáo viên không biết cách mở khi iFrame bị lỗi.
+## 1. Mục tiêu
+Hoàn thiện, tinh chỉnh kỹ thuật tương tác và kiểm thử toàn diện mã nguồn HTML mô phỏng offline: **MP-01 — Cắt ghép diện tích hình bình hành thành hình chữ nhật** theo đúng các yêu cầu nghiêm ngặt trong `docs/handoff/TASK.md`, `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/DAC_TA_KY_THUAT_MP01_MVP.md`, và quy chuẩn `TROLYTHIEN/2_TAO_BAI_TAP/QUY_CHUAN_XAY_DUNG_MO_PHONG.md`.
 
-## Phạm vi
-1. **Backend (`api/padlet.php`):**
-   - Đảm bảo mọi tệp đính kèm khi tải lên Padlet đều được tự động chia sẻ công khai (`anyone` + `reader`) qua hàm `drive_share_file_anyone($fileId)` (tương tự chuẩn đã áp dụng tại `api/lessons.php`).
-   - Thêm cơ chế tự động thử cấp quyền `anyone` nếu tệp chưa được chia sẻ khi người dùng gọi API lấy dữ liệu bảng hoặc tệp.
-2. **Frontend (`padlet_ht.html`):**
-   - Nâng cấp khối nhúng tài liệu `documentEmbedHtml`:
-     - Thêm thanh liên kết phụ trợ / nút dự phòng rõ ràng: **"Mở tệp trong tab mới"** ngay dưới hoặc trên khung xem tài liệu.
-     - Xử lý chỉ dẫn thân thiện khi xem trên trình duyệt điện thoại chặn cookie.
-   - Nâng cấp `#previewModal`:
-     - Bổ sung nút bấm **"Mở trong tab mới"** (`fas fa-external-link-alt`) trên thanh tiêu đề modal để giáo viên có thể mở thẳng tệp ra trình duyệt khi iFrame gặp sự cố.
-3. **Kiểm thử & Tính tương thích:**
-   - Đảm bảo các bộ smoke test hiện tại (`padlet-ownership-smoke.js`, `padlet-ui-smoke.js`, `padlet-comment-ui-smoke.js`) tiếp tục PASS 100%.
+Đảm bảo mô phỏng chạy hoàn hảo 100% offline (Zero CDN, Zero external dependencies), chính xác tuyệt đối về hình học tọa độ, triệt tiêu lỗi cảm ứng trên bảng thông minh và bảo đảm tính trung tính sư phạm.
 
-## Ngoài phạm vi
-- Không đổi dịch vụ lưu trữ (vẫn dùng Google Drive qua Service Account).
-- Không can thiệp vào các mô-đun khác ngoài Padlet.
-- Không chỉnh sửa trực tiếp mã nguồn trong lượt survey (tuân thủ quy trình Antigravity IDE).
+---
 
-## File dự kiến tác động
-1. `api/padlet.php`: Bổ sung `drive_share_file_anyone` khi lưu tệp tải lên (`add-post`, `edit-post`).
-2. `padlet_ht.html`: Thêm nút mở tab mới trực quan tại `documentEmbedHtml` và `#previewModal`.
-3. `api/config.php` (trên hosting): Khuyến nghị cấu hình `define('GOOGLE_DRIVE_SHARE_MODE', 'anyone');`.
-4. `tests/padlet-ui-smoke.js`: Cập nhật/bổ sung kiểm tra nút mở tệp ngoài.
+## 2. Danh sách file dự kiến tác động
+- **Duy nhất 1 file:** `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/MP01_Dien_Tich_Hinh_Binh_Hanh.html`
+- **Quy tắc bất biến:** Tuyệt đối không chỉnh sửa các file tài liệu đặc tả (`.md`) hay bất kỳ file nào khác ngoài file trên.
 
-## Các bước thực hiện
-1. **Bước 1: Cập nhật Backend `api/padlet.php`**
-   - Tại `add-post` (sau dòng 675) và `edit-post` (sau dòng 775):
-     ```php
-     try {
-         drive_share_file_anyone($drive['file_id']);
-     } catch (Throwable $e) {
-         error_log('Padlet share file error: ' . $e->getMessage());
-     }
-     ```
-   - Thêm cơ chế an toàn: Bọc trong `try/catch` để nếu Drive chặn chia sẻ thì bài viết vẫn được lưu mà không gây lỗi 500.
-2. **Bước 2: Cập nhật Frontend `padlet_ht.html`**
-   - Trong `documentEmbedHtml(file)`:
-     - Làm rõ nút mở ngoài và thêm dòng ghi chú hỗ trợ: *"Nếu không tải được trên điện thoại, bấm Mở tệp ngoài"*.
-   - Trong `#previewModal`:
-     - Thêm nút `<a id="previewExternalLink" href="#" target="_blank" rel="noopener" class="flex items-center gap-1.5 rounded-xl bg-teal-50 px-3 py-2 text-xs font-bold text-teal-800 hover:bg-teal-100"><i class="fas fa-external-link-alt"></i><span>Mở tab mới</span></a>` cạnh nút đóng modal.
-     - Cập nhật hàm `previewFile()` để gán URL mở ngoài vào nút này.
-3. **Bước 3: Hướng dẫn cấu hình Server & Xử lý tệp cũ**
-   - Hướng dẫn cấu hình hosting `GOOGLE_DRIVE_SHARE_MODE = 'anyone'` trong `api/config.php`.
-   - Với các tệp cũ đã tải lên (như file `CONG TAC THANG 10.pdf`), người quản trị vào Google Drive cấp quyền "Bất kỳ ai có đường liên kết đều có thể xem" cho thư mục bảng chia sẻ đó.
-4. **Bước 4: Kiểm thử và hoàn tất**
-   - Chạy toàn bộ smoke tests của Padlet.
-   - Xác nhận giao diện hiển thị đúng trên điện thoại và máy tính.
+---
 
-## Rủi ro
-- Một số tổ chức/trường học dùng Google Workspace có chính sách quản trị chặn chia sẻ ra ngoài tên miền đối với Service Account.
-  -> **Biện pháp:** Bọc `try/catch` khi gọi `drive_share_file_anyone` và duy trì nút mở trực tiếp bằng link Drive để người dùng đã đăng nhập tài khoản trường vẫn mở được.
+## 3. Các bước thực hiện chi tiết cho Coder
 
-## Cách kiểm thử
-1. Chạy lệnh:
-   `node tests/padlet-ownership-smoke.js`
-   `node tests/padlet-ui-smoke.js`
-   `node tests/padlet-comment-ui-smoke.js`
-2. Kiểm tra thẻ bài viết và modal xem trước tài liệu có hiển thị nút mở tab mới hay không.
+### Bước 1: Chuẩn hóa kích thước vùng chạm (Touch Target) & Trợ năng (A11y)
+- Nâng bán kính tay kéo đỏ `#sliderHandle` lên `r="25"` (đường kính $50\text{ px}$) để đáp ứng tiêu chuẩn nghiêm ngặt $\ge 50\text{ px}$ trong `TASK.md` (hiện đang là $r=23$, đường kính $46\text{ px}$).
+- Bổ sung các thuộc tính trợ năng và điều khiển bàn phím cho tay kéo:
+  - `tabindex="0"`, `role="slider"`, `aria-valuenow="0"`, `aria-valuemin="0"`, `aria-valuemax="100"`, `aria-label="Thanh trượt cắt ghép hình bình hành"`.
+  - Cập nhật giá trị `aria-valuenow` động theo tiến độ $\%$.
 
-## Tiêu chí nghiệm thu
-1. Tệp tải lên qua Padlet được tự động kích hoạt quyền chia sẻ công khai (`anyone`).
-2. Giao diện bài viết và modal xem tệp có lối tắt "Mở tab mới" rõ ràng, không để giáo viên bị kẹt ở màn hình lỗi cookie iFrame.
-3. Không làm hỏng các tính năng bình luận, phê duyệt, xóa/sửa bài đăng hiện có.
+### Bước 2: Tinh chỉnh cơ chế kéo Pointer Events mượt mà, chống giật và chuẩn hóa tọa độ
+- **Chống giật điểm chạm (Touch Offset):** Khi `pointerdown`, ghi nhận khoảng cách tương đối giữa điểm chạm và tâm tay kéo:
+  ```javascript
+  const pt = getSvgPoint(e);
+  dragOffset = pt.x - (TRACK_START + currentDx);
+  ```
+- **Chuẩn hóa biến đổi tọa độ SVG:** Sử dụng API chuẩn `svg.createSVGPoint()` kết hợp `svg.getScreenCTM().inverse()` để chuyển đổi chính xác tọa độ con trỏ sang hệ tọa độ SVG trên mọi kích cỡ hiển thị, DPI, tỷ lệ co giãn và bảng tương tác thông minh.
+- **Khóa triệt để rãnh trượt:** Thêm `pointer-events: none;` cho `#sliderControls .slider-track` và `#sliderProgress` để triệt tiêu mọi khả năng click nhảy cóc.
+- **Chống mở menu ngữ cảnh (Context Menu):** Thêm `e.preventDefault()` trên sự kiện `contextmenu` của vùng vẽ SVG để chống việc giữ tay lâu trên bảng thông minh / thiết bị di động làm bật context menu hệ thống.
+- **Hỗ trợ phím mũi tên:** Thêm sự kiện `keydown` trên `#sliderHandle`: phím `ArrowRight`/`ArrowUp` tăng $5\%$, `ArrowLeft`/`ArrowDown` giảm $5\%$ (khi chưa bị khóa `isLocked`).
+- **Chuẩn hóa con trỏ của tam giác trượt:** Đặt `.sliding-polygon { cursor: default; }` (vì điều khiển thông qua thanh trượt vật lý, tránh gây hiểu nhầm cho học sinh là có thể nhấc rời tam giác tự do).
+
+### Bước 3: Hoàn thiện trạng thái nút Giáo viên (Teacher Auto-Play)
+- Trong hàm `toggleAutoPlay()`:
+  - Khi bắt đầu chạy tự động: Đổi nhãn nút thành `⏹ Dừng (GV)` và đổi kiểu hiển thị trực quan (active state).
+  - Khi người dùng bấm dừng hoặc khi diễn hoạt kết thúc đạt $100\%$: Khôi phục lại nhãn nút `🎬 Tự động ghép (GV)`.
+
+### Bước 4: Chuẩn hóa Typographic Toán học & Nhãn sư phạm
+- Chuẩn hóa các nhãn toán học theo quy chuẩn in nghiêng biến số, in đứng ký hiệu/đơn vị:
+  - Đáy $a$: `<tspan font-style="italic">a</tspan> = 4 ô` (không in nghiêng cả cụm "= 4 ô").
+  - Kích thước hình chữ nhật mới: `Chiều dài = <tspan font-style="italic">a</tspan> (4 ô)`, `Chiều rộng = <tspan font-style="italic">h</tspan> (3 ô)`.
+  - Công thức chốt: `<tspan font-style="italic">S</tspan> = <tspan font-style="italic">a</tspan> · <tspan font-style="italic">h</tspan>`.
+
+### Bước 5: Tinh chỉnh phản hồi sư phạm 2 nút trung tính
+- Trong `handleChoice(isChanged)`:
+  - Nếu học sinh chọn `[ Không thay đổi ]` (chính xác): Hiển thị phản hồi tán thành và giải thích rõ nguyên lý bảo toàn (các mảnh chỉ đổi chỗ, không thêm bớt).
+  - Nếu học sinh chọn `[ Có thay đổi ]` (bẫy trực giác về hình dạng): Hiển thị phản hồi gợi mở khách quan: *"Lưu ý: Mặc dù hình dạng đổi từ hình bình hành sang hình chữ nhật, nhưng ta chỉ cắt và ghép các mảnh sẵn có mà không thêm bớt phần nào, nên diện tích được bảo toàn (không thay đổi)."*
+
+### Bước 6: Khử đường nứt render đồ họa SVG (Seam Rendering)
+- Thêm `shape-rendering="geometricPrecision"` trên thẻ `<svg>` và các thẻ `<polygon>` để trình duyệt tính toán khử răng cưa chính xác tuyệt đối, không để lộ vệt hở nhỏ tại đường biên ghép chéo $CB$ (từ $(350, 250)$ đến $(400, 100)$).
+
+---
+
+## 4. Rủi ro và giải pháp kỹ thuật
+
+| Rủi ro kỹ thuật | Nguyên nhân tiềm ẩn | Giải pháp triệt để |
+| :--- | :--- | :--- |
+| **Nhảy cóc vị trí tay kéo khi chạm** | Tính toán `svgX - TRACK_START` trực tiếp mà không trừ đi vị trí ngón tay chạm vào mép hình tròn | Lưu `dragOffset` lúc `pointerdown`, tính `currentDx = svgX - TRACK_START - dragOffset` |
+| **Lệch tọa độ cảm ứng khi phóng to/thu nhỏ** | Dùng `scaleX = 700 / rect.width` có thể sai số khi có CSS margin/padding/letterboxing | Dùng `svg.createSVGPoint().matrixTransform(svg.getScreenCTM().inverse())` |
+| **Bảng tương tác bị cuộn trang hoặc hiện menu chuột phải** | Trình duyệt di động kích hoạt cử chỉ cuộn hoặc giữ lâu kích hoạt menu | Giữ vững `touch-action: none;` và chặn sự kiện `contextmenu` |
+| **Phụ thuộc tài nguyên mạng (CDN)** | Vô tình chèn link font hoặc script ngoài | Tuân thủ zero-dependency, dùng font hệ thống |
+
+---
+
+## 5. Lệnh kiểm thử cụ thể (Test / Lint / Syntax Check)
+
+Coder chạy các lệnh kiểm tra sau bằng PowerShell:
+
+1. **Kiểm tra không chứa liên kết ngoại (Zero CDN / No external links):**
+   ```powershell
+   Select-String -Path "TROLYTHIEN\2_TAO_BAI_TAP\Ket_qua\MP01_Dien_Tich_Hinh_Binh_Hanh.html" -Pattern "https?://|cdn|googleapis"
+   ```
+   *Yêu cầu:* Kết quả trống (không tìm thấy liên kết ngoại).
+
+2. **Kiểm tra cú pháp JavaScript & HTML (Node.js syntax check):**
+   ```powershell
+   node -e "const fs = require('fs'); const content = fs.readFileSync('TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/MP01_Dien_Tich_Hinh_Binh_Hanh.html', 'utf8'); const script = content.match(/<script>([\s\S]*?)<\/script>/)[1]; new Function(script); console.log('JS Syntax: PASS');"
+   ```
+   *Yêu cầu:* Xuất ra `JS Syntax: PASS`.
+
+3. **Kiểm tra kích thước bán kính tay kéo (Target diameter $\ge 50\text{ px}$):**
+   ```powershell
+   Select-String -Path "TROLYTHIEN\2_TAO_BAI_TAP\Ket_qua\MP01_Dien_Tich_Hinh_Binh_Hanh.html" -Pattern 'sliderHandle.*r="2[5-9]"'
+   ```
+   *Yêu cầu:* Có dòng khớp $r \ge 25$.
+
+4. **Kiểm tra mở thực tế trên trình duyệt offline:**
+   ```powershell
+   Start-Process msedge "$((Get-Item 'TROLYTHIEN\2_TAO_BAI_TAP\Ket_qua\MP01_Dien_Tich_Hinh_Binh_Hanh.html').FullName)"
+   ```
