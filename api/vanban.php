@@ -910,7 +910,17 @@ function vbd_store_staging_upload(PDO $pdo, int $documentId, array $document, ar
     );
     $storedName = vbd_unique_staging_name($documentId, $rawName);
     $dest = vbd_staging_dir($documentId) . '/' . $storedName;
-    if (!vbd_place_upload_file((string)$file['tmp_name'], $dest)) {
+    $tmpName = (string)$file['tmp_name'];
+    $placed = vbd_place_upload_file($tmpName, $dest);
+    if (!$placed) {
+        $tmpReal = realpath($tmpName);
+        $stageReal = realpath(vbd_staging_root());
+        $prefix = $stageReal ? rtrim($stageReal, '/\\') . DIRECTORY_SEPARATOR : '';
+        if ($tmpReal && $prefix !== '' && str_starts_with($tmpReal, $prefix) && is_file($tmpReal)) {
+            $placed = @copy($tmpReal, $dest);
+        }
+    }
+    if (!$placed) {
         throw new RuntimeException('Không lưu được tệp vào thư mục đệm trên hosting.');
     }
     $marker = vbd_staging_marker($documentId, $storedName);
@@ -940,6 +950,76 @@ function vbd_store_staging_upload(PDO $pdo, int $documentId, array $document, ar
         'download_url' => $downloadUrl,
         'storage' => 'staging',
     ];
+}
+
+function vbd_stage_part_path(int $documentId, int $index): string
+{
+    if ($documentId < 1 || $index < 0 || $index > 200) {
+        throw new RuntimeException('Phần tệp đệm không hợp lệ.');
+    }
+    $dir = vbd_staging_root() . '/_incoming/' . $documentId;
+    if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+        throw new RuntimeException('Không tạo được thư mục nhận tệp.');
+    }
+    return $dir . '/' . $index . '.part';
+}
+
+function vbd_stage_base64_chunk(PDO $pdo, array $document, array $upload): ?array
+{
+    $name = basename(str_replace(['\\', '/', "\0"], ['', '', ''], trim((string)($upload['name'] ?? ''))));
+    $size = (int)($upload['size'] ?? 0);
+    $offset = (int)($upload['offset'] ?? 0);
+    $index = (int)($upload['index'] ?? 0);
+    $final = vbd_boolish($upload['final'] ?? false);
+    if ($name === '' || $size < 1 || $offset < 0) {
+        throw new RuntimeException('Thiếu thông tin phần tệp.');
+    }
+    $maxBytes = vbd_staging_max_bytes();
+    if ($size > $maxBytes) {
+        throw new RuntimeException('Mỗi tệp không được vượt quá ' . ($maxBytes / 1024 / 1024) . ' MB.');
+    }
+    $raw = base64_decode((string)($upload['data'] ?? ''), true);
+    if ($raw === false || $raw === '') throw new RuntimeException('Dữ liệu tệp không hợp lệ.');
+    if (strlen($raw) > 1024 * 1024) throw new RuntimeException('Mỗi phần tệp không được vượt quá 1 MB.');
+    if ($offset + strlen($raw) > $size) throw new RuntimeException('Phần tệp vượt kích thước đã khai báo.');
+    $part = vbd_stage_part_path((int)$document['id'], $index);
+    if ($offset === 0) {
+        if (file_put_contents($part, $raw) === false) throw new RuntimeException('Không ghi được tệp đệm.');
+    } else {
+        $current = is_file($part) ? (int)filesize($part) : -1;
+        if ($current !== $offset) throw new RuntimeException('Thứ tự phần tệp không khớp. Hãy lưu lại.');
+        $handle = fopen($part, 'ab');
+        if (!$handle) throw new RuntimeException('Không mở được tệp đệm.');
+        $written = fwrite($handle, $raw);
+        fclose($handle);
+        if ($written !== strlen($raw)) throw new RuntimeException('Không ghi đủ phần tệp.');
+    }
+    if (!$final) return null;
+    clearstatcache(true, $part);
+    if ((int)filesize($part) !== $size) {
+        @unlink($part);
+        throw new RuntimeException('Tệp tải lên chưa đủ dữ liệu.');
+    }
+    require_once __DIR__ . '/google_drive.php';
+    $invalid = drive_validate_upload($part, $name);
+    if ($invalid) {
+        @unlink($part);
+        throw new RuntimeException($invalid);
+    }
+    try {
+        return vbd_store_staging_upload($pdo, (int)$document['id'], $document, [
+            'name' => $name,
+            'type' => (string)($upload['type'] ?? ''),
+            'tmp_name' => $part,
+            'error' => UPLOAD_ERR_OK,
+            'size' => $size,
+        ], $index);
+    } finally {
+        @unlink($part);
+        $incomingDir = dirname($part);
+        $left = @scandir($incomingDir) ?: [];
+        if (count(array_diff($left, ['.', '..'])) === 0) @rmdir($incomingDir);
+    }
 }
 
 function vbd_stage_uploaded_files(PDO $pdo, array $document, array $files): array
@@ -1119,6 +1199,25 @@ function vbd_clean_orphan_staging(PDO $pdo): void
         foreach ($dirs as $dirName) {
             if ($dirName === '.' || $dirName === '..' || $dirName === '.htaccess') continue;
             $dirPath = $root . '/' . $dirName;
+            if ($dirName === '_incoming' && is_dir($dirPath)) {
+                $docDirs = @scandir($dirPath) ?: [];
+                foreach ($docDirs as $docName) {
+                    if ($docName === '.' || $docName === '..') continue;
+                    $docPath = $dirPath . '/' . $docName;
+                    if (!is_dir($docPath)) continue;
+                    $parts = @scandir($docPath) ?: [];
+                    foreach ($parts as $partName) {
+                        if ($partName === '.' || $partName === '..') continue;
+                        $partPath = $docPath . '/' . $partName;
+                        if (!is_file($partPath)) continue;
+                        $partTime = @filemtime($partPath);
+                        if ($partTime !== false && (time() - $partTime) > 86400) @unlink($partPath);
+                    }
+                    $left = @scandir($docPath) ?: [];
+                    if (count(array_diff($left, ['.', '..'])) === 0) @rmdir($docPath);
+                }
+                continue;
+            }
             if (!is_dir($dirPath) || !preg_match('/^\d+$/', $dirName)) continue;
             $files = @scandir($dirPath) ?: [];
             foreach ($files as $fileName) {
@@ -1887,6 +1986,28 @@ if ($action === 'save_upload_stage') {
     @set_time_limit(120);
     vbd_clean_orphan_staging($pdo);
     try {
+        $json = json_body();
+        $upload = is_array($json['upload'] ?? null) ? $json['upload'] : null;
+        if ($upload) {
+            $json['sector'] = $json['sector'] ?? ($_GET['sector'] ?? 'hanhchinh');
+            $existingId = (int)($json['id'] ?? 0);
+            if ($existingId > 0 && trim((string)($json['title'] ?? '')) === '') {
+                $document = vbd_document($pdo, $existingId, (int)$user['id'], vbd_is_admin($user));
+                if (!$document) throw new RuntimeException('Không tìm thấy văn bản cần sửa.');
+            } else {
+                $document = vbd_save_document($pdo, $user, $json);
+            }
+            $stagedFile = vbd_stage_base64_chunk($pdo, $document, $upload);
+            $document['files'] = vbd_files($pdo, [(int)$document['id']])[(int)$document['id']] ?? [];
+            respond([
+                'ok' => true,
+                'document' => $document,
+                'staged_file' => $stagedFile,
+                'staged_files' => $stagedFile ? [$stagedFile] : [],
+                'storage' => 'staging',
+                'message' => 'Đã lưu văn bản.',
+            ]);
+        }
         $input = $_POST;
         $input['sector'] = $input['sector'] ?? ($_GET['sector'] ?? 'hanhchinh');
         $document = vbd_save_document($pdo, $user, $input);

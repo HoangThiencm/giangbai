@@ -1915,25 +1915,34 @@
         return lastResult;
     }
 
-    function appendSaveFields(form, payload) {
-        Object.entries(payload).forEach(([key, value]) => {
-            if (value === undefined || value === null) return;
-            form.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
+    const STAGE_CHUNK_BYTES = 512 * 1024;
+
+    function blobToBase64(blob) {
+        return blob.arrayBuffer().then(buffer => {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+            return btoa(binary);
         });
     }
 
-    async function postStagingBatch(payload, files) {
-        const form = new FormData();
-        appendSaveFields(form, payload);
-        files.forEach(file => form.append('files[]', file, file.name));
-        const response = await fetch(`${API}?action=save_upload_stage&sector=${encodeURIComponent(SECTOR)}`, {
-            method: 'POST',
-            credentials: 'include',
-            body: form,
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Không lưu được văn bản và tệp đính kèm.');
-        return data;
+    async function postJsonStage(body) {
+        let lastError;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            try {
+                return await api('save_upload_stage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+            } catch (error) {
+                lastError = error;
+                const message = String(error && error.message || '');
+                const network = /failed to fetch|network|load failed|mất kết nối|offline/i.test(message);
+                if (!network || attempt === 1) throw error;
+            }
+        }
+        throw lastError;
     }
 
     function applySyncedFile(file) {
@@ -1991,27 +2000,41 @@
                 body: JSON.stringify(payload),
             });
         }
-        const batches = splitStagingBatches(pending);
-        const oversized = pending.filter(file => file.size > STAGING_BATCH_BYTES);
-        if (oversized.length) {
-            toast(`Tệp ${oversized.map(file => file.name).join(', ')} lớn hơn 50 MB, hệ thống gửi riêng từng tệp.`);
-        } else if (batches.length > 1) {
-            toast(`Tổng dung lượng vượt 50 MB, hệ thống chia thành ${batches.length} đợt lưu.`);
-        }
         const totalBytes = pending.reduce((sum, file) => sum + file.size, 0);
+        if (pending.some(file => !file.size)) throw new Error('Có tệp rỗng, không lưu được.');
+        if (pending.some(file => file.size > STAGING_BATCH_BYTES) || totalBytes > STAGING_BATCH_BYTES) {
+            toast('Tệp khá lớn, hệ thống gửi từng phần lên hosting.');
+        }
         let sentBytes = 0;
         let document = null;
         const staged = [];
         updateUploadProgress(0, totalBytes, 'Đang lưu văn bản và tệp...');
-        for (const batch of batches) {
-            const body = document ? { ...payload, id: document.id } : payload;
-            const data = await postStagingBatch(body, batch);
-            document = data.document || document;
-            if (document?.id && $('documentId')) $('documentId').value = String(document.id);
-            staged.push(...(data.staged_files || []));
-            state.pendingUploadFiles = (state.pendingUploadFiles || []).filter(file => !batch.includes(file));
-            sentBytes += batch.reduce((sum, file) => sum + file.size, 0);
-            updateUploadProgress(sentBytes, totalBytes, 'Đang lưu văn bản và tệp...');
+        for (let index = 0; index < pending.length; index += 1) {
+            const file = pending[index];
+            let offset = 0;
+            while (offset < file.size) {
+                const slice = file.slice(offset, Math.min(file.size, offset + STAGE_CHUNK_BYTES));
+                const upload = {
+                    name: file.name,
+                    type: file.type || 'application/octet-stream',
+                    size: file.size,
+                    index,
+                    offset,
+                    final: offset + slice.size >= file.size,
+                    data: await blobToBase64(slice),
+                };
+                const body = document
+                    ? { id: document.id, sector: payload.sector, upload }
+                    : { ...payload, upload };
+                const data = await postJsonStage(body);
+                document = data.document || document;
+                if (document?.id && $('documentId')) $('documentId').value = String(document.id);
+                if (data.staged_file) staged.push(data.staged_file);
+                offset += slice.size;
+                sentBytes += slice.size;
+                updateUploadProgress(sentBytes, totalBytes, 'Đang lưu văn bản và tệp...');
+            }
+            state.pendingUploadFiles = (state.pendingUploadFiles || []).filter(item => item !== file);
         }
         return {
             ok: true,
@@ -2411,4 +2434,4 @@
         init();
     }
 })();
-/* deploy-touch: 20261012-staging */
+/* deploy-touch: 20261012-stage-json */

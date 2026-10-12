@@ -57,6 +57,8 @@ const context = vm.createContext({
     localStorage: { getItem() { return null; }, setItem() {}, removeItem() {} },
     console,
     TextDecoder,
+    btoa,
+    atob,
     TextEncoder,
     Uint8Array,
     setTimeout,
@@ -120,19 +122,24 @@ async function assertFrontendFlow() {
     context.fetch = async (url, options) => {
         urls.push(String(url));
         assert.equal(options.method, 'POST');
-        assert.ok(options.body instanceof FormData);
+        assert.equal(options.headers['Content-Type'], 'application/json');
+        const body = JSON.parse(options.body);
+        assert.equal(body.upload.name, 'bao-cao.pdf');
+        assert.equal(body.upload.offset, 0);
+        assert.equal(body.upload.final, true);
+        assert.equal(Buffer.from(body.upload.data, 'base64').toString(), 'xin chao');
         return {
             ok: true,
             json: async () => ({
                 ok: true,
                 document: { id: 9, title: 'Van ban thu' },
-                staged_files: [{
+                staged_file: {
                     id: 3,
                     document_id: 9,
                     original_name: 'bao-cao.pdf',
                     drive_file_id: 'staging:9:bao-cao.pdf',
                     view_url: 'api/vanban.php?action=file&document_id=9&name=bao-cao.pdf',
-                }],
+                },
             }),
         };
     };
