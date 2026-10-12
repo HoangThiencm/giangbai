@@ -28,8 +28,8 @@ Gọi tool `ask_question` với 13 lựa chọn:
 - **9/ Viết sáng kiến:** Cung cấp link Gemini Canvas https://gemini.google.com/app/e6bf41201af60de3?hl=vi và file [backupcode viettailieu/sangkien.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/backupcode%20viettailieu/sangkien.html).
 - **11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh):** Cung cấp link website https://www.hoangthiencm.id.vn/vehinh.html và file [vehinh.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/vehinh.html).
 
-## 3. Menu Cấp 2 khi chọn "3/ Tạo bài tập" (11 lựa chọn đánh số)
-Gọi tiếp tool `ask_question` với ĐÚNG 11 lựa chọn:
+## 3. Menu Cấp 2 khi chọn "3/ Tạo bài tập" (12 lựa chọn đánh số)
+Gọi tiếp tool `ask_question` với ĐÚNG 12 lựa chọn:
 - Question: "CHỌN ĐỊNH DẠNG TẠO BÀI TẬP: Thầy/Cô muốn tạo bài tập theo hình thức nào?"
 - Options:
   1. "1. ⭐ Dạng Công văn 7991 (17 câu)"
@@ -43,6 +43,7 @@ Gọi tiếp tool `ask_question` với ĐÚNG 11 lựa chọn:
   9. "9. ⭐ Xuất bài dạy HTML (Dạy thêm, phụ đạo, bồi dưỡng - Phân dạng & Giải từng bước)"
   10. "10. ✂️ Tự động cắt PDF SGK thành từng bài học (Chuẩn xác 100% từng bài)"
   11. "11. 📐 Xây dựng mô phỏng hình học tương tác (Mẫu chuẩn MP-04 & Khảo sát SGK)"
+  12. "12. 📋 Tạo đề thi từ Ma trận & Bản đặc tả (Tự động đọc .docx trong Dau_vao hoặc thư mục chỉ định)"
 
 ## 4. Quy ước thư mục đầu vào và kết quả (Bắt buộc không lưu lung tung)
 Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư mục `TROLYTHIEN/`:
@@ -54,7 +55,7 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
   + Chuẩn hóa công thức Toán: Ký hiệu chia hết hiển thị đúng 3 chấm dọc (`\vdots` $\rightarrow$ $⋮$), không chia hết (`\not\vdots` $\rightarrow$ $∤$), tuyệt đối không để sót chữ *vdots* in nghiêng.
 - **2/ Tạo bài tập:**
   + File đầu vào (PDF bài học, PDF chuyên đề bài tập 5-10 trang, SGK trọn cuốn): đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`
-  + File kết quả (File Word đề thi, OLM, Game, File HTML bài dạy tương tác `[Ten_Bai_Day].html` khi chọn mục 9, trọn bộ PDF từng bài khi chọn mục 10, hoặc mô phỏng HTML tương tác offline khi chọn mục 11): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`
+  + File kết quả (File Word đề thi, OLM, Game, File HTML bài dạy tương tác `[Ten_Bai_Day].html` khi chọn mục 9, trọn bộ PDF từng bài khi chọn mục 10, mô phỏng HTML tương tác offline khi chọn mục 11, hoặc đề Word từ ma trận khi chọn mục 12): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`
   + Khi chọn mục 9 (Xuất bài dạy HTML): Tuân thủ quy chuẩn riêng tại `.agents/rules/tao-bai-day-html.md`.
   + Khi chọn mục 10 (Cắt PDF SGK thành từng bài học):
     * Đọc cuốn SGK/SBT PDF trong `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`.
@@ -66,6 +67,11 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
     * Tuân thủ quy chuẩn `TROLYTHIEN/2_TAO_BAI_TAP/QUY_CHUAN_XAY_DUNG_MO_PHONG.md` (v1.5.0) với kiến trúc 2 tầng sư phạm.
     * Sử dụng mẫu chuẩn đã nghiệm thu: `MP04_Tam_Doi_Xung.html` (offline, SVG vector, Pointer Events, khóa trạng thái khi đạt đích, màu sắc trung tính).
     * Quy trình bắt buộc: Đọc SGK 1:1 $\rightarrow$ Đặc tả sư phạm 5 trường $\rightarrow$ Đặc tả kỹ thuật MVP $\rightarrow$ Lập trình file HTML offline duy nhất.
+  + Khi chọn mục 12 (Tạo đề thi từ Ma trận và Bản đặc tả):
+    * Ưu tiên đường dẫn thư mục hoặc tệp `.docx` giáo viên dán trong chat. Không có đường dẫn thì quét đệ quy `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/` (gồm thư mục con).
+    * Gọi `TROLYTHIEN/engine/doc_ma_tran_dac_ta.py` (`--input-dir` hoặc `--file`) để bóc bảng.
+    * Tuân thủ Master Prompt `TROLYTHIEN/2_TAO_BAI_TAP/HUONG_DAN_TAO_DE_THI_TU_MA_TRAN.md`.
+    * File kết quả: `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/De_Kiem_Tra_[Mon]_[Lop]_[KyThi].docx`, hoặc thư mục kết quả giáo viên chỉ định.
 - **1/ Duyệt giáo án (Thẩm định KHBD):**
   + File đầu vào: Tham chiếu các tệp `Phu-luc-3-...docx` ở thư mục gốc `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/` và thư mục riêng từng giáo viên (ví dụ `HỒ ĐĂNG DANH/`, `TRAN SANG/`...).
   + Tiêu chuẩn thẩm định nghiêm ngặt:
@@ -220,8 +226,31 @@ Toàn bộ logic xử lý, kiểm định, render của Trợ lý Sư phạm Ho�
 3. **Thẩm định & Duyệt giáo án (`3_DUYET_GIAO_AN`):** `TROLYTHIEN/engine/duyet_giao_an_engine.py`.
 4. **Vẽ hình học giải tích chuẩn GDPT 2018 (`11_VE_HINH`):** `TROLYTHIEN/engine/ve_hinh_engine.py`.
 5. **Cắt tách PDF SGK từng bài (`cat_pdf_sgk.py`):** `TROLYTHIEN/engine/cat_pdf_sgk.py` (quản lý mục lục tập trung tại `TROLYTHIEN/engine/configs/sgk_configs.json`).
+6. **Đọc ma trận và bản đặc tả (`2_TAO_BAI_TAP`, lựa chọn 12):** `TROLYTHIEN/engine/doc_ma_tran_dac_ta.py`.
 
 **Kỷ luật bất biến khi hoạt động trên mọi máy tính:**
 - **Tuyệt đối không sinh script `.py` riêng lẻ** theo từng bài học (như `build_bai_04.py`, `build_bai_12.py`, `verify_bai_12.py`...) hay theo từng giáo viên (`inspect_duong_quang_tung.py`, `duyet_hoang_xuan_anh.py`...).
 - **Nạp dữ liệu qua tham số / file cấu hình:** Dữ liệu bài học, slide, nội dung đề bài được nạp qua JSON, text hoặc tham số CLI vào Engine trung tâm.
 - **Thư mục chạy nháp tạm:** Nếu thực sự cần chạy script kiểm tra nhanh, bắt buộc lưu tại thư mục scratch của agent (`<appDataDir>/brain/<conversation-id>/scratch/`) và **xóa sạch ngay lập tức** sau khi thực thi. Không để lại bất kỳ file `.py` rác nào trong repository.
+
+## 12. Quy chuẩn tạo đề thi từ Ma trận và Bản đặc tả (Menu Cấp 2, lựa chọn 12)
+Khi chọn "12. 📋 Tạo đề thi từ Ma trận & Bản đặc tả (Tự động đọc .docx trong Dau_vao hoặc thư mục chỉ định)", đọc `TROLYTHIEN/2_TAO_BAI_TAP/HUONG_DAN_TAO_DE_THI_TU_MA_TRAN.md` trước khi sinh đề.
+
+Nạp học liệu:
+- Giáo viên được chỉ định thư mục hoặc tệp trong chat. Đường dẫn có khoảng trắng hoặc tiếng Việt vẫn dùng nguyên văn, chuẩn hóa bằng `pathlib.Path.resolve()`.
+- Không có đường dẫn: quét đệ quy `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/` (ví dụ `Dau_vao/12.10/`). Bỏ tệp tạm `~$`.
+- Đường dẫn không tồn tại: dừng và nói rõ đường dẫn sai. Không đoán sang thư mục khác.
+- Engine: `python TROLYTHIEN/engine/doc_ma_tran_dac_ta.py --input-dir "<thư mục>"` hoặc `--file "<tệp.docx>"`.
+
+Bám ma trận và bản đặc tả:
+- Giữ số câu, số điểm, tỉ lệ nhận biết / thông hiểu / vận dụng / vận dụng cao và dạng câu (trắc nghiệm, đúng/sai, trả lời ngắn, tự luận) đúng bảng.
+- Mỗi câu gắn 1-1 một yêu cầu cần đạt. Không thêm mạch kiến thức ngoài bảng. Không bỏ dòng đặc tả.
+- GDPT 2018 theo đúng khối lớp: không lấy kiến thức lớp trên. Với Toán THCS, không dùng $\Leftrightarrow$, không kết luận tập nghiệm $S = \{...\}$. Dùng "Ta có", "Suy ra", rồi nêu từng nghiệm.
+- Công thức trong Word là Word Equation (`m:oMath`) qua `latex_to_omml` trong `TROLYTHIEN/2_TAO_BAI_TAP/QUY_CHUAN_TRON_DE.md`. Cấm chuỗi trần `$x^2$`. Cấm ảnh chụp công thức.
+
+Một file `.docx` đủ 3 phần, trang A4, đầu đề trường THCS Trần Phú:
+1. Đề kiểm tra: khung họ tên, lớp, môn, thời gian, điểm.
+2. Ma trận đối chiếu yêu cầu cần đạt và bảng đáp án.
+3. Hướng dẫn chấm, thang điểm từng bước.
+
+Lưu `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/De_Kiem_Tra_[Mon]_[Lop]_[KyThi].docx`. Giáo viên chỉ định thư mục khác thì lưu đúng thư mục đó. Chat chỉ báo đường dẫn file và số câu đã bóc từ ma trận.

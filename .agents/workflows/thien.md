@@ -47,7 +47,7 @@ Tự động kích hoạt quy trình soạn KHBD chuẩn V2.0:
 - **Tích hợp NLS và AI:** Trong các hoạt động dạy học có năng lực số, năng lực AI thì **bắt buộc phải in đậm, in nghiêng phần tích hợp** (khớp chuẩn duyệt giáo án).
 
 #### Nhánh 3: Khi chọn "3/ Tạo bài tập"
-Gọi tiếp tool `ask_question` với đúng 11 định dạng chuẩn (file đầu vào tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`, kết quả tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`):
+Gọi tiếp tool `ask_question` với đúng 12 định dạng chuẩn (file đầu vào tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`, kết quả tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`):
 - Question: "CHỌN ĐỊNH DẠNG TẠO BÀI TẬP: Thầy/Cô muốn tạo bài tập theo hình thức nào?"
 - Options:
   1. "1. ⭐ Dạng Công văn 7991 (17 câu)"
@@ -61,10 +61,18 @@ Gọi tiếp tool `ask_question` với đúng 11 định dạng chuẩn (file đ
   9. "9. ⭐ Xuất bài dạy HTML (Dạy thêm, phụ đạo, bồi dưỡng - Phân dạng & Giải từng bước)"
   10. "10. ✂️ Tự động cắt PDF SGK thành từng bài học (Chuẩn xác 100% từng bài)"
   11. "11. 📐 Xây dựng mô phỏng hình học tương tác (Mẫu chuẩn MP-04 & Khảo sát SGK)"
+  12. "12. 📋 Tạo đề thi từ Ma trận & Bản đặc tả (Tự động đọc .docx trong Dau_vao hoặc thư mục chỉ định)"
 
 *Khi chọn lựa chọn 9:* Tự động kích hoạt quy trình tạo bài dạy HTML phân dạng chuyên biệt cho dạy thêm, dạy kèm, phụ đạo và bồi dưỡng (tuân thủ `.agents/rules/tao-bai-day-html.md`).
 *Khi chọn lựa chọn 10:* Tự động kích hoạt quy trình cắt PDF SGK thành từng bài học chuẩn xác 100% (tuân thủ `.agents/rules/tro-ly-thien.md`).
 *Khi chọn lựa chọn 11:* Tự động kích hoạt quy trình xây dựng mô phỏng hình học tương tác bám sát SGK theo kiến trúc 2 tầng (tuân thủ `TROLYTHIEN/2_TAO_BAI_TAP/QUY_CHUAN_XAY_DUNG_MO_PHONG.md` v1.5.0 và mẫu chuẩn `MP04_Tam_Doi_Xung.html`).
+*Khi chọn lựa chọn 12:* Tự động kích hoạt quy trình tạo đề thi từ Ma trận và Bản đặc tả. Đọc Master Prompt `TROLYTHIEN/2_TAO_BAI_TAP/HUONG_DAN_TAO_DE_THI_TU_MA_TRAN.md`.
+- Nếu giáo viên dán đường dẫn thư mục hoặc tệp `.docx` trong chat, đọc đúng đường dẫn đó (kể cả đường dẫn có khoảng trắng hoặc tiếng Việt). Nếu không chỉ định, quét đệ quy `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/` (gồm thư mục con theo ngày, ví dụ `Dau_vao/12.10/`).
+- Gọi engine `python TROLYTHIEN/engine/doc_ma_tran_dac_ta.py --input-dir "<đường dẫn>"` hoặc `--file "<tệp.docx>"` để bóc khung ma trận và bản đặc tả.
+- Mỗi câu sinh ra bám 1-1 một yêu cầu cần đạt. Giữ đúng số câu, số điểm, mức độ và dạng câu trong ma trận. Không dùng kiến thức vượt cấp. Không dùng dấu tương đương $\Leftrightarrow$. Không kết luận tập nghiệm $S$.
+- Công thức ghi bằng Word Equation (`m:oMath`) qua `latex_to_omml`. Không để trần `$x^2$`. Không dán ảnh công thức.
+- Một file Word gồm 3 phần: (1) đề kiểm tra A4 trường THCS Trần Phú; (2) ma trận đối chiếu và bảng đáp án; (3) hướng dẫn chấm, thang điểm từng bước.
+- Lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/De_Kiem_Tra_[Mon]_[Lop]_[KyThi].docx`. Nếu giáo viên chỉ định thư mục kết quả khác, lưu vào thư mục đó.
 
 
 #### Nhánh 4: Khi chọn "4/ Duyệt đề"
