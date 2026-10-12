@@ -1,24 +1,32 @@
-# IMPLEMENT: Tạo đề thi từ Ma trận và Bản đặc tả
+# IMPLEMENT: Staging văn bản rồi đồng bộ Google Drive
 
 ## Đã làm
-1. Menu Cấp 2 của "3/ Tạo bài tập" có lựa chọn 12, cùng một câu chữ trong `.agents/workflows/thien.md` và `.agents/rules/tro-ly-thien.md`. Lựa chọn 11 giữ mô phỏng hình học đã có trên `main`:
-   `12. 📋 Tạo đề thi từ Ma trận & Bản đặc tả (Tự động đọc .docx trong Dau_vao hoặc thư mục chỉ định)`
-2. Hai file quy tắc nêu cách nhận đường dẫn giáo viên chỉ định, quét đệ quy `Dau_vao/` khi không chỉ định, gọi engine, bám yêu cầu cần đạt, giới hạn GDPT 2018, xuất Word Equation và lưu `Ket_qua/De_Kiem_Tra_[Mon]_[Lop]_[KyThi].docx`.
-3. Master Prompt: `TROLYTHIEN/2_TAO_BAI_TAP/HUONG_DAN_TAO_DE_THI_TU_MA_TRAN.md`.
-4. Engine `TROLYTHIEN/engine/doc_ma_tran_dac_ta.py`:
-   - `quet_file_dau_vao(input_path=None)` quét mặc định hoặc đường dẫn thư mục/tệp. Bỏ tệp tạm `~$`. Đường dẫn sai ném `DuongDanKhongHopLe`.
-   - `phan_tich_ma_tran_dac_ta(docx_path)` tách khung ma trận, bản đặc tả, tổng số câu, mức độ, yêu cầu cần đạt, dạng câu và điểm.
-   - CLI: `--input-dir` hoặc `--file`.
-5. `BUNDLE_MAP` thêm `2_TAO_BAI_TAP/HUONG_DAN_TAO_DE_THI_TU_MA_TRAN.md` → `prompts/02_tao_de_ma_tran.md`. `REQUIRED_PROMPTS` có `02_tao_de_ma_tran.md`. Bản đóng gói nằm ở `app_trolythien/troly/prompts/02_tao_de_ma_tran.md`.
-6. Smoke test: `tests/trolythien-tao-de-ma-tran-smoke.py`.
+1. `api/vanban.php` thêm thư mục `storage/vanban/staging/{document_id}/`, tạo khi cần và ghi `.htaccess` chặn truy cập trực tiếp.
+2. `action=save_upload_stage` lưu văn bản, chuyển tệp vào staging, ghi `office_document_files` với `drive_file_id = staging:{doc_id}:{stored_name}` (cắt tên để vừa `VARCHAR(160)`), `view_url`/`download_url` trỏ `action=file`. Trả `{ ok, document, staged_files }` ngay, không chờ Drive.
+3. `action=sync_drive_file` nhận `file_id` hoặc `document_id`, kiểm tra quyền, dùng `office_documents.drive_folder_id` nếu đã có, không thì gọi `vbd_drive_folder()` một lần và lưu lại. Gọi `drive_upload_file()`, cập nhật mã Drive cùng link xem/tải, `unlink` tệp đệm và `rmdir` thư mục văn bản nếu rỗng.
+4. `action=file` phục vụ cả tệp `staging:` và tệp `local:` khi người dùng bấm Xem/Tải trong lúc chưa sang Drive.
+5. `vbd_clean_orphan_staging()` chạy ở `list`, `save`, `save_upload` và `save_upload_stage`: xóa tệp đĩa đã có mã Drive thật; xóa tệp không có dòng CSDL và cũ hơn 24 giờ; giữ tệp `staging:` còn chờ đồng bộ.
+6. Xóa và sao chép văn bản gỡ hoặc copy đúng file staging. Mã `staging:` không bị tính là “đã có file Drive”.
+7. `vanban-app.js`: có tệp đính kèm thì một `fetch` `FormData` tới `save_upload_stage` (tách đợt khi tổng vượt 50 MB, tệp lớn hơn 50 MB gửi riêng). Thanh tiến trình hiện “Đang lưu văn bản và tệp...”. Đóng modal, toast “Đã lưu văn bản”, rồi `syncPendingStagedFiles()` đồng bộ nền từng tệp. Chip hiện “Đang đồng bộ Drive”; xong thì icon Google Drive. Lần `load()` sau tiếp tục tệp `staging:` còn sót. `drive_file_id` dạng `staging:` không bị đưa vào link preview Drive.
+8. Ba trang Hành chính, Chuyên môn, Đảng đổi cache `vanban-app.js?v=20261012-staging` để trình duyệt tải script mới.
 
 ## Chưa đụng
-- Không sửa 10 định dạng bài tập cũ.
-- Không sửa engine trộn đề, CV 7991, hay giao diện tab đề kiểm tra.
+- Không đổi schema `office_documents` và `office_school_years`.
+- Không đổi cấu hình Service Account Google Drive.
+- Không sửa OCR, phân công, lịch, sổ điểm.
+- `save_upload` và luồng chunk cũ vẫn còn cho client chưa cập nhật. Form hiện tại không đi qua chunk.
 
 ## Kiểm thử
-- `python tests/trolythien-tao-de-ma-tran-smoke.py` — PASS. Hai tệp trong `Dau_vao/12.10/` đều ra 21 câu, 10 điểm, có nhận biết / thông hiểu / vận dụng và yêu cầu cần đạt. Quét mặc định, CLI `--file` và đường dẫn không tồn tại đều đúng.
-- `python tests/test_verify_dekiemtra.py`: Test 1 đến Test 7 in PASS. Sau Test 7, tiến trình tắt trong `MainWindow._preflight.wait` (không có traceback Python). `test_exe()` chạy riêng: PASS (TroLyHoangThien.exe 2MB). Lỗi thoát nằm ở luồng kiểm tra agy, ngoài phần ma trận vừa thêm.
+- `php -l api/vanban.php`: không lỗi cú pháp. Máy không có `php` trên PATH; dùng PHP 8.3 portable.
+- `node tests/vanban-staging-sync-smoke.js`: PASS.
+  - Lưu văn bản và đưa PDF vào staging, tệp có trên đĩa, marker đúng.
+  - Sync gọi upload với `drive_folder_id` đã lưu, ghi `drive_file_id = 1AbCDriveTestFileId`, link `drive.google.com`, `unlink` và thư mục staging của văn bản biến mất (dung lượng file đệm = 0).
+  - Gọi sync lần hai không tải lên lại.
+  - GC giữ staging còn chờ, xóa file đã có mã Drive, giữ mồ côi mới, xóa mồ côi quá 24 giờ.
+  - Frontend: một request `save_upload_stage`, tách đợt 50 MB, toast đồng bộ, chip Drive sau khi sync.
+- Bước upload HTTP của smoke test đi qua hook `vbd_drive_upload_handler` để không ghi tệp thật lên Shared Drive của nhà trường. Hàm production vẫn gọi `drive_upload_file()` khi hook không được gán.
+- `node tests/vanban-display-saved-smoke.js`: PASS.
+- Chưa mở trình duyệt để bấm Lưu trên trang văn bản.
 
 ## Bước tiếp
 Antigravity IDE, chat mới: `/verify`

@@ -243,6 +243,39 @@
         return limits.length ? Math.min(...limits) : appMax;
     }
 
+    const STAGING_BATCH_BYTES = 50 * 1024 * 1024;
+    const syncingDriveFileIds = new Set();
+
+    function stagingUploadMaxBytes() {
+        const limits = [state.uploadMaxBytes, state.postMaxBytes].filter(n => Number.isFinite(n) && n > 0);
+        return limits.length ? Math.min(...limits) : (64 * 1024 * 1024);
+    }
+
+    function splitStagingBatches(files, limitBytes = STAGING_BATCH_BYTES) {
+        const batches = [];
+        let current = [];
+        let size = 0;
+        files.forEach(file => {
+            const fileSize = Number(file.size) || 0;
+            if (fileSize > limitBytes) {
+                if (current.length) batches.push(current);
+                batches.push([file]);
+                current = [];
+                size = 0;
+                return;
+            }
+            if (current.length && size + fileSize > limitBytes) {
+                batches.push(current);
+                current = [];
+                size = 0;
+            }
+            current.push(file);
+            size += fileSize;
+        });
+        if (current.length) batches.push(current);
+        return batches;
+    }
+
     function formatBytes(bytes) {
         if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
         if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -628,15 +661,19 @@
         });
     }
 
+    function isStagingFile(file) {
+        return String(file?.drive_file_id || '').trim().startsWith('staging:');
+    }
+
     function isLocalFile(file) {
         const id = String(file?.drive_file_id || '').trim();
         const url = String(file?.view_url || '');
-        return id.startsWith('local:') || url.includes('action=file');
+        return id.startsWith('local:') || id.startsWith('staging:') || url.includes('action=file');
     }
 
     function driveFileId(file) {
         const direct = String(file?.drive_file_id || '').trim();
-        if (direct.startsWith('local:')) return '';
+        if (direct.startsWith('local:') || direct.startsWith('staging:')) return '';
         if (direct) return direct;
         const url = String(file?.view_url || '');
         const match = url.match(/\/d\/([A-Za-z0-9_-]+)/) || url.match(/[?&]id=([A-Za-z0-9_-]+)/);
@@ -644,13 +681,23 @@
     }
 
     function renderFileChip(doc, file) {
+        const staging = isStagingFile(file);
         const fileId = driveFileId(file);
         const previewUrl = isLocalFile(file) ? String(file.view_url || '') : '';
         const canPreview = fileId || previewUrl;
         const dbFileId = Number(file.id || 0);
+        const icon = fileId
+            ? '<i class="fa-brands fa-google-drive shrink-0 text-emerald-700" title="Đã trên Google Drive"></i>'
+            : (staging
+                ? '<i class="fa-solid fa-cloud-arrow-up shrink-0 text-amber-600" title="Đang đồng bộ Drive"></i>'
+                : '<i class="fa-solid fa-paperclip shrink-0"></i>');
+        const badge = staging
+            ? '<span class="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">Đang đồng bộ Drive</span>'
+            : '';
         return `<span class="inline-flex max-w-full items-center gap-1.5 rounded bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">
-            <i class="fa-solid fa-paperclip shrink-0"></i>
+            ${icon}
             <span class="truncate">${esc(file.original_name)}</span>
+            ${badge}
             ${canPreview ? `<button type="button" data-preview-id="${esc(fileId)}" data-preview-url="${esc(previewUrl)}" data-preview-title="${esc(file.original_name)}" class="shrink-0 rounded ${accentPrimary()} px-2 py-0.5 text-[11px] font-bold text-white"><i class="fa-solid fa-eye mr-0.5"></i>Xem</button>` : ''}
             ${!state.isGuest && dbFileId ? `<button type="button" data-delete-file-id="${dbFileId}" data-doc-id="${doc.id}" data-file-name="${esc(file.original_name)}" class="shrink-0 rounded border border-rose-200 bg-white px-2 py-0.5 text-[11px] font-bold text-rose-700 hover:bg-rose-50" title="Xóa tệp này"><i class="fa-solid fa-trash-can"></i></button>` : ''}
         </span>`;
@@ -1129,6 +1176,7 @@
             state.driveDiag = data;
             renderYears();
             render();
+            resumeStagingSync();
             checkDriveRemote();
         } catch (error) {
             const message = error && error.message ? error.message : NETWORK_ERROR;
@@ -1184,12 +1232,12 @@
         const note = $('selectedFilesNote');
         if (!note) return;
         const files = state.pendingUploadFiles || [];
-        const maxBytes = effectiveUploadMaxBytes();
+        const maxBytes = stagingUploadMaxBytes();
         if (!files.length) {
-            note.textContent = 'Có thể chọn nhiều tệp, gồm ZIP/RAR/7Z · tối đa 25 MB cho mỗi tệp.';
+            note.textContent = 'Có thể chọn nhiều tệp. Tệp được lưu ngay trên hosting rồi đồng bộ Google Drive. Mỗi đợt gửi tối đa 50 MB.';
             return;
         }
-        note.textContent = `Đã chọn ${files.length} tệp · tối đa ${formatBytes(maxBytes)}/tệp`;
+        note.textContent = `Đã chọn ${files.length} tệp · tối đa ${formatBytes(maxBytes)}/tệp · mỗi đợt 50 MB`;
     }
 
     function renderPendingFilesPicker() {
@@ -1867,57 +1915,111 @@
         return lastResult;
     }
 
-    async function saveDocument(payload) {
-        const pending = state.pendingUploadFiles || [];
-        const saveData = await api('save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-        });
-        if (!pending.length) return saveData;
-        if (state.driveReady) {
-            const totalBytes = pending.reduce((sum, file) => sum + file.size, 0);
-            let completedBytes = 0;
-            updateUploadProgress(0, totalBytes, `Đang chuẩn bị 1/${pending.length}`);
-            for (let index = 0; index < pending.length; index += 1) {
-                const file = pending[index];
-                await uploadFileViaChunks(
-                    Number(saveData.document?.id) || Number(payload.id) || 0,
-                    file,
-                    index,
-                    uploaded => updateUploadProgress(
-                        completedBytes + uploaded,
-                        totalBytes,
-                        `Tệp ${index + 1}/${pending.length}: ${file.name}`
-                    )
-                );
-                completedBytes += file.size;
-            }
-            updateUploadProgress(totalBytes, totalBytes, `Đã tải ${pending.length} tệp`);
-            return {
-                ok: true,
-                document: saveData.document,
-                storage: 'drive',
-                message: `Đã lưu văn bản và ${pending.length} tệp lên Google Drive.`,
-            };
-        }
-        const form = new FormData();
+    function appendSaveFields(form, payload) {
         Object.entries(payload).forEach(([key, value]) => {
             if (value === undefined || value === null) return;
             form.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
         });
-        pending.forEach(file => form.append('files[]', file, file.name));
-        const response = await fetch(`${API}?action=save_upload&sector=${encodeURIComponent(SECTOR)}`, {
+    }
+
+    async function postStagingBatch(payload, files) {
+        const form = new FormData();
+        appendSaveFields(form, payload);
+        files.forEach(file => form.append('files[]', file, file.name));
+        const response = await fetch(`${API}?action=save_upload_stage&sector=${encodeURIComponent(SECTOR)}`, {
             method: 'POST',
             credentials: 'include',
             body: form,
         });
         const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            const backend = data.upload_backend ? ` [${data.upload_backend}]` : '';
-            throw new Error((data.error || 'Không lưu được văn bản và tệp đính kèm.') + backend);
-        }
+        if (!response.ok) throw new Error(data.error || 'Không lưu được văn bản và tệp đính kèm.');
         return data;
+    }
+
+    function applySyncedFile(file) {
+        if (!file) return;
+        const docId = Number(file.document_id);
+        const fileId = Number(file.id);
+        const doc = state.documents.find(item => Number(item.id) === docId);
+        if (!doc || !fileId) return;
+        doc.files = (doc.files || []).map(item => Number(item.id) === fileId ? { ...item, ...file } : item);
+        render();
+    }
+
+    async function syncPendingStagedFiles(files) {
+        const list = (files || []).filter(file => isStagingFile(file) && Number(file.id) > 0);
+        for (const file of list) {
+            const id = Number(file.id);
+            if (syncingDriveFileIds.has(id)) continue;
+            syncingDriveFileIds.add(id);
+            const name = file.original_name || 'tệp';
+            toast(`Đang đồng bộ ${name} lên Google Drive...`);
+            try {
+                const data = await api('sync_drive_file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        file_id: id,
+                        document_id: Number(file.document_id) || 0,
+                    }),
+                });
+                applySyncedFile(data.file);
+            } catch (error) {
+                toast(error.message || `Chưa đồng bộ được ${name}.`, 'rose');
+            } finally {
+                syncingDriveFileIds.delete(id);
+            }
+        }
+    }
+
+    function resumeStagingSync() {
+        const pending = [];
+        state.documents.forEach(doc => {
+            (doc.files || []).forEach(file => {
+                if (isStagingFile(file)) pending.push({ ...file, document_id: file.document_id || doc.id });
+            });
+        });
+        if (pending.length) syncPendingStagedFiles(pending);
+    }
+
+    async function saveDocument(payload) {
+        const pending = state.pendingUploadFiles || [];
+        if (!pending.length) {
+            return api('save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+        }
+        const batches = splitStagingBatches(pending);
+        const oversized = pending.filter(file => file.size > STAGING_BATCH_BYTES);
+        if (oversized.length) {
+            toast(`Tệp ${oversized.map(file => file.name).join(', ')} lớn hơn 50 MB, hệ thống gửi riêng từng tệp.`);
+        } else if (batches.length > 1) {
+            toast(`Tổng dung lượng vượt 50 MB, hệ thống chia thành ${batches.length} đợt lưu.`);
+        }
+        const totalBytes = pending.reduce((sum, file) => sum + file.size, 0);
+        let sentBytes = 0;
+        let document = null;
+        const staged = [];
+        updateUploadProgress(0, totalBytes, 'Đang lưu văn bản và tệp...');
+        for (const batch of batches) {
+            const body = document ? { ...payload, id: document.id } : payload;
+            const data = await postStagingBatch(body, batch);
+            document = data.document || document;
+            if (document?.id && $('documentId')) $('documentId').value = String(document.id);
+            staged.push(...(data.staged_files || []));
+            state.pendingUploadFiles = (state.pendingUploadFiles || []).filter(file => !batch.includes(file));
+            sentBytes += batch.reduce((sum, file) => sum + file.size, 0);
+            updateUploadProgress(sentBytes, totalBytes, 'Đang lưu văn bản và tệp...');
+        }
+        return {
+            ok: true,
+            document,
+            staged_files: staged,
+            storage: 'staging',
+            message: 'Đã lưu văn bản',
+        };
     }
 
     function bindEvents() {
@@ -1936,7 +2038,10 @@
                 state.pendingUploadFiles = [];
                 state.primaryParseFileIndex = 0;
                 closeModal();
-                if (data.storage === 'local') {
+                if (data.storage === 'staging') {
+                    toast('Đã lưu văn bản');
+                    syncPendingStagedFiles(data.staged_files || []);
+                } else if (data.storage === 'local') {
                     toast(data.message || 'Đã lưu tệp tạm trên hosting vì Google Drive chưa kết nối được.');
                 } else if (data.storage === 'drive' || hadPendingFiles) {
                     toast(data.message || 'Đã lưu văn bản và tệp đính kèm.');
@@ -1969,16 +2074,14 @@
 
         $('files')?.addEventListener('change', async event => {
             const files = [...event.target.files];
-            const maxBytes = effectiveUploadMaxBytes();
+            const maxBytes = stagingUploadMaxBytes();
             const oversized = files.filter(file => file.size > maxBytes);
             if (oversized.length) {
                 state.pendingUploadFiles = [];
                 state.primaryParseFileIndex = 0;
                 renderPendingFilesPicker();
                 const limitText = formatBytes(maxBytes);
-                const hint = state.driveReady
-                    ? `Tệp vượt giới hạn ${limitText}/tệp của ứng dụng.`
-                    : `Tệp ${oversized.map(file => file.name).join(', ')} vượt giới hạn ${limitText}/tệp trên hosting. Vào cPanel → PHP → đặt upload_max_filesize ≥ 32M, hoặc bật Google Drive.`;
+                const hint = `Tệp ${oversized.map(file => file.name).join(', ')} vượt giới hạn ${limitText}/tệp trên hosting.`;
                 if ($('selectedFilesNote')) $('selectedFilesNote').textContent = hint;
                 toast(hint, 'rose');
                 event.target.value = '';
@@ -2308,4 +2411,4 @@
         init();
     }
 })();
-/* deploy-touch: 20261012-restore-app */
+/* deploy-touch: 20261012-staging */
