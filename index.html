@@ -1306,6 +1306,17 @@
 
                 <div id="mainToolsGrid" class="tools-bento">
 
+                    <a href="quanlyvanban.html" data-tool="teacher-documents" class="tool-tile tool-tile--colored tool-tile--documents">
+                        <span class="tool-tile-glow"></span>
+                        <span class="tool-tile-watermark"><i class="fas fa-folder-open"></i></span>
+                        <div class="tool-tile-content">
+                            <span class="tool-tile-eyebrow">Hành chính, Chuyên môn &amp; Đảng <span id="teacherDocumentsCardReminder" class="ml-1 hidden rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800"></span></span>
+                            <h3 class="tool-tile-title">Quản lý văn bản</h3>
+                            <p class="tool-tile-desc">Văn bản đến/đi, hạn báo cáo, xuất Excel, tệp minh chứng trên Drive.</p>
+                        </div>
+                        <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
+                    </a>
+
                     <a href="thitructuyen.html" data-tool="thitructuyen" class="tool-tile tool-tile--hero tool-tile--hero-exam">
                         <span class="tool-tile-glow"></span>
                         <span class="tool-tile-watermark"><i class="fas fa-qrcode"></i></span>
@@ -2111,20 +2122,6 @@
                                 <span class="tool-tile-eyebrow">Lộ trình Toán</span>
                                 <h3 class="tool-tile-title">Soạn bài lộ trình</h3>
                                 <p class="tool-tile-desc">Soạn bài lộ trình; xem bài HS nộp Drive qua nút <strong>Xem bài nộp HS</strong>.</p>
-                            </div>
-                            <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
-                        </a>
-                    `);
-                }
-                if (canViewDocuments) {
-                    teacherWorkspaceCards.push(`
-                        <a href="quanlyvanban.html" data-tool="teacher-documents" class="tool-tile tool-tile--colored tool-tile--documents">
-                            <span class="tool-tile-glow"></span>
-                            <span class="tool-tile-watermark"><i class="fas fa-folder-open"></i></span>
-                            <div class="tool-tile-content">
-                                <span class="tool-tile-eyebrow">Hành chính & Đảng <span id="teacherDocumentsCardReminder" class="ml-1 hidden rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-extrabold text-rose-800"></span></span>
-                                <h3 class="tool-tile-title">Quản lý văn bản</h3>
-                                <p class="tool-tile-desc">Hành chính và Đảng: văn bản đến/đi, hạn báo cáo, xuất Excel, tệp trên Drive.</p>
                             </div>
                             <span class="tool-tile-go"><i class="fas fa-arrow-right"></i></span>
                         </a>
