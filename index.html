@@ -1058,7 +1058,7 @@
             });
             const hasLotrinh = LOTRINH_PAGE_KEYS.some(key => allowedSet.has(key));
             setToolCardsVisible('[data-tool="teacher-lotrinh-design"]', hasLotrinh && features.teacher_design !== false);
-            setToolCardsVisible('[data-tool="teacher-documents"]', allowedSet.has('quanlyvanban'));
+            setToolCardsVisible('[data-tool="teacher-documents"]', true);
             setToolCardsVisible(
                 'a[href="thongketientrinh.html"]',
                 allowedSet.has('thongketientrinh') && features.teacher_progress_stats !== false
@@ -1955,7 +1955,7 @@
             });
 
             const canViewStats = teacherTabs.progress_stats && allowedSet.has('thongketientrinh');
-            const canViewDocuments = allowedSet.has('quanlyvanban');
+            const canViewDocuments = true;
             const canViewDesign = teacherTabs.design && lotrinhPages.length > 0;
             const hasTeacherWorkspace = canViewDesign || canViewStats || canViewDocuments || (teacherTabs.ai_stats && allowedSet.has('theodoiai')) || teacherHasAnyToolPage(allowedSet);
 

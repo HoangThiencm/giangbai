@@ -926,7 +926,7 @@
         const USER_FEATURE_GROUPS = [
             {
                 title: 'Công cụ AI trên hub giáo viên',
-                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'quanlyvanban', 'phancongtochuyenmon', 'rutgon', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc', 'canvas_soankhbd', 'canvas_soanlotrinh', 'canvas_sangkien']
+                ids: ['quanlyvanban', 'thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc', 'canvas_soankhbd', 'canvas_soanlotrinh', 'canvas_sangkien']
             },
             {
                 title: 'Không gian lộ trình Toán',
@@ -2040,6 +2040,11 @@
         const PAGE_CONFIG = hostingPages;
         const teacherFeatureGroups = [
             {
+                title: 'Quản lý văn bản',
+                hint: 'Trang văn bản trên hub giáo viên.',
+                pages: ['quanlyvanban']
+            },
+            {
                 title: 'Lộ trình Toán — Soạn bài',
                 hint: 'Tab Soạn bài và chọn khối Toán 4–9.',
                 pages: ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']
@@ -2047,7 +2052,7 @@
             {
                 title: 'Theo dõi & quản lý',
                 hint: 'Các tab trong không gian giáo viên.',
-                pages: ['thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu', 'theodoiai']
+                pages: ['thongketientrinh', 'thanhtich', 'thoikhoabieu', 'theodoiai']
             },
             {
                 title: 'Công cụ giảng dạy',
