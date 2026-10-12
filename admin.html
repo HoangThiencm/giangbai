@@ -892,7 +892,7 @@
 
         const CLIENT_FEATURE_CHECKS = [
             'gslides', 'vehinh', 'smartquiz', 'matrande', 'tronde', 'thitructuyen', 'kttx', 'sodiem',
-            'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'soankhbd', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc',
+            'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'quanlyvanban', 'phancongtochuyenmon', 'rutgon', 'soankhbd', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc',
             'canvas_soankhbd', 'canvas_soanlotrinh', 'canvas_sangkien'
         ];
 
@@ -913,6 +913,7 @@
             canvas_sangkien: "CANVAS_SÁNG KIẾN",
             thanhtich: "Thống Kê Thành Tích",
             thoikhoabieu: "Xếp Thời Khóa Biểu",
+            quanlyvanban: "Quản lý văn bản",
             phancongtochuyenmon: "Phân Công Chuyên Môn",
             rutgon: "Link Rút Gọn & QR",
             taovideo: "Tạo video bài giảng",
@@ -925,7 +926,7 @@
         const USER_FEATURE_GROUPS = [
             {
                 title: 'Công cụ AI trên hub giáo viên',
-                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'rutgon', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc', 'canvas_soankhbd', 'canvas_soanlotrinh', 'canvas_sangkien']
+                ids: ['thitructuyen', 'matrande', 'gslides', 'vehinh', 'smartquiz', 'tronde', 'kttx', 'sodiem', 'nopbai', 'padlet', 'vietbaocao', 'thanhtich', 'thoikhoabieu', 'quanlyvanban', 'phancongtochuyenmon', 'rutgon', 'taovideo', 'taobaitap', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc', 'canvas_soankhbd', 'canvas_soanlotrinh', 'canvas_sangkien']
             },
             {
                 title: 'Không gian lộ trình Toán',
@@ -2194,7 +2195,7 @@
                     syncClassNameLabels(role);
                     renderPageChecks(
                         'createAllowedPages',
-                        preserved.length ? preserved : (role === 'teacher' ? [] : ['lotrinhtoan6']),
+                        preserved.length ? preserved : (role === 'teacher' ? defaultTeacherPages : ['lotrinhtoan6']),
                         role
                     );
                 });
@@ -3101,7 +3102,7 @@
                 form.reset();
                 const roleSelect = document.querySelector('#createStudentForm select[name="role"]');
                 const resetRole = roleSelect?.value || 'student';
-                renderPageChecks('createAllowedPages', resetRole === 'teacher' ? [] : ['lotrinhtoan6'], resetRole);
+                renderPageChecks('createAllowedPages', resetRole === 'teacher' ? defaultTeacherPages : ['lotrinhtoan6'], resetRole);
                 renderDurationOptions('createDurationOption', 'forever');
                 if (roleSelect) {
                     syncAllowedPagesLabels(roleSelect.value);

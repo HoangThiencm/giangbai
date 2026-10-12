@@ -1,37 +1,26 @@
-STATUS: PASS
+# VERIFY
 
-## 1. Kết quả thực thi các lệnh kiểm thử trong PLAN.md
+## Kết luận
+PASS
 
-| Lệnh kiểm thử | Mục đích | Kết quả | Trạng thái |
-| :--- | :--- | :--- | :--- |
-| `Select-String -Path "TROLYTHIEN\2_TAO_BAI_TAP\Ket_qua\MP01_Dien_Tich_Hinh_Binh_Hanh.html" -Pattern "https?://\|cdn\|googleapis"` | Kiểm tra zero CDN / không liên kết ngoại | Không tìm thấy liên kết ngoại (rỗng) | PASS |
-| `node -e "const fs = require('fs'); const content = fs.readFileSync('TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/MP01_Dien_Tich_Hinh_Binh_Hanh.html', 'utf8'); const script = content.match(/<script>([\s\S]*?)<\/script>/)[1]; new Function(script); console.log('JS Syntax: PASS');"` | Kiểm tra cú pháp JavaScript & HTML | `JS Syntax: PASS` | PASS |
-| `Select-String -Path "TROLYTHIEN\2_TAO_BAI_TAP\Ket_qua\MP01_Dien_Tich_Hinh_Binh_Hanh.html" -Pattern 'sliderHandle.*r="2[5-9]"'` | Kiểm tra kích thước bán kính tay kéo ($r \ge 25\text{ px}$, đường kính $\ge 50\text{ px}$) | Khớp dòng 511: `<circle id="sliderHandle" ... r="25" ... />` | PASS |
-| `Start-Process msedge "$((Get-Item 'TROLYTHIEN\2_TAO_BAI_TAP\Ket_qua\MP01_Dien_Tich_Hinh_Binh_Hanh.html').FullName)"` | Khởi chạy thực tế trên trình duyệt Edge offline | Process khởi chạy thành công (Exit Code 0) | PASS |
+## Đối chiếu scope
+- `admin.html`: Đã thêm `quanlyvanban` vào `CLIENT_FEATURE_CHECKS`, `FEATURE_NAMES` và `USER_FEATURE_GROUPS`. Đã gán quyền mặc định `defaultTeacherPages` khi tạo tài khoản giáo viên mới.
+- `.htaccess`: Đã thêm các quy tắc `RewriteRule` chuyển hướng thân thiện cho `/quanlyvanban` và `/quanlyvanban-(hanhchinh|chuyenmon|dang)`.
+- `access-control.js`: Tự động nhận diện URL không đuôi mở rộng thành `.html` để tra khóa `pageKeys`. Khi giáo viên chưa có quyền, hiển thị giao diện báo lỗi chuyên nghiệp `showAccessDenied` kèm nút quay lại trang chủ thay vì redirect đột ngột gây trắng trang.
 
-## 2. Đối chiếu chi tiết các bước kỹ thuật trong PLAN.md
+## Test đã chạy
+1. `node --check access-control.js`: Cú pháp JavaScript hợp lệ (Exit code 0).
+2. `node tests/vanban-chuyenmon-signature-smoke.js`: PASS.
+3. `node tests/vanban-display-saved-smoke.js`: PASS.
+4. `node tests/vanban-ocr-clipboard-smoke.js`: PASS.
+5. `node tests/student-portal-layout-smoke.js`: PASS.
+6. Kiểm tra hợp đồng tĩnh về rewrite rule, feature checks và quyền mặc định: PASS.
 
-- **Bước 1: Touch Target & Trợ năng (A11y):**
-  - `#sliderHandle`: $r = 25$ (đường kính $50\text{ px}$).
-  - Đầy đủ thuộc tính: `tabindex="0"`, `role="slider"`, `aria-valuenow="0"`, `aria-valuemin="0"`, `aria-valuemax="100"`, `aria-label="Thanh trượt cắt ghép hình bình hành"`.
-  - Cập nhật động `aria-valuenow` trong `updatePositions(dx)`.
-- **Bước 2: Pointer Events, biến đổi tọa độ & chống giật:**
-  - Tính toán `dragOffset` khi `pointerdown`.
-  - Dùng chuẩn `svg.createSVGPoint()` + `svg.getScreenCTM().inverse()`.
-  - Khóa rãnh trượt: `#sliderControls .slider-track, #sliderProgress { pointer-events: none; }`.
-  - Chặn mở context menu trên SVG (`svg.addEventListener('contextmenu', e => e.preventDefault())`).
-  - Hỗ trợ phím mũi tên `ArrowRight`/`ArrowUp`/`ArrowLeft`/`ArrowDown` bước nhảy 5%.
-  - `.sliding-polygon { cursor: default; }`.
-- **Bước 3: Nút Giáo viên (Teacher Auto-Play):**
-  - Đổi nhãn `⏹ Dừng (GV)` + class `active` khi chạy tự động.
-  - Khôi phục `🎬 Tự động ghép (GV)` khi dừng hoặc hoàn thành 100%.
-- **Bước 4: Typographic Toán học & Nhãn sư phạm:**
-  - Chỉ in nghiêng các biến toán học $a, h, S$; in đứng các nhãn `= 4 ô`, `= 3 ô` và toán tử `·`.
-- **Bước 5: Phản hồi sư phạm 2 nút trung tính:**
-  - `[ Không thay đổi ]`: Tán thành và giải thích bảo toàn diện tích.
-  - `[ Có thay đổi ]`: Phản hồi định hướng nguyên lý bảo toàn đúng đặc tả.
-- **Bước 6: Khử vệt nứt render (Seam Rendering):**
-  - Khai báo `shape-rendering="geometricPrecision"` trên `<svg>` và các thẻ `<polygon>`.
+## Pass / Fail từng tiêu chí
+- [x] Hiển thị Quản lý văn bản trong phân quyền theo tài khoản (`user_features` trên `admin.html`): PASS
+- [x] Tự động chọn quyền mặc định (gồm Quản lý văn bản) khi tạo tài khoản Giáo viên mới: PASS
+- [x] Định tuyến URL không đuôi `.html` qua `.htaccess`: PASS
+- [x] Xử lý truy cập khi thiếu quyền một cách thân thiện, triệt tiêu lỗi trắng trang: PASS
 
-## 3. Kết luận
-Tất cả tiêu chuẩn kỹ thuật và kiểm thử đều đạt. File sẵn sàng để commit/push theo quy trình.
+## Bug
+Không phát hiện lỗi tồn đọng.

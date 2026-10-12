@@ -11,6 +11,10 @@ RewriteEngine On
 # Link rút gọn dạng /s/AbCdEfGh -> s.php?c=AbCdEfGh
 RewriteRule ^s/([A-Za-z0-9]+)$ s.php?c=$1 [L,QSA]
 
+# URL thân thiện Quản lý văn bản
+RewriteRule ^quanlyvanban/?$ quanlyvanban.html [L,QSA]
+RewriteRule ^quanlyvanban-(hanhchinh|chuyenmon|dang)/?$ quanlyvanban-$1.html [L,QSA]
+
 # 3. Chặn truy cập trực tiếp vào các file nhạy cảm và tài liệu
 <FilesMatch "(?i)\.(sql|md|log|ini|env|yml|yaml|zip|bak|backup|sh|bat)$">
     <IfModule mod_authz_core.c>

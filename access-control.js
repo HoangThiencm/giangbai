@@ -91,7 +91,8 @@ async function accessControlMain() {
     const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
     const lotrinhRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];
 
-    const fileName = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+    const rawFileName = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+    const fileName = rawFileName.includes('.') ? rawFileName : (rawFileName ? rawFileName + '.html' : 'index.html');
     const pageKey = window.location.pathname.toLowerCase().endsWith('/taovideo/index.html')
         ? 'taovideo'
         : pageKeys[fileName];
@@ -322,10 +323,22 @@ async function accessControlMain() {
         return;
     }
 
+    function showAccessDenied(message) {
+        const root = document.body || document.documentElement;
+        root.innerHTML = ''
+            + '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;background:#f8fafc;padding:24px;">'
+            + '<div style="max-width:480px;background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:28px;text-align:center;box-shadow:0 10px 30px rgba(15,23,42,.08);">'
+            + '<h1 style="font-size:20px;margin:0 0 12px;color:#0f172a;">Không đủ quyền</h1>'
+            + '<p style="color:#334155;line-height:1.5;margin:0 0 20px;"></p>'
+            + '<a href="index.html" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;font-weight:700;padding:10px 18px;border-radius:10px;">Quay lại trang chủ</a>'
+            + '</div></div>';
+        const note = root.querySelector('p');
+        if (note) note.textContent = message;
+    }
+
     if (role === 'teacher' && pageKey === 'quanlyvanban') {
         if (!canOpenPage('quanlyvanban', allowedPages)) {
-            alert('Tài khoản chưa được admin cấp quyền Quản lý văn bản.');
-            window.location.href = 'index.html';
+            showAccessDenied('Tài khoản chưa được admin cấp quyền Quản lý văn bản. Nhờ admin bật quyền này rồi mở lại trang.');
         }
         return;
     }
