@@ -108,7 +108,15 @@ async function accessControlMain() {
         'quanlyvanban-dang.html'
     ].includes(fileName);
 
-    if (isOpenExamLink || (isPublicVanbanPage && !token)) {
+    if (isPublicVanbanPage) {
+        if (localStorage.getItem('userRole') === 'student') {
+            alert('Chức năng này chỉ dành cho giáo viên.');
+            window.location.href = 'index.html';
+        }
+        return;
+    }
+
+    if (isOpenExamLink) {
         return;
     }
 

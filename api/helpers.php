@@ -169,7 +169,11 @@ function teacher_allowed_pages_resolved(array $user): array
     $raw = json_decode($user['allowed_pages_json'] ?? '[]', true);
     // allowed_pages_json is the sole source of per-teacher permissions.
     $allowEmpty = ($user['role'] ?? '') === 'teacher';
-    return normalize_pages(is_array($raw) ? $raw : [], $allowEmpty);
+    $pages = normalize_pages(is_array($raw) ? $raw : [], $allowEmpty);
+    if ($allowEmpty && !in_array('quanlyvanban', $pages, true)) {
+        $pages[] = 'quanlyvanban';
+    }
+    return $pages;
 }
 
 function normalize_pages($pages, bool $allowEmpty = true): array
@@ -280,6 +284,9 @@ function maybe_upgrade_teacher_allowed_pages(PDO $pdo, array $user): array
     }
 
     $current = normalize_pages(json_decode($user['allowed_pages_json'] ?? '[]', true), true);
+    if (!in_array('quanlyvanban', $current, true)) {
+        $current[] = 'quanlyvanban';
+    }
     $upgraded = ensure_teacher_lotrinh_scope($current);
 
     if ($upgraded === $current) {
