@@ -1,107 +1,135 @@
-# PLAN: Bổ sung tính năng tạo đề thi từ Ma trận và Bản đặc tả trong mục Tạo bài tập (TROLYTHIEN/2_TAO_BAI_TAP)
+# PLAN: Tối ưu tải tệp Quản lý văn bản — Bộ đệm Staging trên hosting, đẩy sang Google Drive và tự động xóa để bảo vệ dung lượng 3GB
 
-## Hiện trạng
-1. **Quy trình tương tác hiện tại của Trợ lý Hoàng Thiên (`/thien`):**
-   - Menu Cấp 1 có mục "3/ Tạo bài tập" tương ứng với thư mục nghiệp vụ `TROLYTHIEN/2_TAO_BAI_TAP/`.
-   - Khi chọn mục này, hệ thống hiển thị Menu Cấp 2 với 10 định dạng bài tập (CV 7991, 100% trắc nghiệm, game, OLM/Azota, đề 15 phút, tự luận, bài dạy HTML, cắt PDF SGK).
-   - Chưa có lựa chọn chuyên biệt cho phép giáo viên tạo đề thi tự động bám sát file Ma trận & Bản đặc tả.
-2. **Học liệu thực tế giáo viên cung cấp:**
-   - Tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/12.10/`, giáo viên đã tải lên 2 file mẫu chuẩn:
-     + `MA TRẬN - BẢN ĐẶC TẢ - GIỮA KÌ 1 - TOÁN 8 - 2026-2027.docx` (Khung ma trận + Bản đặc tả môn Toán 8 kết hợp TN + TL).
-     + `MH (26-27)-MA TRẬN GIỮA HK1-Toan-9.docx` (Khung ma trận + Bản đặc tả môn Toán 9 theo định dạng CV 7991).
-   - **Yêu cầu bổ sung của giáo viên:**
-     + Hỗ trợ linh hoạt đường dẫn đầu vào (chỉ định thư mục/file bất kỳ hoặc quét mặc định trong `Dau_vao/`).
-     + Làm rõ về cấu trúc đề: Hệ thống tự động nhận diện cả 3 dạng cấu trúc chuẩn (CV 7991, TN + TL kết hợp, 100% TL) trực tiếp từ ma trận, đồng thời tiếp nhận file cấu trúc/đề mẫu riêng của trường nếu giáo viên cung cấp thêm.
-3. **Thiếu hụt tài liệu quy chuẩn và công cụ trích xuất:**
-   - Trong `TROLYTHIEN/2_TAO_BAI_TAP/`, hiện có `QUY_CHUAN_TRON_DE.md`, `HUONG_DAN_CAT_PDF_SGK.md`, nhưng chưa có Master Prompt và Hướng dẫn nghiệp vụ chuyên sâu về quy trình đọc ma trận, trích xuất Yêu cầu cần đạt từ bản đặc tả, và sinh đề thi chuẩn 3 phần (Đề, Đáp án, Hướng dẫn chấm) bằng Word Equation OMML.
-   - Chưa có script engine tự động phân tích và trích xuất bảng biểu ma trận từ các file Word `.docx` đầu vào.
+## 1. Hiện trạng & Vấn đề
+1. **Dung lượng hosting có hạn (chỉ 3 GB):** Không thể lưu trữ văn bản vĩnh viễn trên hosting. Bắt buộc kho lưu trữ chính phải là Google Drive (Shared Drive của nhà trường qua Service Account).
+2. **Nút thắt tốc độ hiện tại:**
+   - Dù hosting đã nâng `upload_max_filesize` và `post_max_size` lên 64 MB, và cấu hình `VANBAN_UPLOAD_CHUNK_MB = 25`, nhưng frontend `vanban-app.js` khi `state.driveReady = true` vẫn chạy luồng `uploadFileViaChunks` tuần tự.
+   - Mỗi văn bản mới phải chạy qua `upload_init` gọi `vbd_drive_folder()` dò tìm/tạo 5 cấp thư mục trên Drive (`04_QUAN_LY_VAN_BAN` -> Lĩnh vực -> Năm học -> Đến/Đi -> Tên văn bản) tốn 5–8 giây mạng quốc tế trước khi gửi byte đầu tiên.
+   - Băng thông quốc tế (outbound) của shared hosting từ Việt Nam sang Google API (`googleapis.com`) bị bóp hẹp (thường chỉ 1–2 MB/s). Người dùng phải ngồi chờ thanh phần trăm chạy tuần tự 20–40 giây cho mỗi tệp lớn.
 
-## Phạm vi
-1. **Cập nhật Menu & Quy tắc Sư phạm Trợ lý Thiên:**
-   - Bổ sung lựa chọn số 11 vào Menu Cấp 2 của "Tạo bài tập" trong `.agents/workflows/thien.md` và `.agents/rules/tro-ly-thien.md`:
-     `11. 📋 Tạo đề thi từ Ma trận & Bản đặc tả (Tự động đọc .docx trong Dau_vao hoặc thư mục chỉ định)`
-   - Bổ sung quy định chi tiết về nghiệp vụ tạo đề từ ma trận & bản đặc tả vào cả 2 file quy tắc trên, bao gồm cơ chế tiếp nhận đường dẫn thư mục tùy biến từ người dùng.
-2. **Biên soạn Quy chuẩn Master Prompt chuyên sâu:**
-   - Tạo file `TROLYTHIEN/2_TAO_BAI_TAP/HUONG_DAN_TAO_DE_THI_TU_MA_TRAN.md` đóng vai trò Master Prompt chuẩn mực cho việc sinh đề thi từ Ma trận và Bản đặc tả:
-     + **Cơ chế nạp file linh hoạt:** Hỗ trợ quét thư mục mặc định `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/` (bao gồm đệ quy thư mục con) HOẶC đọc trực tiếp từ bất kỳ thư mục/đường dẫn cụ thể nào do giáo viên chỉ định trong chat.
-     + **Tự động nhận diện cấu trúc đề (Không bắt buộc giáo viên đưa đề mẫu):**
-       * *Dạng 1 (Theo Công văn 7991):* Đủ 3 phần: Phần I (Trắc nghiệm nhiều lựa chọn A, B, C, D); Phần II (Trắc nghiệm Đúng/Sai, barem 0.1 - 0.25 - 0.5 - 1.0đ); Phần III (Trắc nghiệm trả lời ngắn).
-       * *Dạng 2 (Kết hợp TN 4 lựa chọn + Tự luận):* Trắc nghiệm khách quan chuẩn và Tự luận có thang điểm từng câu theo ma trận (như mẫu Toán 8 thực tế).
-       * *Dạng 3 (100% Tự luận):* Bám sát các đơn vị kiến thức và Yêu cầu cần đạt của ma trận, có hướng dẫn chấm chi tiết từng bước.
-       * *Khi có đề mẫu riêng của trường:* Hệ thống ưu tiên kế thừa tiêu đề, header, định dạng bảng điểm từ đề mẫu của trường.
-     + Nguyên tắc sinh câu hỏi bám sát 100% Yêu cầu cần đạt, tuân thủ giới hạn kiến thức cấp học GDPT 2018 (không dùng $\Leftrightarrow$, không dùng tập nghiệm $S$, chuẩn hóa công thức LaTeX).
-     + Kỹ thuật xuất Word Equation OMML (`m:oMath`) qua engine `latex_to_omml`, tuyệt đối không để trần ký hiệu `$x^2$` hay dán ảnh công thức.
-     + Đầu ra hoàn chỉnh gồm 3 phần độc lập trong file Word `.docx`: (1) Đề kiểm tra chuẩn A4 trang trọng THCS Trần Phú; (2) Ma trận đối chiếu và bảng đáp án; (3) Hướng dẫn chấm & Thang điểm chi tiết từng bước.
-3. **Xây dựng Script Engine phân tích Ma trận & Bản đặc tả:**
-   - Tạo script `TROLYTHIEN/engine/doc_ma_tran_dac_ta.py` sử dụng `python-docx`:
-     + Hỗ trợ tham số đường dẫn thư mục hoặc tệp chỉ định (CLI argument hoặc gọi qua hàm).
-     + Tự động bóc tách các bảng trong file `.docx` đầu vào thành cấu trúc dữ liệu JSON/Dict có cấu trúc (chủ đề, đơn vị kiến thức, mức độ, yêu cầu cần đạt, dạng câu, số điểm).
-4. **Đồng bộ ứng dụng Desktop (`app_trolythien`):**
-   - Bổ sung ánh xạ trong `BUNDLE_MAP` (`app_trolythien/core/prompt_builder.py`) nếu cần đồng bộ tri thức đóng gói.
-5. **Kiểm thử tự động:**
-   - Tạo bộ test `tests/trolythien-tao-de-ma-tran-smoke.py` kiểm thử khả năng đọc và bóc tách chính xác từ cả thư mục mặc định và thư mục tùy biến (như `Dau_vao/12.10/`).
-   - Đảm bảo toàn bộ test hiện có (`test_verify_dekiemtra.py`) tiếp tục PASS 100%.
+## 2. Mục tiêu kiến trúc (Staging Buffer -> Google Drive -> Auto-Delete)
+1. **Trải nghiệm người dùng tức thì (1–2 giây):**
+   - Người dùng bấm Lưu văn bản -> Trình duyệt đẩy tệp thẳng lên trạm trung chuyển (Staging) trên hosting trong nước qua 1 request duy nhất -> Giao diện báo thành công ngay lập tức (1–2 giây), đóng modal, cho phép thầy/cô tiếp tục công việc mà không phải chờ đợi.
+2. **Bảo vệ tuyệt đối ổ cứng 3 GB của hosting:**
+   - Tệp trên staging chỉ tồn tại tạm thời trong lúc chuyển tiếp.
+   - Ngay sau khi Google Drive xác nhận đã nhận trọn vẹn tệp -> PHP gọi `unlink()` **xóa sạch tệp đệm trên hosting ngay lập tức**.
+   - Dung lượng lưu trữ lâu dài trên hosting cho tệp văn bản luôn là **0 MB**.
+3. **Độ tin cậy & Tính liên tục:**
+   - Trong vài chục giây tệp đang ở staging chờ đẩy sang Drive, nếu người dùng bấm "Xem" hoặc "Tải về", hệ thống vẫn phục vụ xem trơn tru từ tệp đệm cục bộ.
+   - Có cơ chế dọn dẹp quét rác (Garbage Collection) tự động dọn sạch các tệp staging mồ côi nếu có sự cố mạng.
 
-## Ngoài phạm vi
-- Không chỉnh sửa các định dạng bài tập từ 1 đến 10 hiện có.
-- Không can thiệp vào các mô-đun khác ngoài phân hệ Tạo bài tập / Đề kiểm tra.
-- Không sửa mã nguồn trong lượt khảo sát này (Antigravity IDE chỉ lập PLAN và khóa LOCK).
+---
 
-## File dự kiến tác động
-1. `.agents/workflows/thien.md`: Bổ sung lựa chọn 11 vào menu cấp 2 và kịch bản thực thi linh hoạt đường dẫn.
-2. `.agents/rules/tro-ly-thien.md`: Cập nhật menu cấp 2 và quy chuẩn nghiệp vụ cho lựa chọn 11.
-3. `TROLYTHIEN/2_TAO_BAI_TAP/HUONG_DAN_TAO_DE_THI_TU_MA_TRAN.md`: Master Prompt và quy chuẩn kỹ thuật sinh đề thi từ ma trận & bản đặc tả (tự động nhận diện cấu trúc đề, hỗ trợ thư mục tùy định).
-4. `TROLYTHIEN/engine/doc_ma_tran_dac_ta.py`: Script bóc tách bảng ma trận và bản đặc tả từ file `.docx` theo đường dẫn chỉ định hoặc mặc định.
-5. `app_trolythien/core/prompt_builder.py`: Cập nhật `BUNDLE_MAP` ánh xạ tri thức mới.
-6. `tests/trolythien-tao-de-ma-tran-smoke.py`: Bộ kiểm thử tự động cho tính năng mới.
+## 3. Thiết kế chi tiết
 
-## Các bước thực hiện
-1. **Bước 1: Cập nhật Menu Cấp 2 và Quy chuẩn Sư phạm Trợ lý Thiên**
-   - Trong `.agents/workflows/thien.md`:
-     + Thêm `11. 📋 Tạo đề thi từ Ma trận & Bản đặc tả (Tự động đọc .docx trong Dau_vao hoặc thư mục chỉ định)` vào `ask_question` của Nhánh 3.
-     + Thêm hướng dẫn quy trình kích hoạt khi chọn mục 11: cho phép giáo viên dán đường dẫn thư mục tùy chọn hoặc dùng mặc định.
-   - Trong `.agents/rules/tro-ly-thien.md`:
-     + Cập nhật danh sách 11 lựa chọn tại mục 3 (Menu Cấp 2 khi chọn Tạo bài tập).
-     + Thêm mục quy chuẩn nghiệp vụ chi tiết cho tính năng Tạo đề thi từ Ma trận & Bản đặc tả (hỗ trợ đọc thư mục do người dùng chỉ định).
-2. **Bước 2: Xây dựng Master Prompt `HUONG_DAN_TAO_DE_THI_TU_MA_TRAN.md`**
-   - Tạo file trong `TROLYTHIEN/2_TAO_BAI_TAP/` quy định đầy đủ:
-     + Cơ chế nhận diện dữ liệu đầu vào: Ưu tiên đường dẫn thư mục giáo viên chỉ định trong câu lệnh/chat; nếu không chỉ định thì quét đệ quy `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/` (bao gồm các thư mục con theo ngày như `12.10/`).
-     + Tự động nhận diện dạng đề từ chính file ma trận (CV 7991, TN + TL, 100% TL). Nếu giáo viên đưa thêm file đề mẫu của trường, kế thừa header và mẫu trình bày.
-     + Bóc tách Bản đặc tả: Ghép nối 1-1 từng câu hỏi với Yêu cầu cần đạt.
-     + Quy tắc biên soạn đề thi GDPT 2018: Độ khó phân tầng chuẩn mực, không dùng kiến thức cấp trên, chuẩn hóa toàn bộ công thức toán LaTeX.
-     + Quy cách xuất file Word: Dùng `latex_to_omml` chèn công thức Word Equation (`m:oMath`), bố cục bảng điểm, khung thông tin học sinh trang trọng, bảng đáp án và thang điểm chi tiết.
-     + Vị trí lưu kết quả: Mặc định lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/De_Kiem_Tra_[Mon]_[Lop]_[KyThi].docx` (hoặc thư mục kết quả tương ứng nếu người dùng chỉ định).
-3. **Bước 3: Xây dựng Script Engine `doc_ma_tran_dac_ta.py`**
-   - Tạo `TROLYTHIEN/engine/doc_ma_tran_dac_ta.py`:
-     + Hỗ trợ nhận tham số đường dẫn thư mục/file từ dòng lệnh `--input-dir` hoặc `--file`.
-     + Hàm `quet_file_dau_vao(input_path=None)`: Tìm kiếm thông minh các file `.docx` ma trận trong thư mục chỉ định hoặc thư mục mặc định.
-     + Hàm `phan_tich_ma_tran_dac_ta(docx_path)`: Đọc qua các `table` trong `.docx`, nhận diện bảng ma trận và bảng đặc tả bằng heuristic (từ khóa: chủ đề, nội dung, yêu cầu cần đạt, nhận biết, thông hiểu, vận dụng, câu hỏi, điểm).
-     + Trả về cấu trúc JSON sạch chứa đầy đủ thông tin để phục vụ sinh đề.
-4. **Bước 4: Cập nhật `BUNDLE_MAP` trong `app_trolythien/core/prompt_builder.py`**
-   - Bổ sung cặp ánh xạ tài liệu quy chuẩn mới vào `BUNDLE_MAP` và `REQUIRED_PROMPTS` nếu cần đồng bộ cho ứng dụng Desktop.
-5. **Bước 5: Viết bộ kiểm thử tự động và xác minh**
-   - Tạo `tests/trolythien-tao-de-ma-tran-smoke.py`:
-     + Kiểm thử đọc và parse thành công với đường dẫn chỉ định cụ thể (`TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/12.10/`).
-     + Kiểm thử đọc với đường dẫn mặc định (`TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`).
-     + Kiểm chứng cấu trúc JSON trích xuất có đủ số câu, mức độ và yêu cầu cần đạt.
-   - Chạy test xác nhận PASS toàn bộ.
+### A. Phía Backend (`api/vanban.php`)
 
-## Rủi ro
-- **Rủi ro 1:** Đường dẫn người dùng chỉ định chứa khoảng trắng, ký tự tiếng Việt hoặc đường dẫn tương đối không tồn tại.
-  -> **Giải pháp:** Engine xử lý chuẩn hóa đường dẫn bằng `pathlib.Path().resolve()`, kiểm tra `is_dir()` / `is_file()` an toàn và thông báo rõ ràng nếu đường dẫn không hợp lệ.
-- **Rủi ro 2:** Định dạng bảng Ma trận và Bản đặc tả có sự khác biệt giữa các trường hoặc các năm học (cấu trúc gộp ô, tên cột khác biệt nhẹ).
-  -> **Giải pháp:** Engine phân tích áp dụng cơ chế nhận diện từ khóa mềm đa năng (fuzzy matching / heuristic regex), kết hợp trích xuất dòng dữ liệu an toàn.
+1. **Thư mục lưu đệm Staging:**
+   - Đường dẫn: `storage/vanban/staging/{document_id}/` (tạo thư mục tự động nếu chưa có, bảo vệ bằng `.htaccess` chặn truy cập trực tiếp nếu cần).
+2. **Endpoint lưu văn bản & nạp vào Staging (`action=save_upload_stage` hoặc nâng cấp `action=save_upload`):**
+   - Nhận thông tin văn bản + danh sách tệp đính kèm (`files[]`) qua multipart POST.
+   - Lưu hoặc cập nhật văn bản vào bảng `office_documents`.
+   - Di chuyển các tệp tải lên vào thư mục staging: `storage/vanban/staging/{doc_id}/{stored_name}`.
+   - Thêm bản ghi vào bảng `office_document_files`:
+     - `drive_file_id`: `staging:{doc_id}:{stored_name}` (đánh dấu tệp đang ở trạm trung chuyển).
+     - `original_name`: tên gốc của tệp.
+     - `stored_name`: tên chuẩn hóa.
+     - `mime_type`: MIME detect được.
+     - `size_bytes`: kích thước tệp.
+     - `view_url` & `download_url`: trỏ về endpoint xem cục bộ `api/vanban.php?action=file&document_id=...&name=...`.
+   - Phản hồi ngay cho frontend: `{ ok: true, document: ..., staged_files: [...] }` trong vòng 1–2 giây.
+3. **Endpoint đồng bộ sang Google Drive & Xóa đệm (`action=sync_drive_file`):**
+   - Nhận `file_id` (ID dòng trong `office_document_files`) hoặc `document_id`.
+   - Kiểm tra quyền sở hữu văn bản.
+   - Tìm file trên đĩa tại `storage/vanban/staging/...`.
+   - Tối ưu tìm/tạo thư mục Drive:
+     - Tận dụng `drive_folder_id` đã lưu trong `office_documents`.
+     - Nếu chưa có: gọi `vbd_drive_folder($document)` và cập nhật ngay vào `office_documents.drive_folder_id` để các tệp sau không phải dò lại 5 cấp thư mục.
+   - Gọi `drive_upload_file($folderId, $storedName, $mime, $stagingPath)` đẩy tệp sang Google Drive.
+   - Nhận phản hồi từ Drive: lấy `file_id` thật, `webViewLink`, `webContentLink`.
+   - Cập nhật dòng trong `office_document_files`:
+     - `drive_file_id = $drive['file_id']`
+     - `view_url = $drive['view_url']`
+     - `download_url = $drive['download_url']`
+   - **XÓA ĐỆM:** Gọi `@unlink($stagingPath)`. Nếu thư mục con `storage/vanban/staging/{doc_id}/` rỗng thì `@rmdir()` xóa luôn.
+   - Phản hồi `{ ok: true, synced: true, file: ... }`.
+4. **Cơ chế phục vụ tệp xem trước (`action=file`):**
+   - Nếu `drive_file_id` bắt đầu bằng `staging:`, đọc và xuất tệp trực tiếp từ `storage/vanban/staging/...`.
+   - Đảm bảo người dùng xem được tệp ngay cả khi tệp vừa tải xong 1 giây trước và chưa kịp sang Drive.
+5. **Cơ chế tự dọn dẹp (Garbage Collection):**
+   - Khi gọi `action=list` hoặc `action=save`, nếu phát hiện tệp staging nào đã được đồng bộ (đã có Google Drive file ID) hoặc tệp mồ côi quá 24h, tự động xóa để bảo vệ tuyệt đối hạn mức 3 GB.
 
-## Cách kiểm thử
-1. Chạy lệnh kiểm thử bộ phân tích ma trận (bao gồm cả test đường dẫn chỉ định):
-   `python tests/trolythien-tao-de-ma-tran-smoke.py`
-2. Chạy lệnh kiểm thử bộ đề kiểm tra hiện tại:
-   `python tests/test_verify_dekiemtra.py`
-3. Kiểm tra tính khớp 100% giữa danh sách menu trong `.agents/workflows/thien.md` và `.agents/rules/tro-ly-thien.md`.
+### B. Phía Frontend (`vanban-app.js`)
 
-## Tiêu chí nghiệm thu
-1. Menu Cấp 2 của Tạo bài tập trong `/thien` có đúng 11 lựa chọn, gồm lựa chọn "11. 📋 Tạo đề thi từ Ma trận & Bản đặc tả (Tự động đọc .docx trong Dau_vao hoặc thư mục chỉ định)".
-2. Master Prompt và Engine hỗ trợ trơn tru cả 2 chế độ: tự động quét thư mục mặc định `Dau_vao/` VÀ tiếp nhận đường dẫn thư mục do người dùng chỉ định.
-3. Engine tự động nhận diện chính xác 3 dạng cấu trúc đề (CV 7991, TN + TL, 100% TL) từ ma trận và bản đặc tả mà không bắt buộc người dùng nạp đề mẫu. Nếu có đề mẫu riêng của trường, kế thừa chuẩn xác.
-4. Engine `doc_ma_tran_dac_ta.py` đọc và trích xuất chính xác cấu trúc từ các file `.docx` thực tế trong `Dau_vao/12.10/`.
-5. Toàn bộ smoke test liên quan PASS 100%, không gây xung đột với các tính năng khác.
+1. **Điều chỉnh hàm `saveDocument`:**
+   - Khi có tệp đính kèm (`pendingUploadFiles.length > 0`):
+     - Gửi toàn bộ dữ liệu form + tệp qua `save_upload_stage` bằng một request `fetch` duy nhất (với `FormData`).
+     - Thanh tiến trình tải lên chuyển sang trạng thái "Đang lưu văn bản và tệp..." và hoàn tất ngay khi nhận được phản hồi (1–2 giây).
+     - Đóng modal chỉnh sửa, cập nhật danh sách văn bản hiển thị trên bảng.
+2. **Kích hoạt đồng bộ ngầm (Background Sync):**
+   - Sau khi form đã đóng thành công, frontend tự động kích hoạt tiến trình đồng bộ ngầm cho các tệp vừa lưu:
+     - Gửi yêu cầu `action=sync_drive_file` cho từng tệp vừa đưa vào staging.
+     - Hiển thị badge nhỏ hoặc toast nhẹ ở góc dưới: "Đang đồng bộ [Tên file] lên Google Drive...".
+     - Khi đồng bộ xong: cập nhật lại trạng thái tệp sang biểu tượng Google Drive.
+   - Nếu người dùng chuyển trang hoặc tắt tab: Lần sau khi vào trang hoặc qua cơ chế dọn dẹp, hệ thống vẫn duy trì kiểm tra và đồng bộ nốt.
+
+---
+
+## 4. Phạm vi tác động & Danh sách file
+
+1. `api/vanban.php`:
+   - Bổ sung logic xử lý staging và xóa tự động sau khi upload Drive thành công.
+   - Bổ sung action `sync_drive_file`.
+   - Cập nhật action `file` để hỗ trợ đọc tệp staging.
+   - Thêm hàm dọn dẹp rác định kỳ cho staging.
+2. `vanban-app.js`:
+   - Cập nhật luồng `saveDocument` ưu tiên đẩy nhanh vào staging.
+   - Thêm bộ điều phối đồng bộ ngầm sau khi lưu văn bản.
+   - Cập nhật hiển thị trạng thái tệp (đang đồng bộ Drive / đã trên Drive).
+3. `tests/vanban-staging-sync-smoke.js`:
+   - Bộ kiểm thử tự động kiểm tra:
+     + Lưu văn bản kèm tệp vào staging thành công.
+     + File tạm tồn tại trong staging.
+     + Kích hoạt sync sang Google Drive.
+     + Kiểm tra file tạm trong staging đã bị `unlink` hoàn toàn (kích thước thư mục staging = 0).
+     + Bản ghi MySQL cập nhật đúng ID Google Drive.
+
+---
+
+## 5. Ngoài phạm vi
+- Không thay đổi cấu trúc bảng cơ sở dữ liệu `office_documents` và `office_school_years`.
+- Không thay đổi cấu hình xác thực Google Drive Service Account đã có.
+- Không sửa đổi các chức năng khác (OCR, phân công, lịch, sổ điểm).
+
+---
+
+## 6. Rủi ro & Giải pháp
+
+| Rủi ro | Giải pháp |
+| :--- | :--- |
+| Mạng từ hosting sang Google bị ngắt giữa chừng khi sync | Tệp vẫn an toàn ở thư mục staging; lần sau hoặc khi giáo viên bấm vào xem, hệ thống thử đồng bộ lại. Không mất dữ liệu. |
+| Người dùng tải nhiều tệp cùng lúc vượt 64MB | Frontend kiểm tra tổng dung lượng trước khi gửi; nếu vượt quá 50MB thì tự động chia làm 2 đợt hoặc cảnh báo trước. |
+| Hosting hết ổ cứng nếu tệp bị kẹt không xóa được | Cơ chế dọn rác tự động (Garbage Collection) quét thư mục staging khi tải danh sách văn bản, xóa mọi tệp tạm cũ > 24h. |
+
+---
+
+## 7. Các bước thực hiện chi tiết cho Coder
+
+1. **Bước 1: Cập nhật `api/vanban.php`**
+   - Định nghĩa thư mục `vbd_staging_dir()` tại `storage/vanban/staging/`.
+   - Viết hàm `vbd_store_staging_upload()` lưu tệp tạm và tạo bản ghi đệm.
+   - Thêm action `save_upload_stage` (hoặc tích hợp vào `save_upload`).
+   - Thêm action `sync_drive_file` thực hiện: đọc file staging -> `drive_upload_file` -> cập nhật DB -> `unlink()` xóa file đệm.
+   - Cập nhật action `file` hỗ trợ tải tệp từ staging nếu `drive_file_id` dạng `staging:...`.
+   - Viết hàm `vbd_clean_orphan_staging()` quét dọn file thừa.
+
+2. **Bước 2: Cập nhật `vanban-app.js`**
+   - Điều chỉnh hàm `saveDocument`: gom toàn bộ tệp đính kèm vào `FormData` gửi lên endpoint staging.
+   - Nhận phản hồi thành công ngay lập tức, hiển thị thông báo "Đã lưu văn bản", đóng modal.
+   - Tạo hàm chạy nền `syncPendingStagedFiles()` gửi request `sync_drive_file` từng tệp lên server.
+   - Hiển thị trạng thái đồng bộ nhẹ nhàng trên giao diện.
+
+3. **Bước 3: Viết và chạy Smoke Test**
+   - Tạo file test `tests/vanban-staging-sync-smoke.js`.
+   - Kiểm thử quy trình: Upload staging -> Verify file exists on disk -> Trigger sync -> Verify file deleted from disk -> Verify Drive link valid.
+   - Chạy test xác nhận PASS 100%.

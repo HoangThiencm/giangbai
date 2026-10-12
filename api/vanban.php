@@ -1,7 +1,8 @@
 <?php
-require_once __DIR__ . '/helpers.php';
-
-session_start();
+if (!defined('VBD_SKIP_BOOT')) {
+    require_once __DIR__ . '/helpers.php';
+    session_start();
+}
 
 function vbd_optional_user(PDO $pdo): ?array
 {
@@ -231,18 +232,12 @@ function vbd_copy_document_files(PDO $pdo, int $fromId, int $toId, array $fromDo
     $stmt->execute([$fromId]);
     $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
     foreach ($stmt->fetchAll() as $file) {
-        $viewUrl = (string)($file['view_url'] ?? '');
-        $downloadUrl = (string)($file['download_url'] ?? '');
-        if (vbd_is_local_file_id((string)($file['drive_file_id'] ?? ''))) {
-            $storedName = (string)($file['stored_name'] ?? '');
-            $viewUrl = vbd_local_file_url($toId, $storedName, false);
-            $downloadUrl = vbd_local_file_url($toId, $storedName, true);
-        }
+        [$driveId, $storedName, $viewUrl, $downloadUrl] = vbd_duplicate_stored_file($fromId, $toId, $file);
         $insert->execute([
             $toId,
-            $file['drive_file_id'],
+            $driveId,
             $file['original_name'],
-            $file['stored_name'],
+            $storedName,
             $file['mime_type'],
             (int)($file['size_bytes'] ?? 0),
             $viewUrl,
@@ -783,13 +778,378 @@ function vbd_is_local_file_id(string $fileId): bool
     return str_starts_with(trim($fileId), 'local:');
 }
 
+function vbd_is_staging_file_id(string $fileId): bool
+{
+    return str_starts_with(trim($fileId), 'staging:');
+}
+
+function vbd_text_len(string $value): int
+{
+    return function_exists('mb_strlen') ? mb_strlen($value, 'UTF-8') : strlen($value);
+}
+
+function vbd_text_cut(string $value, int $length): string
+{
+    if ($length < 1) return '';
+    return function_exists('mb_substr') ? mb_substr($value, 0, $length, 'UTF-8') : substr($value, 0, $length);
+}
+
+function vbd_staging_root(): string
+{
+    $root = rtrim(vbd_local_storage_root(), '/\\') . '/staging';
+    if (!is_dir($root) && !@mkdir($root, 0755, true) && !is_dir($root)) {
+        throw new RuntimeException('Không tạo được thư mục staging trên hosting.');
+    }
+    $htaccess = $root . '/.htaccess';
+    if (!is_file($htaccess)) {
+        @file_put_contents($htaccess, "Require all denied\nDeny from all\n");
+    }
+    return $root;
+}
+
+function vbd_staging_dir(int $documentId): string
+{
+    if ($documentId < 1) throw new RuntimeException('Thiếu mã văn bản để lưu tệp đệm.');
+    $dir = vbd_staging_root() . '/' . $documentId;
+    if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+        throw new RuntimeException('Không tạo được thư mục staging của văn bản.');
+    }
+    return $dir;
+}
+
+function vbd_staging_disk_path(int $documentId, string $storedName): string
+{
+    $name = basename(str_replace(['\\', '/'], '', $storedName));
+    return rtrim(vbd_local_storage_root(), '/\\') . '/staging/' . $documentId . '/' . $name;
+}
+
+function vbd_fit_stored_name(int $documentId, string $storedName): string
+{
+    $storedName = basename(str_replace(['\\', '/', "\0"], ['', '', ''], trim($storedName)));
+    if ($storedName === '' || $storedName === '.' || $storedName === '..') $storedName = 'van-ban';
+    $max = 160 - vbd_text_len('staging:' . $documentId . ':');
+    if ($max < 12) $max = 12;
+    if (vbd_text_len($storedName) <= $max) return $storedName;
+    $ext = pathinfo($storedName, PATHINFO_EXTENSION);
+    $suffix = $ext !== '' ? ('.' . $ext) : '';
+    if (vbd_text_len($suffix) > 16) $suffix = vbd_text_cut($suffix, 16);
+    $hash = substr(sha1($storedName), 0, 8);
+    $room = $max - vbd_text_len($suffix) - vbd_text_len($hash) - 1;
+    $base = $room > 0 ? rtrim(vbd_text_cut($storedName, $room), " .-") : '';
+    $fitted = ($base !== '' ? $base . '-' : '') . $hash . $suffix;
+    if (vbd_text_len($fitted) > $max) $fitted = $hash . $suffix;
+    if (vbd_text_len($fitted) > $max) $fitted = vbd_text_cut($hash, $max);
+    return $fitted;
+}
+
+function vbd_staging_marker(int $documentId, string $storedName): string
+{
+    $marker = 'staging:' . $documentId . ':' . $storedName;
+    if (vbd_text_len($marker) > 160) {
+        throw new RuntimeException('Tên tệp đệm vượt quá độ dài cột drive_file_id.');
+    }
+    return $marker;
+}
+
+function vbd_unique_staging_name(int $documentId, string $storedName): string
+{
+    $storedName = vbd_fit_stored_name($documentId, $storedName);
+    $dir = vbd_staging_dir($documentId);
+    $candidate = $storedName;
+    for ($i = 2; $i <= 50 && is_file($dir . '/' . $candidate); $i++) {
+        $ext = pathinfo($storedName, PATHINFO_EXTENSION);
+        $suffix = $ext !== '' ? ('.' . $ext) : '';
+        $stem = $suffix !== '' && str_ends_with($storedName, $suffix) ? substr($storedName, 0, -strlen($suffix)) : $storedName;
+        $candidate = vbd_fit_stored_name($documentId, $stem . '-' . $i . $suffix);
+    }
+    if (is_file($dir . '/' . $candidate)) {
+        $candidate = vbd_fit_stored_name($documentId, $storedName . '-' . bin2hex(random_bytes(3)));
+    }
+    return $candidate;
+}
+
+function vbd_remove_empty_staging_dir(int $documentId): void
+{
+    if ($documentId < 1) return;
+    $dir = rtrim(vbd_local_storage_root(), '/\\') . '/staging/' . $documentId;
+    if (!is_dir($dir)) return;
+    $items = @scandir($dir) ?: [];
+    foreach ($items as $item) {
+        if ($item === '.' || $item === '..' || $item === '.htaccess') continue;
+        return;
+    }
+    @rmdir($dir);
+}
+
+function vbd_place_upload_file(string $tmpName, string $dest): bool
+{
+    if (is_uploaded_file($tmpName)) return move_uploaded_file($tmpName, $dest);
+    if (!vbd_is_tmp_upload_path($tmpName)) return false;
+    return @copy($tmpName, $dest);
+}
+
+function vbd_staging_max_bytes(): int
+{
+    $cap = 64 * 1024 * 1024;
+    foreach ([
+        vbd_parse_ini_size((string)(ini_get('upload_max_filesize') ?: '')),
+        vbd_parse_ini_size((string)(ini_get('post_max_size') ?: '')),
+    ] as $limit) {
+        if ($limit > 0) $cap = min($cap, $limit);
+    }
+    return max(1024 * 1024, $cap);
+}
+
+function vbd_store_staging_upload(PDO $pdo, int $documentId, array $document, array $file, int $index): array
+{
+    require_once __DIR__ . '/google_drive.php';
+    $mime = drive_detect_mime($file['tmp_name'], (string)$file['name'], (string)$file['type']);
+    $rawName = drive_safe_name(
+        ($document['document_number'] ?: 'VB-' . $documentId) . ' - ' . ($document['title'] ?? 'Van ban') . ' - ' . ($index + 1) . ' - ' . $file['name'],
+        'van-ban'
+    );
+    $storedName = vbd_unique_staging_name($documentId, $rawName);
+    $dest = vbd_staging_dir($documentId) . '/' . $storedName;
+    if (!vbd_place_upload_file((string)$file['tmp_name'], $dest)) {
+        throw new RuntimeException('Không lưu được tệp vào thư mục đệm trên hosting.');
+    }
+    $marker = vbd_staging_marker($documentId, $storedName);
+    $viewUrl = vbd_local_file_url($documentId, $storedName, false);
+    $downloadUrl = vbd_local_file_url($documentId, $storedName, true);
+    $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
+    $insert->execute([
+        $documentId,
+        $marker,
+        (string)$file['name'],
+        $storedName,
+        $mime,
+        (int)$file['size'],
+        $viewUrl,
+        $downloadUrl,
+    ]);
+    return [
+        'id' => (int)$pdo->lastInsertId(),
+        'document_id' => $documentId,
+        'file_id' => $marker,
+        'drive_file_id' => $marker,
+        'original_name' => (string)$file['name'],
+        'stored_name' => $storedName,
+        'mime_type' => $mime,
+        'size_bytes' => (int)$file['size'],
+        'view_url' => $viewUrl,
+        'download_url' => $downloadUrl,
+        'storage' => 'staging',
+    ];
+}
+
+function vbd_stage_uploaded_files(PDO $pdo, array $document, array $files): array
+{
+    $id = (int)($document['id'] ?? 0);
+    if ($id < 1) throw new RuntimeException('Hãy lưu văn bản trước khi đưa tệp vào staging.');
+    $maxBytes = vbd_staging_max_bytes();
+    $staged = [];
+    foreach ($files as $index => $file) {
+        vbd_validate_upload_file($file, $maxBytes);
+        $staged[] = vbd_store_staging_upload($pdo, $id, $document, $file, (int)$index);
+    }
+    return $staged;
+}
+
+function vbd_upload_staged_to_drive(string $folderId, string $storedName, string $mime, string $path): array
+{
+    require_once __DIR__ . '/google_drive.php';
+    $handler = $GLOBALS['vbd_drive_upload_handler'] ?? null;
+    if (is_callable($handler)) {
+        $drive = $handler($folderId, $storedName, $mime, $path);
+        if (!is_array($drive) || trim((string)($drive['file_id'] ?? '')) === '') {
+            throw new RuntimeException('Google Drive không trả về mã tệp.');
+        }
+        return $drive;
+    }
+    return drive_upload_file($folderId, $storedName, $mime, $path);
+}
+
+function vbd_sync_staging_record(PDO $pdo, array &$document, array $file): array
+{
+    $rawId = trim((string)($file['drive_file_id'] ?? ''));
+    if (!vbd_is_staging_file_id($rawId)) return $file;
+    $documentId = (int)($document['id'] ?? 0);
+    $storedName = basename(str_replace(['\\', '/'], '', (string)($file['stored_name'] ?? '')));
+    $path = vbd_staging_disk_path($documentId, $storedName);
+    if ($storedName === '' || !is_file($path)) {
+        throw new RuntimeException('Không tìm thấy tệp đệm để đồng bộ lên Google Drive.');
+    }
+    $folderId = trim((string)($document['drive_folder_id'] ?? ''));
+    if ($folderId === '') {
+        $folderId = vbd_drive_folder($document);
+        $pdo->prepare('UPDATE office_documents SET drive_folder_id=? WHERE id=?')->execute([$folderId, $documentId]);
+        $document['drive_folder_id'] = $folderId;
+    }
+    $mime = trim((string)($file['mime_type'] ?? '')) ?: 'application/octet-stream';
+    $drive = vbd_upload_staged_to_drive($folderId, $storedName, $mime, $path);
+    $driveId = trim((string)($drive['file_id'] ?? ''));
+    if ($driveId === '' || vbd_is_staging_file_id($driveId) || vbd_is_local_file_id($driveId)) {
+        throw new RuntimeException('Google Drive không trả về mã tệp hợp lệ.');
+    }
+    $viewUrl = trim((string)($drive['view_url'] ?? '')) ?: ('https://drive.google.com/file/d/' . $driveId . '/view');
+    $downloadUrl = trim((string)($drive['download_url'] ?? '')) ?: ('https://drive.google.com/uc?export=download&id=' . $driveId);
+    $pdo->prepare('UPDATE office_document_files SET drive_file_id=?, view_url=?, download_url=?, mime_type=? WHERE id=? AND document_id=?')->execute([
+        $driveId,
+        $viewUrl,
+        $downloadUrl,
+        trim((string)($drive['mime_type'] ?? '')) ?: $mime,
+        (int)$file['id'],
+        $documentId,
+    ]);
+    @unlink($path);
+    vbd_remove_empty_staging_dir($documentId);
+    $stmt = $pdo->prepare('SELECT * FROM office_document_files WHERE id=? AND document_id=? LIMIT 1');
+    $stmt->execute([(int)$file['id'], $documentId]);
+    $updated = $stmt->fetch();
+    if (!$updated) throw new RuntimeException('Không đọc lại được tệp sau khi đồng bộ Google Drive.');
+    return $updated;
+}
+
+function vbd_sync_drive_request(PDO $pdo, array $user, array $input): array
+{
+    $fileRowId = (int)($input['file_id'] ?? 0);
+    $documentId = (int)($input['document_id'] ?? 0);
+    $records = [];
+    if ($fileRowId > 0) {
+        $stmt = $pdo->prepare('SELECT * FROM office_document_files WHERE id = ? LIMIT 1');
+        $stmt->execute([$fileRowId]);
+        $row = $stmt->fetch();
+        if (!$row) throw new RuntimeException('Không tìm thấy tệp đính kèm.');
+        $documentId = (int)$row['document_id'];
+        $records[] = $row;
+    }
+    $document = vbd_document($pdo, $documentId, (int)$user['id'], vbd_is_admin($user));
+    if (!$document) throw new RuntimeException('Không tìm thấy văn bản hoặc bạn không có quyền.');
+    if (!$records) {
+        $stmt = $pdo->prepare('SELECT * FROM office_document_files WHERE document_id = ? ORDER BY id ASC');
+        $stmt->execute([$documentId]);
+        $records = array_values(array_filter(
+            $stmt->fetchAll(),
+            static fn(array $row): bool => vbd_is_staging_file_id((string)($row['drive_file_id'] ?? ''))
+        ));
+        if (!$records) throw new RuntimeException('Văn bản không còn tệp nào đang chờ đồng bộ.');
+    }
+    $synced = [];
+    foreach ($records as $record) {
+        if ((int)$record['document_id'] !== (int)$document['id']) {
+            throw new RuntimeException('Tệp không thuộc văn bản này.');
+        }
+        $synced[] = vbd_sync_staging_record($pdo, $document, $record);
+    }
+    return [
+        'ok' => true,
+        'synced' => true,
+        'file' => $synced[count($synced) - 1],
+        'files' => $synced,
+    ];
+}
+
+function vbd_copy_staging_file(int $fromId, int $toId, string $storedName): array
+{
+    $storedName = basename(str_replace(['\\', '/'], '', $storedName));
+    $src = vbd_staging_disk_path($fromId, $storedName);
+    if ($storedName === '' || !is_file($src)) {
+        throw new RuntimeException('Không tìm thấy tệp đệm để sao chép.');
+    }
+    $destName = vbd_unique_staging_name($toId, $storedName);
+    $dest = vbd_staging_dir($toId) . '/' . $destName;
+    if (!@copy($src, $dest)) throw new RuntimeException('Không sao chép được tệp đệm sang văn bản mới.');
+    return [
+        'drive_file_id' => vbd_staging_marker($toId, $destName),
+        'stored_name' => $destName,
+        'view_url' => vbd_local_file_url($toId, $destName, false),
+        'download_url' => vbd_local_file_url($toId, $destName, true),
+    ];
+}
+
+function vbd_duplicate_stored_file(int $fromId, int $toId, array $file): array
+{
+    $driveId = (string)($file['drive_file_id'] ?? '');
+    $storedName = (string)($file['stored_name'] ?? '');
+    $viewUrl = (string)($file['view_url'] ?? '');
+    $downloadUrl = (string)($file['download_url'] ?? '');
+    if (vbd_is_local_file_id($driveId)) {
+        $viewUrl = vbd_local_file_url($toId, $storedName, false);
+        $downloadUrl = vbd_local_file_url($toId, $storedName, true);
+    } elseif (vbd_is_staging_file_id($driveId)) {
+        $copied = vbd_copy_staging_file($fromId, $toId, $storedName);
+        $driveId = $copied['drive_file_id'];
+        $storedName = $copied['stored_name'];
+        $viewUrl = $copied['view_url'];
+        $downloadUrl = $copied['download_url'];
+    }
+    return [$driveId, $storedName, $viewUrl, $downloadUrl];
+}
+
+function vbd_hosted_file_path(int $documentId, array $document, array $record): ?string
+{
+    $storedName = basename(str_replace(['\\', '/'], '', (string)($record['stored_name'] ?? '')));
+    if ($storedName === '') return null;
+    $rawId = (string)($record['drive_file_id'] ?? '');
+    if (vbd_is_staging_file_id($rawId)) {
+        $path = vbd_staging_disk_path($documentId, $storedName);
+        return is_file($path) ? $path : null;
+    }
+    if (vbd_is_local_file_id($rawId)) {
+        $path = vbd_local_file_path($documentId, $document, $storedName);
+        return is_file($path) ? $path : null;
+    }
+    return null;
+}
+
+function vbd_clean_orphan_staging(PDO $pdo): void
+{
+    try {
+        $root = rtrim(vbd_local_storage_root(), '/\\') . '/staging';
+        if (!is_dir($root)) return;
+        $rows = $pdo->query('SELECT document_id, stored_name, drive_file_id FROM office_document_files')->fetchAll();
+        $tracked = [];
+        foreach ($rows as $row) {
+            $name = basename(str_replace(['\\', '/'], '', (string)($row['stored_name'] ?? '')));
+            $docId = (int)($row['document_id'] ?? 0);
+            if ($name === '' || $docId < 1) continue;
+            $tracked[$docId . '/' . $name] = trim((string)($row['drive_file_id'] ?? ''));
+        }
+        $dirs = @scandir($root) ?: [];
+        foreach ($dirs as $dirName) {
+            if ($dirName === '.' || $dirName === '..' || $dirName === '.htaccess') continue;
+            $dirPath = $root . '/' . $dirName;
+            if (!is_dir($dirPath) || !preg_match('/^\d+$/', $dirName)) continue;
+            $files = @scandir($dirPath) ?: [];
+            foreach ($files as $fileName) {
+                if ($fileName === '.' || $fileName === '..' || $fileName === '.htaccess') continue;
+                $full = $dirPath . '/' . $fileName;
+                if (!is_file($full)) continue;
+                $key = $dirName . '/' . $fileName;
+                if (array_key_exists($key, $tracked)) {
+                    $fileId = $tracked[$key];
+                    if ($fileId !== '' && !vbd_is_staging_file_id($fileId) && !vbd_is_local_file_id($fileId)) {
+                        @unlink($full);
+                    }
+                    continue;
+                }
+                $mtime = @filemtime($full);
+                if ($mtime !== false && (time() - $mtime) > 86400) @unlink($full);
+            }
+            vbd_remove_empty_staging_dir((int)$dirName);
+        }
+    } catch (Throwable $e) {
+        // Danh sách văn bản vẫn phải trả về khi dọn rác gặp lỗi.
+    }
+}
+
 function vbd_documents_have_drive_files(array $documents, array $filesByDocument): bool
 {
     foreach ($documents as $document) {
         $docId = (int)($document['id'] ?? 0);
         foreach (($filesByDocument[$docId] ?? []) as $file) {
             $fileId = trim((string)($file['drive_file_id'] ?? ''));
-            if ($fileId !== '' && !vbd_is_local_file_id($fileId)) {
+            if ($fileId !== '' && !vbd_is_local_file_id($fileId) && !vbd_is_staging_file_id($fileId)) {
                 return true;
             }
         }
@@ -1066,7 +1426,7 @@ function vbd_drive_file_shared(PDO $pdo, array $file, string $resolvedId): bool
     $candidates = array_values(array_unique(array_filter([
         trim((string)($file['drive_file_id'] ?? '')),
         trim($resolvedId),
-    ], static fn(string $value): bool => $value !== '' && !vbd_is_local_file_id($value))));
+    ], static fn(string $value): bool => $value !== '' && !vbd_is_local_file_id($value) && !vbd_is_staging_file_id($value))));
     if (!$candidates) return false;
     $placeholders = implode(',', array_fill(0, count($candidates), '?'));
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM office_document_files WHERE id <> ? AND drive_file_id IN ($placeholders)");
@@ -1078,6 +1438,17 @@ function vbd_delete_document_file_storage(int $documentId, array $document, arra
 {
     $label = trim((string)($file['original_name'] ?? 'Tệp đính kèm'));
     $rawId = (string)($file['drive_file_id'] ?? '');
+    if (vbd_is_staging_file_id($rawId)) {
+        $storedName = trim((string)($file['stored_name'] ?? ''));
+        if ($storedName !== '') {
+            $path = vbd_staging_disk_path($documentId, $storedName);
+            if (is_file($path) && !@unlink($path)) {
+                return $label . ': không xóa được tệp đệm trên hosting';
+            }
+            vbd_remove_empty_staging_dir($documentId);
+        }
+        return null;
+    }
     if (vbd_is_local_file_id($rawId)) {
         $storedName = trim((string)($file['stored_name'] ?? ''));
         if ($storedName !== '') {
@@ -1222,6 +1593,10 @@ function vbd_process_document_upload(PDO $pdo, int $id, array $document, array $
     }
 }
 
+if (defined('VBD_SKIP_BOOT')) {
+    return;
+}
+
 vbd_maybe_ensure_schema($pdo);
 $action = (string)($_GET['action'] ?? $_POST['action'] ?? 'list');
 
@@ -1254,6 +1629,7 @@ if ($action === 'reminder_count') {
 }
 
 if ($action === 'list') {
+    vbd_clean_orphan_staging($pdo);
     $sectorFilter = trim((string)($_GET['sector'] ?? ''));
     $where = [];
     $params = [];
@@ -1337,6 +1713,7 @@ if ($action === 'parse_document' || $action === 'ai_suggest') {
 }
 
 if ($action === 'save') {
+    vbd_clean_orphan_staging($pdo);
     try {
         $document = vbd_save_document($pdo, $user, json_body());
         respond(['ok' => true, 'document' => $document, 'message' => 'Đã lưu văn bản.']);
@@ -1505,9 +1882,49 @@ if ($action === 'upload_finalize') {
     ]);
 }
 
+if ($action === 'save_upload_stage') {
+    @ini_set('memory_limit', '256M');
+    @set_time_limit(120);
+    vbd_clean_orphan_staging($pdo);
+    try {
+        $input = $_POST;
+        $input['sector'] = $input['sector'] ?? ($_GET['sector'] ?? 'hanhchinh');
+        $document = vbd_save_document($pdo, $user, $input);
+        $files = vbd_collect_uploaded_files();
+        $staged = $files ? vbd_stage_uploaded_files($pdo, $document, $files) : [];
+        $document['files'] = vbd_files($pdo, [(int)$document['id']])[(int)$document['id']] ?? [];
+        respond([
+            'ok' => true,
+            'document' => $document,
+            'staged_files' => $staged,
+            'storage' => 'staging',
+            'message' => 'Đã lưu văn bản.',
+        ]);
+    } catch (RuntimeException $e) {
+        respond(['error' => $e->getMessage()], 422);
+    } catch (Throwable $e) {
+        respond(['error' => 'Không lưu được tệp vào staging: ' . $e->getMessage()], 502);
+    }
+}
+
+if ($action === 'sync_drive_file') {
+    @ini_set('memory_limit', '256M');
+    @set_time_limit(300);
+    $input = json_body();
+    if (!$input) $input = $_POST;
+    try {
+        respond(vbd_sync_drive_request($pdo, $user, $input));
+    } catch (RuntimeException $e) {
+        respond(['error' => $e->getMessage()], 422);
+    } catch (Throwable $e) {
+        respond(['error' => 'Chưa đồng bộ được tệp lên Google Drive: ' . $e->getMessage()], 502);
+    }
+}
+
 if ($action === 'save_upload') {
     @ini_set('memory_limit', '256M');
     @set_time_limit(300);
+    vbd_clean_orphan_staging($pdo);
     try {
         $input = $_POST;
         $input['sector'] = $input['sector'] ?? ($_GET['sector'] ?? 'hanhchinh');
@@ -1628,11 +2045,10 @@ if ($action === 'file') {
     $stmt = $pdo->prepare('SELECT * FROM office_document_files WHERE document_id=? AND stored_name=? LIMIT 1');
     $stmt->execute([$id, $storedName]);
     $record = $stmt->fetch();
-    if (!$record || !vbd_is_local_file_id((string)($record['drive_file_id'] ?? ''))) {
+    $path = $record ? vbd_hosted_file_path($id, $document, $record) : null;
+    if (!$record || $path === null) {
         respond(['error' => 'Tệp không tồn tại hoặc không được lưu trên hosting.'], 404);
     }
-    $path = vbd_local_file_path($id, $document, $storedName);
-    if (!is_file($path)) respond(['error' => 'Không tìm thấy tệp trên hosting.'], 404);
     $mime = trim((string)($record['mime_type'] ?? '')) ?: 'application/octet-stream';
     $download = !empty($_GET['download']);
     header('Content-Type: ' . $mime);
@@ -1763,15 +2179,16 @@ if ($action === 'copy_from_hanhchinh') {
             $newId = (int)$pdo->lastInsertId();
             $fileStmt->execute([$sourceId]);
             foreach ($fileStmt->fetchAll() as $file) {
+                [$driveId, $storedName, $viewUrl, $downloadUrl] = vbd_duplicate_stored_file((int)$sourceId, $newId, $file);
                 $insertFile->execute([
                     $newId,
-                    (string)($file['drive_file_id'] ?? ''),
+                    $driveId,
                     (string)($file['original_name'] ?? ''),
-                    (string)($file['stored_name'] ?? ''),
+                    $storedName,
                     $file['mime_type'] ?? null,
                     (int)($file['size_bytes'] ?? 0),
-                    (string)($file['view_url'] ?? ''),
-                    $file['download_url'] ?? null,
+                    $viewUrl,
+                    $downloadUrl,
                 ]);
             }
             $copied++;
