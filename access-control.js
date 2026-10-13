@@ -242,7 +242,7 @@ async function accessControlMain() {
                     return;
                 }
             }
-            const res = await fetch('global_config.json', { cache: 'no-store' });
+            const res = await fetch('api/site_features.php', { cache: 'no-store', credentials: 'same-origin' });
             if (!res.ok) return;
             const cfg = await res.json();
             sessionStorage.setItem(cacheKey, JSON.stringify({ cfg, expiresAt: Date.now() + 120000 }));

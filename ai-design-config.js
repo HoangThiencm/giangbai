@@ -128,22 +128,12 @@
 
         async loadHostingFallbackConfig() {
             try {
-                const res = await fetch('global_config.json', { cache: 'no-store' });
+                const res = await fetch('api/site_features.php', { cache: 'no-store', credentials: 'same-origin' });
                 if (!res.ok) return;
                 const cfg = await res.json();
-                // Admin là nguồn cấu hình chung. Đồng bộ ở đây để khi mở thẳng
-                // một công cụ, giáo viên không cần ghé qua trang chủ trước.
-                if (Array.isArray(cfg.gemini_keys) && cfg.gemini_keys.filter(Boolean).length > 0) {
-                    localStorage.setItem(LS.gemini, JSON.stringify(cfg.gemini_keys.filter(Boolean)));
-                }
+                // Model chung lấy từ API công khai. Key hệ thống không gửi ra trình duyệt.
                 if (cfg.gemini_model) localStorage.setItem(LS.geminiModel, String(cfg.gemini_model));
-                if (Array.isArray(cfg.groq_keys)) {
-                    localStorage.setItem(LS.groq, JSON.stringify(cfg.groq_keys.filter(Boolean)));
-                }
                 if (cfg.groq_model) localStorage.setItem(LS.groqModel, String(cfg.groq_model));
-                if (Array.isArray(cfg.mistral_keys) && cfg.mistral_keys.filter(Boolean).length > 0) {
-                    localStorage.setItem(LS.mistral, JSON.stringify(cfg.mistral_keys.filter(Boolean)));
-                }
                 if (cfg.mistral_ocr_model) localStorage.setItem(LS.mistralModel, String(cfg.mistral_ocr_model));
                 localStorage.setItem(LS.mistralEnabled, cfg.mistral_enabled === false ? 'false' : 'true');
                 localStorage.setItem(LS.hfFallback, 'false');

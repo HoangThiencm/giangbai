@@ -1098,26 +1098,15 @@
         // Load Global Config from GitHub deployment
         async function applyGlobalConfig() {
             try {
-                const res = await fetch('global_config.json', { cache: 'no-store' });
+                const res = await fetch('api/site_features.php', { cache: 'no-store', credentials: 'same-origin' });
                 if (res.ok) {
                     const config = await res.json();
 
-                    if (config.github_repo) localStorage.setItem('github_repo', config.github_repo);
-                    if (config.github_pat) localStorage.setItem('github_pat', config.github_pat);
-                    if (Array.isArray(config.gemini_keys) && config.gemini_keys.filter(Boolean).length > 0) {
-                        localStorage.setItem('global_gemini_keys', JSON.stringify(config.gemini_keys.filter(Boolean)));
-                    }
                     if (config.gemini_model) {
                         localStorage.setItem('default_gemini_module', config.gemini_model);
                     }
-                    if (Array.isArray(config.groq_keys)) {
-                        localStorage.setItem('global_groq_keys', JSON.stringify(config.groq_keys.filter(Boolean)));
-                    }
                     if (config.groq_model) {
                         localStorage.setItem('default_groq_model', config.groq_model);
-                    }
-                    if (Array.isArray(config.mistral_keys) && config.mistral_keys.filter(Boolean).length > 0) {
-                        localStorage.setItem('global_mistral_keys', JSON.stringify(config.mistral_keys.filter(Boolean)));
                     }
                     if (config.mistral_ocr_model) {
                         localStorage.setItem('default_mistral_ocr_model', String(config.mistral_ocr_model));
@@ -1936,7 +1925,7 @@
             }
 
             try {
-                const cfgRes = await fetch('global_config.json', { cache: 'no-store' });
+                const cfgRes = await fetch('api/site_features.php', { cache: 'no-store', credentials: 'same-origin' });
                 if (cfgRes.ok) {
                     globalConfig = await cfgRes.json();
                     accountFeatures = mergeAccountFeatures(globalConfig);

@@ -150,7 +150,7 @@
                     if (isLoginMode) {
                         try {
                             // Fetch user_features expiry from global_config.json on Github
-                            const configRes = await fetch('global_config.json', { cache: 'no-store' });
+                            const configRes = await fetch('api/site_features.php', { cache: 'no-store', credentials: 'same-origin' });
                             if (configRes.ok) {
                                 const config = await configRes.json();
                                 if (config.user_features && config.user_features[email]) {

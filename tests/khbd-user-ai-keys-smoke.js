@@ -51,10 +51,11 @@ const loginGlobalMistral = login.match(/localStorage\.setItem\('global_mistral_k
 assert.strictEqual(loginGlobalGemini.length, 2, "login.html ghi global_gemini_keys ở cả 2 luồng");
 assert.strictEqual(loginGlobalMistral.length, 2, "login.html ghi global_mistral_keys ở cả 2 luồng");
 
-assert.match(designConfig, /cfg\.gemini_keys\.filter\(Boolean\)\.length > 0/, "ai-design-config không ghi đè global_gemini_keys bằng mảng rỗng");
-assert.match(designConfig, /cfg\.mistral_keys\.filter\(Boolean\)\.length > 0/, "ai-design-config không ghi đè global_mistral_keys bằng mảng rỗng");
-assert.match(indexHtml, /config\.gemini_keys\.filter\(Boolean\)\.length > 0/, "index.html không ghi đè global_gemini_keys bằng mảng rỗng");
-assert.match(indexHtml, /config\.mistral_keys\.filter\(Boolean\)\.length > 0/, "index.html không ghi đè global_mistral_keys bằng mảng rỗng");
+assert.match(designConfig, /fetch\('api\/site_features\.php'/, "ai-design-config đọc cấu hình công khai, không tải file bị chặn");
+assert.doesNotMatch(designConfig, /fetch\('global_config\.json'/, "ai-design-config không gọi global_config.json");
+assert.match(indexHtml, /fetch\('api\/site_features\.php'/, "index.html đọc cấu hình công khai");
+assert.doesNotMatch(indexHtml, /config\.gemini_keys/, "index.html không ghi key hệ thống từ cấu hình công khai");
+assert.doesNotMatch(indexHtml, /config\.mistral_keys/, "index.html không ghi Mistral key hệ thống từ cấu hình công khai");
 
 assert.match(runtime, /\$_SESSION\['user_id'\]/, "ai_runtime_config nạp key theo session user");
 assert.match(runtime, /SELECT gemini_keys FROM users WHERE id = \?/, "ai_runtime_config đọc gemini_keys từ bảng users");

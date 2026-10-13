@@ -912,7 +912,7 @@ function bootVehinhApp() {
         const name = error?.name || '';
         if (name === 'AbortError' || name === 'TypeError' || name === 'TimeoutError') return true;
         const code = Number(status || error?.status || 0);
-        return code === 0 || code >= 500;
+        return code === 0 || code === 403 || code >= 500;
     }
 
     async function callGeminiDrawingDirect(model, apiKey, systemPrompt, userInstruction, imagePayload) {
