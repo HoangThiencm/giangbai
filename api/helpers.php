@@ -93,7 +93,7 @@ function teacher_workspace_page_ids(): array
 
 function teacher_default_workspace_extras(): array
 {
-    return ['thongketientrinh', 'quanlyvanban', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'xaydungphuluc', 'duyetgiaoan', 'duyetde'];
+    return ['thongketientrinh', 'thanhtich', 'thoikhoabieu', 'phancongtochuyenmon', 'xaydungphuluc', 'duyetgiaoan', 'duyetde'];
 }
 
 function teacher_all_page_ids(): array
@@ -169,11 +169,7 @@ function teacher_allowed_pages_resolved(array $user): array
     $raw = json_decode($user['allowed_pages_json'] ?? '[]', true);
     // allowed_pages_json is the sole source of per-teacher permissions.
     $allowEmpty = ($user['role'] ?? '') === 'teacher';
-    $pages = normalize_pages(is_array($raw) ? $raw : [], $allowEmpty);
-    if ($allowEmpty && !in_array('quanlyvanban', $pages, true)) {
-        $pages[] = 'quanlyvanban';
-    }
-    return $pages;
+    return normalize_pages(is_array($raw) ? $raw : [], $allowEmpty);
 }
 
 function normalize_pages($pages, bool $allowEmpty = true): array
@@ -284,9 +280,6 @@ function maybe_upgrade_teacher_allowed_pages(PDO $pdo, array $user): array
     }
 
     $current = normalize_pages(json_decode($user['allowed_pages_json'] ?? '[]', true), true);
-    if (!in_array('quanlyvanban', $current, true)) {
-        $current[] = 'quanlyvanban';
-    }
     $upgraded = ensure_teacher_lotrinh_scope($current);
 
     if ($upgraded === $current) {
@@ -706,6 +699,40 @@ function collect_api_keys_from_input($rawInput): array
         $inputItems = preg_split('/[\r\n,;]+/', $rawInput) ?: [];
     }
     return parse_stored_api_keys($inputItems);
+}
+
+function looks_like_masked_api_key(string $key): bool
+{
+    return str_contains($key, '...****') || str_ends_with($key, '****');
+}
+
+function filter_posted_api_keys(array $keys): array
+{
+    $clean = [];
+    foreach ($keys as $key) {
+        $value = trim((string)$key);
+        if ($value === '' || looks_like_masked_api_key($value) || is_encrypted_user_api_key($value)) {
+            continue;
+        }
+        if (strlen($value) > 10 && !in_array($value, $clean, true)) {
+            $clean[] = $value;
+        }
+    }
+    return $clean;
+}
+
+function save_user_key_column(PDO $pdo, int $userId, string $column, array $keys): void
+{
+    if ($column !== 'gemini_keys' && $column !== 'mistral_keys') {
+        respond(['error' => 'Cột key không hợp lệ.'], 400);
+    }
+    if (empty($keys)) {
+        $stmt = $pdo->prepare("UPDATE users SET {$column} = NULL WHERE id = ?");
+        $stmt->execute([$userId]);
+        return;
+    }
+    $stmt = $pdo->prepare("UPDATE users SET {$column} = ? WHERE id = ?");
+    $stmt->execute([encode_stored_api_keys($keys), $userId]);
 }
 
 function ensure_users_gemini_keys_column(PDO $pdo): void

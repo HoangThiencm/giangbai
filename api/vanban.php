@@ -8,7 +8,7 @@ function vbd_optional_user(PDO $pdo): ?array
 {
     $userId = (int)($_SESSION['user_id'] ?? 0);
     if ($userId <= 0) return null;
-    $stmt = $pdo->prepare('SELECT id, username, full_name, role, is_active FROM users WHERE id = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, username, full_name, role, is_active, allowed_pages_json FROM users WHERE id = ? LIMIT 1');
     $stmt->execute([$userId]);
     $user = $stmt->fetch();
     if (!$user || !(bool)$user['is_active']) {
@@ -17,6 +17,12 @@ function vbd_optional_user(PDO $pdo): ?array
     $role = (string)($user['role'] ?? '');
     if (!in_array($role, ['teacher', 'admin', 'superadmin'], true)) {
         respond(['error' => 'Chức năng quản lý văn bản chỉ dành cho giáo viên hoặc quản trị viên.'], 403);
+    }
+    if ($role === 'teacher') {
+        $allowed = teacher_allowed_pages_resolved($user);
+        if (!in_array('quanlyvanban', $allowed, true)) {
+            respond(['error' => 'Tài khoản chưa được cấp quyền Quản lý văn bản.'], 403);
+        }
     }
     return $user;
 }

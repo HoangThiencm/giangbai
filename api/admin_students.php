@@ -7,6 +7,26 @@ ensure_users_registration_status_column($pdo);
 $method = $_SERVER['REQUEST_METHOD'];
 $data = json_body();
 
+function admin_apply_user_api_keys(PDO $pdo, int $id, array $data): array
+{
+    ensure_users_ai_key_columns($pdo);
+    if (array_key_exists('gemini_keys', $data)) {
+        $cleanGemini = filter_posted_api_keys(collect_api_keys_from_input($data['gemini_keys']));
+        save_user_key_column($pdo, $id, 'gemini_keys', $cleanGemini);
+    }
+    if (array_key_exists('mistral_keys', $data)) {
+        $cleanMistral = filter_posted_api_keys(collect_api_keys_from_input($data['mistral_keys']));
+        save_user_key_column($pdo, $id, 'mistral_keys', $cleanMistral);
+    }
+    $stmt = $pdo->prepare('SELECT gemini_keys, mistral_keys FROM users WHERE id = ? LIMIT 1');
+    $stmt->execute([$id]);
+    $row = $stmt->fetch() ?: [];
+    return [
+        'gemini_keys' => parse_stored_api_keys($row['gemini_keys'] ?? null),
+        'mistral_keys' => parse_stored_api_keys($row['mistral_keys'] ?? null),
+    ];
+}
+
 if ($method === 'GET') {
     $stmt = $pdo->query("SELECT * FROM users ORDER BY role ASC, class_name ASC, full_name ASC, id DESC");
     $users = array_map('public_user', $stmt->fetchAll());
@@ -55,7 +75,18 @@ if ($action === 'create') {
             $expiry['expires_at'],
             $expiry['expires_option'],
         ]);
-        respond(['ok' => true, 'id' => (int)$pdo->lastInsertId(), 'mode' => 'created']);
+        $newId = (int)$pdo->lastInsertId();
+        $savedKeys = ['gemini_keys' => [], 'mistral_keys' => []];
+        if (array_key_exists('gemini_keys', $data) || array_key_exists('mistral_keys', $data)) {
+            $savedKeys = admin_apply_user_api_keys($pdo, $newId, $data);
+        }
+        respond([
+            'ok' => true,
+            'id' => $newId,
+            'mode' => 'created',
+            'gemini_keys' => $savedKeys['gemini_keys'],
+            'mistral_keys' => $savedKeys['mistral_keys'],
+        ]);
     } catch (PDOException $e) {
         $existing = $pdo->prepare('SELECT id FROM users WHERE username = ? LIMIT 1');
         $existing->execute([$username]);
@@ -133,10 +164,14 @@ if ($action === 'update') {
         $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?')->execute([$hash, $id]);
     }
 
+    $savedKeys = admin_apply_user_api_keys($pdo, $id, $data);
+
     respond([
         'ok' => true,
         'allowed_pages' => $allowedPages,
         'allowed_count' => count($allowedPages),
+        'gemini_keys' => $savedKeys['gemini_keys'],
+        'mistral_keys' => $savedKeys['mistral_keys'],
     ]);
 }
 

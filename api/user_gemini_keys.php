@@ -9,26 +9,6 @@ if (empty($_SESSION['user_id'])) {
 $userId = (int)$_SESSION['user_id'];
 ensure_users_ai_key_columns($pdo);
 
-function looks_like_masked_api_key(string $key): bool
-{
-    return str_contains($key, '...****') || str_ends_with($key, '****');
-}
-
-function filter_posted_api_keys(array $keys): array
-{
-    $clean = [];
-    foreach ($keys as $key) {
-        $value = trim((string)$key);
-        if ($value === '' || looks_like_masked_api_key($value) || is_encrypted_user_api_key($value)) {
-            continue;
-        }
-        if (strlen($value) > 10 && !in_array($value, $clean, true)) {
-            $clean[] = $value;
-        }
-    }
-    return $clean;
-}
-
 function read_user_key_column_raw(PDO $pdo, int $userId, string $column): ?string
 {
     if ($column !== 'gemini_keys' && $column !== 'mistral_keys') {
@@ -39,20 +19,6 @@ function read_user_key_column_raw(PDO $pdo, int $userId, string $column): ?strin
     $row = $stmt->fetch() ?: [];
     $value = $row[$column] ?? null;
     return is_string($value) ? $value : null;
-}
-
-function save_user_key_column(PDO $pdo, int $userId, string $column, array $keys): void
-{
-    if ($column !== 'gemini_keys' && $column !== 'mistral_keys') {
-        respond(['error' => 'Cột key không hợp lệ.'], 400);
-    }
-    if (empty($keys)) {
-        $stmt = $pdo->prepare("UPDATE users SET {$column} = NULL WHERE id = ?");
-        $stmt->execute([$userId]);
-        return;
-    }
-    $stmt = $pdo->prepare("UPDATE users SET {$column} = ? WHERE id = ?");
-    $stmt->execute([encode_stored_api_keys($keys), $userId]);
 }
 
 function maybe_upgrade_user_key_column(PDO $pdo, int $userId, string $column, $raw): array

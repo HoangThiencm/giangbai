@@ -109,9 +109,25 @@ async function accessControlMain() {
     ].includes(fileName);
 
     if (isPublicVanbanPage) {
-        if (localStorage.getItem('userRole') === 'student') {
+        const role = localStorage.getItem('userRole');
+        if (role === 'student') {
             alert('Chức năng này chỉ dành cho giáo viên.');
             window.location.href = 'index.html';
+            return;
+        }
+        if (role === 'teacher') {
+            let allowedPages = [];
+            try {
+                const parsed = JSON.parse(localStorage.getItem('allowedPages') || '[]');
+                allowedPages = Array.isArray(parsed) ? parsed : [];
+            } catch (error) {
+                allowedPages = [];
+            }
+            if (!allowedPages.includes('quanlyvanban')) {
+                alert('Tài khoản của bạn chưa được cấp quyền Quản lý văn bản');
+                window.location.href = 'index.html';
+                return;
+            }
         }
         return;
     }

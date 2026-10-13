@@ -363,7 +363,7 @@
         async openModal(tabName) {
             if (isStudent()) return;
             ensureModal();
-            UserAiSettings.switchTab(tabName === 'keys' ? 'keys' : 'overview');
+            UserAiSettings.switchTab(tabName === 'overview' ? 'overview' : 'keys');
             setLoginHint(false);
             setStatus('Đang tải cài đặt...', '');
             const modal = document.getElementById('userAiSettingsModal');

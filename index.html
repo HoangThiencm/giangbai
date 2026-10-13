@@ -1058,7 +1058,10 @@
             });
             const hasLotrinh = LOTRINH_PAGE_KEYS.some(key => allowedSet.has(key));
             setToolCardsVisible('[data-tool="teacher-lotrinh-design"]', hasLotrinh && features.teacher_design !== false);
-            setToolCardsVisible('[data-tool="teacher-documents"]', true);
+            setToolCardsVisible(
+                '[data-tool="teacher-documents"]',
+                allowedSet.has('quanlyvanban') && features.quanlyvanban !== false
+            );
             setToolCardsVisible(
                 'a[href="thongketientrinh.html"]',
                 allowedSet.has('thongketientrinh') && features.teacher_progress_stats !== false
