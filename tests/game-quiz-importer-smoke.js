@@ -270,6 +270,11 @@ const extractSrc = [
     extractNamed(appJs, 'sanitizeAiDrawingCode'),
     extractNamed(appJs, 'isGeoGebraCoordinateRequested'),
     extractNamed(appJs, 'formatGeoGebraExecuteCommand'),
+    extractNamed(appJs, 'unwrapGeoGebraExecuteList'),
+    extractNamed(appJs, 'splitGeoGebraCallArgs'),
+    extractNamed(appJs, 'parseGeoGebraCoordPair'),
+    extractNamed(appJs, 'parseGeoGebraScene'),
+    extractNamed(appJs, 'mapGeoGebraSceneToScreen'),
 ].join('\n');
 const store = {};
 const sandbox = {
@@ -308,6 +313,73 @@ assert.ok(commentedGgb.commandsArray.some((cmd) => cmd.startsWith('Tangent(')), 
 const executeLine = sandbox.formatGeoGebraExecuteCommand(['O=(0,0)', 'R=3', 'Segment(A, B)']);
 assert.strictEqual(executeLine, 'Execute({"ShowAxes(false)", "ShowGrid(false)", "O=(0,0)", "R=3", "Segment(A, B)"})', 'must hide axes and grid for non-coordinate geometry');
 assert.ok(!executeLine.includes('\n'), 'Execute payload must be a single line');
+
+const triangleScene = sandbox.parseGeoGebraScene([
+    'ShowAxes(false)',
+    'ShowGrid(false)',
+    'A = (0, 0)',
+    'B = (4, 0)',
+    'C = (0, 3)',
+    'Segment(A, B)',
+    'Segment(A, C)',
+    'Segment(B, C)',
+    'ShowLabel(A, true)',
+    'ShowLabel(B, true)',
+    'ShowLabel(C, true)',
+    'ShowLabel(f, false)',
+    'ShowLabel(g, false)',
+    'ShowLabel(h, false)',
+    'Angle(C, A, B)'
+]);
+assert.strictEqual(triangleScene.points.A.x, 0);
+assert.strictEqual(triangleScene.points.A.y, 0);
+assert.strictEqual(triangleScene.points.B.x, 4);
+assert.strictEqual(triangleScene.points.B.y, 0);
+assert.strictEqual(triangleScene.points.C.x, 0);
+assert.strictEqual(triangleScene.points.C.y, 3);
+assert.strictEqual(triangleScene.segments.length, 3, 'three triangle sides must be kept');
+assert.strictEqual(triangleScene.angles[0].vertex, 'A', 'GeoGebra Angle(C, A, B) has vertex A');
+assert.strictEqual(triangleScene.showLabel.f, false);
+const triangleScreen = sandbox.mapGeoGebraSceneToScreen(triangleScene, 800, 600);
+assert.ok(triangleScreen.points.C.y < triangleScreen.points.A.y, 'math y-up must place C above A');
+assert.ok(triangleScreen.points.B.x > triangleScreen.points.A.x, 'B must sit to the right of A');
+assert.ok(triangleScreen.points.A.x > 40 && triangleScreen.points.A.x < 760, 'A must stay inside the canvas');
+assert.ok(triangleScreen.points.C.y > 20 && triangleScreen.points.B.y < 580, 'triangle must stay inside the canvas');
+
+const hiddenOrigin = sandbox.parseGeoGebraScene([
+    'Origin = (0, 0)',
+    'SetVisibleInView(Origin, 1, false)',
+    'A = (0, 0)',
+    'B = (6, 0)',
+    'Segment(A, B)'
+]);
+assert.strictEqual(hiddenOrigin.hidden.Origin, true);
+const hiddenScreen = sandbox.mapGeoGebraSceneToScreen(hiddenOrigin, 800, 600);
+assert.ok(!hiddenScreen.points.Origin, 'a hidden unused origin must not shift the figure');
+
+const constructed = sandbox.parseGeoGebraScene([
+    'A = (0, 0)',
+    'B = (4, 0)',
+    'C = (0, 6)',
+    'M = Midpoint(A, B)',
+    'BC = Segment(B, C)',
+    'aux_l = Line(A, M)',
+    'H = Intersect(aux_l, BC)',
+    'O = (1, 1)',
+    'R = 2',
+    'c = Circle(O, R)'
+]);
+assert.strictEqual(constructed.points.M.x, 2);
+assert.strictEqual(constructed.points.M.y, 0);
+assert.ok(constructed.points.H && Number.isFinite(constructed.points.H.x), 'Intersect must produce a point');
+assert.strictEqual(constructed.circles.length, 1);
+assert.strictEqual(constructed.circles[0].radius, 2);
+assert.ok(!constructed.segments.some((seg) => seg.indexOf('M') >= 0 && seg.indexOf('A') >= 0), 'aux_ lines must not be drawn');
+
+const fromExecute = sandbox.parseGeoGebraScene(['Execute({"A = (0, 0)", "B = (2, 0)", "Segment(A, B)"})']);
+assert.strictEqual(fromExecute.segments.length, 1, 'Execute({...}) must unwrap into drawable commands');
+assert.ok(appJs.includes('drawFallbackFromGeoGebra'), 'missing JavaScript must fall back to GeoGebra commands');
+assert.ok(appJs.includes('drawGeoGebraSceneOnCanvas'), 'GeoGebra scene must draw on the Fabric canvas');
 
 store.khbd_gemini_model = 'gemini-3.7-flash';
 store.default_gemini_module = 'gemini-3.6-flash';
@@ -366,6 +438,7 @@ assert.ok(vehinhHtml.includes('id="ai-progress-bar"'), 'progress bar');
 assert.ok(vehinhHtml.includes('id="ai-progress-status"'), 'multi-stage status');
 assert.ok(vehinhHtml.includes('id="replay-construction-btn"'), 'replay construction button');
 assert.ok(vehinhHtml.includes('Tái hiện từng bước vẽ'), 'replay button label');
+assert.match(vehinhHtml, /app\.js\?v=20261013-ggb-canvas/, 'vehinh.html must cache-bust the canvas fallback');
 assert.ok(vehinhHtml.includes('https://www.geogebra.org/apps/deployggb.js'), 'vehinh.html must embed deployggb.js');
 assert.ok(!vehinhHtml.includes('src="https://www.geogebra.org/classic"'), 'vehinh.html must not use a cross-origin GeoGebra iframe');
 assert.ok(appJs.includes('runCommandsOnGeoGebra'), 'app.js must run GeoGebra commands via evalCommand');

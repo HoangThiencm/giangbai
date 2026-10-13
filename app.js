@@ -273,6 +273,344 @@ function addAngleArc(canvas, p1, vertex, p2, color, radius = 25, label = '') {
     }
 }
 
+function unwrapGeoGebraExecuteList(commands) {
+    const out = [];
+    (Array.isArray(commands) ? commands : []).forEach((cmd) => {
+        const text = String(cmd || '').trim();
+        const wrapped = text.match(/^Execute\s*\(\s*\{([\s\S]*)\}\s*\)\s*;?$/i);
+        if (!wrapped) {
+            if (text) out.push(text);
+            return;
+        }
+        const re = /"((?:\\.|[^"\\])*)"/g;
+        let match;
+        let found = false;
+        while ((match = re.exec(wrapped[1]))) {
+            found = true;
+            const piece = match[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').trim();
+            if (piece) out.push(piece);
+        }
+        if (!found) out.push(text);
+    });
+    return out;
+}
+
+function splitGeoGebraCallArgs(inner) {
+    const args = [];
+    let depth = 0;
+    let current = '';
+    const text = String(inner || '');
+    for (let i = 0; i < text.length; i++) {
+        const ch = text.charAt(i);
+        if (ch === '(' || ch === '[') depth += 1;
+        else if (ch === ')' || ch === ']') depth -= 1;
+        if (ch === ',' && depth === 0) {
+            args.push(current.trim());
+            current = '';
+        } else {
+            current += ch;
+        }
+    }
+    if (current.trim()) args.push(current.trim());
+    return args;
+}
+
+function parseGeoGebraCoordPair(expr) {
+    const match = String(expr || '').trim().match(/^\(\s*([+-]?\d+(?:[.,]\d+)?)\s*,\s*([+-]?\d+(?:[.,]\d+)?)\s*\)$/);
+    if (!match) return null;
+    const x = Number(match[1].replace(',', '.'));
+    const y = Number(match[2].replace(',', '.'));
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return { x, y };
+}
+
+function parseGeoGebraScene(commands) {
+    const points = {};
+    const scalars = {};
+    const hidden = {};
+    const showLabel = {};
+    const segments = [];
+    const circles = [];
+    const angles = [];
+    const objects = {};
+    const segmentKeys = new Set();
+
+    function rememberSegment(a, b) {
+        if (!a || !b || a === b || !points[a] || !points[b]) return;
+        const key = [a, b].sort().join('|');
+        if (segmentKeys.has(key)) return;
+        segmentKeys.add(key);
+        segments.push([a, b]);
+    }
+
+    function resolvePointToken(token) {
+        const coord = parseGeoGebraCoordPair(token);
+        if (coord) {
+            const key = `__p${coord.x}_${coord.y}`;
+            if (!points[key]) points[key] = coord;
+            hidden[key] = true;
+            return key;
+        }
+        return points[token] ? token : null;
+    }
+
+    function lineIntersection(p1, p2, p3, p4) {
+        const den = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
+        if (Math.abs(den) < 1e-9) return null;
+        const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / den;
+        return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) };
+    }
+
+    function handleCall(fnName, args, assignTo, pass) {
+        const fn = String(fnName || '').toLowerCase();
+        if (pass === 'defs') {
+            if (fn === 'showlabel' && args.length >= 2) showLabel[args[0]] = /^(true|1)$/i.test(args[1]);
+            if (fn === 'setvisibleinview' && args.length >= 3 && /^(false|0)$/i.test(args[2])) hidden[args[0]] = true;
+            return;
+        }
+        if (fn === 'midpoint' && assignTo && args.length >= 2 && points[args[0]] && points[args[1]]) {
+            const p = points[args[0]];
+            const q = points[args[1]];
+            points[assignTo] = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+            return;
+        }
+        if (fn === 'intersect' && assignTo && args.length >= 2) {
+            const o1 = objects[args[0]];
+            const o2 = objects[args[1]];
+            if (o1 && o2 && points[o1.a] && points[o1.b] && points[o2.a] && points[o2.b]) {
+                const hit = lineIntersection(points[o1.a], points[o1.b], points[o2.a], points[o2.b]);
+                if (hit) points[assignTo] = hit;
+            }
+            return;
+        }
+        if (fn === 'segment' || fn === 'line' || fn === 'ray') {
+            const a = resolvePointToken(args[0]);
+            const b = resolvePointToken(args[1]);
+            if (assignTo) objects[assignTo] = { kind: fn, a, b };
+            if (a && b && !(assignTo && /^aux_/i.test(assignTo))) rememberSegment(a, b);
+            return;
+        }
+        if (fn === 'polygon') {
+            const names = args.map(resolvePointToken).filter(Boolean);
+            if (assignTo) objects[assignTo] = { kind: 'polygon', names };
+            if (!(assignTo && /^aux_/i.test(assignTo))) {
+                for (let i = 0; i < names.length; i++) rememberSegment(names[i], names[(i + 1) % names.length]);
+            }
+            return;
+        }
+        if (fn === 'circle' && args.length >= 2) {
+            const center = resolvePointToken(args[0]);
+            if (!center) return;
+            const circle = { center };
+            if (points[args[1]]) circle.through = args[1];
+            else if (Object.prototype.hasOwnProperty.call(scalars, args[1])) circle.radius = scalars[args[1]];
+            else {
+                const radius = Number(String(args[1]).replace(',', '.'));
+                if (Number.isFinite(radius)) circle.radius = radius;
+            }
+            if (assignTo) objects[assignTo] = circle;
+            if (!(assignTo && /^aux_/i.test(assignTo)) && (circle.through || Number.isFinite(circle.radius))) circles.push(circle);
+            return;
+        }
+        if (fn === 'angle' && args.length >= 3) {
+            const a = resolvePointToken(args[0]);
+            const vertex = resolvePointToken(args[1]);
+            const b = resolvePointToken(args[2]);
+            if (a && vertex && b) angles.push({ a, vertex, b });
+        }
+    }
+
+    function ingest(raw, pass) {
+        let line = String(raw || '').trim().replace(/;$/, '');
+        if (!line) return;
+        const assign = line.match(/^([A-Za-z_][\w]*)\s*:?=\s*([\s\S]+)$/);
+        const lhs = assign ? assign[1] : '';
+        const rhs = assign ? assign[2].trim() : line;
+        const coord = parseGeoGebraCoordPair(rhs);
+        if (assign && coord) {
+            if (pass === 'defs') {
+                points[lhs] = coord;
+                if (/^aux_/i.test(lhs)) hidden[lhs] = true;
+            }
+            return;
+        }
+        if (assign && /^[+-]?\d+(?:[.,]\d+)?$/.test(rhs)) {
+            if (pass === 'defs') scalars[lhs] = Number(rhs.replace(',', '.'));
+            return;
+        }
+        const call = rhs.match(/^([A-Za-z_][\w]*)\s*\((.*)\)\s*$/);
+        if (!call) return;
+        handleCall(call[1], splitGeoGebraCallArgs(call[2]), lhs, pass);
+    }
+
+    const list = unwrapGeoGebraExecuteList(commands);
+    list.forEach((cmd) => ingest(cmd, 'defs'));
+    list.forEach((cmd) => ingest(cmd, 'draw'));
+    return { points, hidden, showLabel, segments, circles, angles };
+}
+
+function mapGeoGebraSceneToScreen(scene, canvasW, canvasH) {
+    const w = Number(canvasW) > 0 ? Number(canvasW) : 800;
+    const h = Number(canvasH) > 0 ? Number(canvasH) : 600;
+    const include = new Set();
+    (scene.segments || []).forEach(([a, b]) => { include.add(a); include.add(b); });
+    (scene.circles || []).forEach((circle) => {
+        include.add(circle.center);
+        if (circle.through) include.add(circle.through);
+    });
+    (scene.angles || []).forEach((angle) => {
+        include.add(angle.a);
+        include.add(angle.vertex);
+        include.add(angle.b);
+    });
+    Object.keys(scene.points || {}).forEach((name) => {
+        if (!scene.hidden || !scene.hidden[name]) include.add(name);
+    });
+    const names = [...include].filter((name) => {
+        const point = scene.points && scene.points[name];
+        return point && Number.isFinite(point.x) && Number.isFinite(point.y);
+    });
+    if (!names.length) return { scale: 1, points: {} };
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    names.forEach((name) => {
+        const point = scene.points[name];
+        minX = Math.min(minX, point.x);
+        maxX = Math.max(maxX, point.x);
+        minY = Math.min(minY, point.y);
+        maxY = Math.max(maxY, point.y);
+    });
+    (scene.circles || []).forEach((circle) => {
+        const center = scene.points[circle.center];
+        if (!center) return;
+        let radius = Number(circle.radius);
+        if (!Number.isFinite(radius) && circle.through && scene.points[circle.through]) {
+            const through = scene.points[circle.through];
+            radius = Math.hypot(through.x - center.x, through.y - center.y);
+        }
+        if (!(radius > 0)) return;
+        minX = Math.min(minX, center.x - radius);
+        maxX = Math.max(maxX, center.x + radius);
+        minY = Math.min(minY, center.y - radius);
+        maxY = Math.max(maxY, center.y + radius);
+    });
+    const spanX = Math.max(maxX - minX, 0);
+    const spanY = Math.max(maxY - minY, 0);
+    const pad = 72;
+    const usableW = Math.max(w - pad * 2, 40);
+    const usableH = Math.max(h - pad * 2, 40);
+    let scale = 1;
+    if (spanX === 0 && spanY === 0) scale = 1;
+    else if (spanX === 0) scale = usableH / spanY;
+    else if (spanY === 0) scale = usableW / spanX;
+    else scale = Math.min(usableW / spanX, usableH / spanY);
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    const mapped = {};
+    names.forEach((name) => {
+        const point = scene.points[name];
+        mapped[name] = {
+            x: w / 2 + (point.x - cx) * scale,
+            y: h / 2 - (point.y - cy) * scale
+        };
+    });
+    return { scale, points: mapped };
+}
+
+function drawGeoGebraSceneOnCanvas(targetCanvas, scene) {
+    if (!targetCanvas || !scene || typeof targetCanvas.add !== 'function' || typeof targetCanvas.getWidth !== 'function') return [];
+    const mapped = mapGeoGebraSceneToScreen(scene, targetCanvas.getWidth(), targetCanvas.getHeight());
+    const screen = mapped.points || {};
+    const created = [];
+    const before = () => (typeof targetCanvas.getObjects === 'function' ? targetCanvas.getObjects().length : created.length);
+    const takeNew = (start) => {
+        if (typeof targetCanvas.getObjects !== 'function') return [];
+        return targetCanvas.getObjects().slice(start);
+    };
+    (scene.circles || []).forEach((circle) => {
+        const center = screen[circle.center];
+        if (!center) return;
+        let radius = Number.isFinite(circle.radius) ? circle.radius * mapped.scale : NaN;
+        if (circle.through && screen[circle.through]) {
+            radius = Math.hypot(screen[circle.through].x - center.x, screen[circle.through].y - center.y);
+        }
+        if (!(radius > 1)) return;
+        const start = before();
+        targetCanvas.add(new fabric.Circle({
+            ...defaultProps,
+            left: center.x,
+            top: center.y,
+            radius,
+            fill: 'transparent',
+            stroke: '#111827',
+            strokeWidth: 2,
+            originX: 'center',
+            originY: 'center',
+            source: 'ai_primitive'
+        }));
+        created.push.apply(created, takeNew(start));
+    });
+    (scene.segments || []).forEach(([a, b]) => {
+        const p1 = screen[a];
+        const p2 = screen[b];
+        if (!p1 || !p2) return;
+        const start = before();
+        targetCanvas.add(new fabric.Line([p1.x, p1.y, p2.x, p2.y], {
+            ...defaultProps,
+            stroke: '#111827',
+            strokeWidth: 2,
+            objectCaching: false,
+            source: 'ai_primitive'
+        }));
+        created.push.apply(created, takeNew(start));
+    });
+    (scene.angles || []).forEach((angle) => {
+        const vertex = screen[angle.vertex];
+        const p1 = screen[angle.a];
+        const p2 = screen[angle.b];
+        if (!vertex || !p1 || !p2) return;
+        const v1x = p1.x - vertex.x;
+        const v1y = p1.y - vertex.y;
+        const v2x = p2.x - vertex.x;
+        const v2y = p2.y - vertex.y;
+        const n1 = Math.hypot(v1x, v1y);
+        const n2 = Math.hypot(v2x, v2y);
+        if (n1 < 1 || n2 < 1) return;
+        const dot = (v1x * v2x + v1y * v2y) / (n1 * n2);
+        const size = Math.max(14, Math.min(36, Math.min(n1, n2) * 0.22));
+        const start = before();
+        if (Math.abs(dot) < 0.08) addRightAngleSymbol(targetCanvas, p1, vertex, p2, '#111827', size);
+        else addAngleArc(targetCanvas, p1, vertex, p2, '#111827', size);
+        created.push.apply(created, takeNew(start));
+    });
+    Object.keys(scene.points || {}).forEach((name) => {
+        if (!screen[name] || (scene.hidden && scene.hidden[name]) || name.indexOf('__p') === 0) return;
+        const start = before();
+        if (scene.showLabel && scene.showLabel[name] === false) {
+            targetCanvas.add(new fabric.Circle({
+                ...defaultProps,
+                left: screen[name].x,
+                top: screen[name].y,
+                radius: 3.5,
+                fill: '#111827',
+                stroke: '#111827',
+                strokeWidth: 1,
+                originX: 'center',
+                originY: 'center',
+                source: 'ai_primitive',
+                role: 'point-dot'
+            }));
+        } else {
+            smartAddPoint(targetCanvas, screen[name], name);
+        }
+        created.push.apply(created, takeNew(start));
+    });
+    return created;
+}
+
 function drawBarChart(canvas, data, options = {}) {
     const { title = "Biểu đồ cột", usePatterns = false, x = 100, y = 400, width = 400, height = 300 } = options;
     const chartGroup = []; const maxValue = Math.max(...data.map(d => d.value)); const barWidth = width / (data.length * 1.5);
@@ -1520,72 +1858,121 @@ PHẦN 3: CÁC BƯỚC DỰNG HÌNH VÀ MÃ LỆNH GEOGEBRA trong thẻ <geogebr
         if (replayBtn) replayBtn.classList.remove('hidden');
     }
 
-    async function executeAiCode(fullText) {
-        const rawCode = extractDrawingJavascript(fullText);
-        if (!rawCode) {
-            const warningHtml = `<br><br><strong class="text-yellow-400">Cảnh báo:</strong> Không tìm thấy mã JavaScript trong phản hồi của AI.`;
-            if (!allDOMElements.analysisOutput.innerHTML.includes(warningHtml)) {
-                allDOMElements.analysisOutput.innerHTML += warningHtml;
-            }
-            stopProgressIndicator();
-            allDOMElements.loader.classList.add('hidden');
-            allDOMElements.generateBtn.disabled = false;
-            allDOMElements.regenerateBtn.disabled = false;
-            return;
-        }
-        const codeText = sanitizeAiDrawingCode(rawCode);
+    async function drawFallbackFromGeoGebra(fullText) {
+        const commands = (lastGeoGebraParts.commandsArray && lastGeoGebraParts.commandsArray.length)
+            ? lastGeoGebraParts.commandsArray
+            : splitGeoGebraBlocks(extractGeoGebraContent(fullText)).commandsArray;
+        const scene = parseGeoGebraScene(commands);
+        if (!scene || !Object.keys(scene.points).length) return false;
+        isAiDrawing = true;
+        canvas.renderOnAddRemove = false;
         try {
-            isAiDrawing = true;
-            canvas.renderOnAddRemove = false;
-            const drawFunction = new Function(
-                'canvas', 'fabric', 'addPoint', 'addText', 'drawLine',
-                'addRightAngleSymbol', 'addEqualityTick', 'addAngleArc',
-                'drawBarChart', 'drawPieChart',
-                codeText + buildAiPointDumpTail(codeText)
-            );
             const initialCount = canvas.getObjects().length;
-            const dumpedPoints = drawFunction(
-                canvas,
-                fabric,
-                wrapAddPoint,
-                wrapAddText,
-                drawLine,
-                wrapCanvasHelper(addRightAngleSymbol),
-                wrapCanvasHelper(addEqualityTick),
-                wrapCanvasHelper(addAngleArc),
-                wrapCanvasHelper(drawBarChart),
-                wrapCanvasHelper(drawPieChart)
-            ) || {};
-            let newAiObjects = canvas.getObjects().slice(initialCount);
+            drawGeoGebraSceneOnCanvas(canvas, scene);
+            const newAiObjects = canvas.getObjects().slice(initialCount);
+            if (!newAiObjects.length) return false;
             newAiObjects.forEach((obj) => {
                 if (!obj.source) obj.set({ source: 'ai_primitive' });
                 if (obj.type === 'line' || obj.type === 'polyline' || obj.type === 'path') {
                     obj.set({ objectCaching: false });
                 }
             });
-            const recovered = recoverMissingAiPointLabels(canvas, dumpedPoints);
-            if (recovered.length) newAiObjects = newAiObjects.concat(recovered);
             autoCenterAndFitDrawing(canvas);
             applyAiLockState();
             sendPointsToFront();
             canvas.renderOnAddRemove = true;
             await animateDrawingSteps(newAiObjects);
             stopProgressIndicator('Đã vẽ xong');
-        } catch (e) {
-            const errorHtml = `<br><br><strong class="text-red-400">Lỗi thực thi mã vẽ:</strong> ${e.message}`;
-            if (!allDOMElements.analysisOutput.innerHTML.includes(errorHtml)) {
-                allDOMElements.analysisOutput.innerHTML += errorHtml;
-            }
-            stopProgressIndicator();
+            showVehinhToast('Đã vẽ hình lên bảng từ lệnh GeoGebra.');
+            return true;
         } finally {
             canvas.renderOnAddRemove = true;
             canvas.renderAll();
             isAiDrawing = false;
             saveHistory();
-            allDOMElements.loader.classList.add('hidden');
-            allDOMElements.generateBtn.disabled = false;
-            allDOMElements.regenerateBtn.disabled = false;
         }
+    }
+
+    async function executeAiCode(fullText) {
+        const rawCode = extractDrawingJavascript(fullText);
+        let drew = false;
+        let jsError = null;
+        if (rawCode) {
+            const codeText = sanitizeAiDrawingCode(rawCode);
+            const initialCount = canvas.getObjects().length;
+            try {
+                isAiDrawing = true;
+                canvas.renderOnAddRemove = false;
+                const drawFunction = new Function(
+                    'canvas', 'fabric', 'addPoint', 'addText', 'drawLine',
+                    'addRightAngleSymbol', 'addEqualityTick', 'addAngleArc',
+                    'drawBarChart', 'drawPieChart',
+                    codeText + buildAiPointDumpTail(codeText)
+                );
+                const dumpedPoints = drawFunction(
+                    canvas,
+                    fabric,
+                    wrapAddPoint,
+                    wrapAddText,
+                    drawLine,
+                    wrapCanvasHelper(addRightAngleSymbol),
+                    wrapCanvasHelper(addEqualityTick),
+                    wrapCanvasHelper(addAngleArc),
+                    wrapCanvasHelper(drawBarChart),
+                    wrapCanvasHelper(drawPieChart)
+                ) || {};
+                let newAiObjects = canvas.getObjects().slice(initialCount);
+                newAiObjects.forEach((obj) => {
+                    if (!obj.source) obj.set({ source: 'ai_primitive' });
+                    if (obj.type === 'line' || obj.type === 'polyline' || obj.type === 'path') {
+                        obj.set({ objectCaching: false });
+                    }
+                });
+                const recovered = recoverMissingAiPointLabels(canvas, dumpedPoints);
+                if (recovered.length) newAiObjects = newAiObjects.concat(recovered);
+                if (newAiObjects.length) {
+                    autoCenterAndFitDrawing(canvas);
+                    applyAiLockState();
+                    sendPointsToFront();
+                    canvas.renderOnAddRemove = true;
+                    await animateDrawingSteps(newAiObjects);
+                    stopProgressIndicator('Đã vẽ xong');
+                    drew = true;
+                }
+            } catch (e) {
+                jsError = e;
+                canvas.getObjects().slice(initialCount).forEach((obj) => canvas.remove(obj));
+            } finally {
+                canvas.renderOnAddRemove = true;
+                canvas.renderAll();
+                isAiDrawing = false;
+                if (drew) saveHistory();
+            }
+        }
+        if (!drew) {
+            try {
+                drew = await drawFallbackFromGeoGebra(fullText);
+            } catch (e) {
+                jsError = jsError || e;
+            }
+        }
+        if (!drew) {
+            if (jsError) {
+                const errorHtml = `<br><br><strong class="text-red-400">Lỗi thực thi mã vẽ:</strong> ${jsError.message}`;
+                if (!allDOMElements.analysisOutput.innerHTML.includes(errorHtml)) {
+                    allDOMElements.analysisOutput.innerHTML += errorHtml;
+                }
+            } else if (!rawCode) {
+                const warningHtml = `<br><br><strong class="text-yellow-400">Cảnh báo:</strong> Không tìm thấy mã JavaScript trong phản hồi của AI.`;
+                if (!allDOMElements.analysisOutput.innerHTML.includes(warningHtml)) {
+                    allDOMElements.analysisOutput.innerHTML += warningHtml;
+                }
+            }
+            stopProgressIndicator();
+        }
+        allDOMElements.loader.classList.add('hidden');
+        allDOMElements.generateBtn.disabled = false;
+        allDOMElements.regenerateBtn.disabled = false;
     }
 
     function resetDrawingState() { if (activeToolCleanup) { activeToolCleanup(); activeToolCleanup = null; } canvas.isDrawingMode = false; canvas.selection = true; canvas.defaultCursor = 'default'; document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active')); document.querySelector('button[data-tool="select"]').classList.add('active'); }
