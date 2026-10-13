@@ -64,45 +64,66 @@ def make_svg_hbh_diagonals():
 </svg>"""
 
 def make_svg_hbh_midpoints():
-    """Hình bình hành ABCD với M, N là trung điểm AB, CD (5 HBH lồng nhau)"""
+    """Hình bình hành ABCD với M, N là trung điểm AB, CD (5 HBH lồng nhau) - Nấc vẽ theo câu a, b, c"""
     return """<svg viewBox="0 0 480 260" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-  <polygon points="100,60 360,60 300,200 40,200" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
-  <line x1="230" y1="60" x2="170" y2="200" stroke="#059669" stroke-width="2"/>
-  <line x1="100" y1="60" x2="170" y2="200" stroke="#d97706" stroke-width="1.8" stroke-dasharray="3,3"/>
-  <line x1="230" y1="60" x2="300" y2="200" stroke="#d97706" stroke-width="1.8" stroke-dasharray="3,3"/>
-  <line x1="40" y1="200" x2="230" y2="60" stroke="#7c3aed" stroke-width="1.8"/>
-  <line x1="170" y1="200" x2="360" y2="60" stroke="#7c3aed" stroke-width="1.8"/>
-  <circle cx="230" cy="60" r="3.5" fill="#059669"/>
-  <circle cx="170" cy="200" r="3.5" fill="#059669"/>
-  <text x="85" y="55" font-size="16" font-weight="bold" fill="#0f172a">A</text>
-  <text x="225" y="50" font-size="16" font-weight="bold" fill="#059669">M</text>
-  <text x="370" y="55" font-size="16" font-weight="bold" fill="#0f172a">B</text>
-  <text x="310" y="215" font-size="16" font-weight="bold" fill="#0f172a">C</text>
-  <text x="165" y="225" font-size="16" font-weight="bold" fill="#059669">N</text>
-  <text x="25" y="215" font-size="16" font-weight="bold" fill="#0f172a">D</text>
-  <circle cx="135" cy="130" r="3" fill="#dc2626"/>
-  <circle cx="265" cy="130" r="3" fill="#dc2626"/>
-  <text x="120" y="130" font-size="14" font-weight="bold" fill="#dc2626">I</text>
-  <text x="275" y="130" font-size="14" font-weight="bold" fill="#dc2626">K</text>
+  <!-- CÂU A: HÌNH BÌNH HÀNH ABCD VÀ TRUNG ĐIỂM M, N -->
+  <g class="geo-stage geo-stage-a" data-stage="a">
+    <polygon points="100,60 360,60 300,200 40,200" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+    <line x1="230" y1="60" x2="170" y2="200" stroke="#059669" stroke-width="2.2"/>
+    <circle cx="230" cy="60" r="3.5" fill="#059669"/>
+    <circle cx="170" cy="200" r="3.5" fill="#059669"/>
+    <text x="85" y="55" font-size="16" font-weight="bold" fill="#0f172a">A</text>
+    <text x="225" y="50" font-size="16" font-weight="bold" fill="#059669">M</text>
+    <text x="370" y="55" font-size="16" font-weight="bold" fill="#0f172a">B</text>
+    <text x="310" y="215" font-size="16" font-weight="bold" fill="#0f172a">C</text>
+    <text x="165" y="225" font-size="16" font-weight="bold" fill="#059669">N</text>
+    <text x="25" y="215" font-size="16" font-weight="bold" fill="#0f172a">D</text>
+  </g>
+  <!-- CÂU B: NỐI AN VÀ CM -->
+  <g class="geo-stage geo-stage-b" data-stage="b" style="display: none;">
+    <line x1="100" y1="60" x2="170" y2="200" stroke="#d97706" stroke-width="2"/>
+    <line x1="230" y1="60" x2="300" y2="200" stroke="#d97706" stroke-width="2"/>
+  </g>
+  <!-- CÂU C: NỐI DM VÀ BN, GIAO ĐIỂM I VÀ K -->
+  <g class="geo-stage geo-stage-c" data-stage="c" style="display: none;">
+    <line x1="40" y1="200" x2="230" y2="60" stroke="#7c3aed" stroke-width="2"/>
+    <line x1="170" y1="200" x2="360" y2="60" stroke="#7c3aed" stroke-width="2"/>
+    <circle cx="135" cy="130" r="4" fill="#dc2626"/>
+    <circle cx="265" cy="130" r="4" fill="#dc2626"/>
+    <text x="120" y="130" font-size="15" font-weight="bold" fill="#dc2626">I</text>
+    <text x="275" y="130" font-size="15" font-weight="bold" fill="#dc2626">K</text>
+  </g>
 </svg>"""
 
 def make_svg_hbh_perpendiculars():
-    """Hình bình hành ABCD với AH và CK vuông góc BD"""
+    """Hình bình hành ABCD với AH và CK vuông góc BD - Nấc vẽ theo câu a, b, c"""
     return """<svg viewBox="0 0 480 260" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-  <polygon points="110,60 370,60 310,200 50,200" fill="#eff6ff" stroke="#2563eb" stroke-width="2.2"/>
-  <line x1="50" y1="200" x2="370" y2="60" stroke="#475569" stroke-width="1.8"/>
-  <line x1="110" y1="60" x2="160" y2="152" stroke="#dc2626" stroke-width="2"/>
-  <line x1="310" y1="200" x2="260" y2="108" stroke="#dc2626" stroke-width="2"/>
-  <polyline points="152,148 156,140 164,144" fill="none" stroke="#dc2626" stroke-width="1.5"/>
-  <polyline points="268,112 264,120 256,116" fill="none" stroke="#dc2626" stroke-width="1.5"/>
-  <circle cx="210" cy="130" r="3.5" fill="#0f172a"/>
-  <text x="95" y="55" font-size="16" font-weight="bold" fill="#0f172a">A</text>
-  <text x="380" y="55" font-size="16" font-weight="bold" fill="#0f172a">B</text>
-  <text x="320" y="215" font-size="16" font-weight="bold" fill="#0f172a">C</text>
-  <text x="35" y="215" font-size="16" font-weight="bold" fill="#0f172a">D</text>
-  <text x="145" y="172" font-size="15" font-weight="bold" fill="#dc2626">H</text>
-  <text x="260" y="98" font-size="15" font-weight="bold" fill="#dc2626">K</text>
-  <text x="215" y="145" font-size="15" font-weight="bold" fill="#0f172a">O</text>
+  <!-- CÂU A: HÌNH BÌNH HÀNH ABCD, BD VÀ 2 ĐƯỜNG VUÔNG GÓC AH, CK -->
+  <g class="geo-stage geo-stage-a" data-stage="a">
+    <polygon points="110,60 370,60 310,200 50,200" fill="#eff6ff" stroke="#2563eb" stroke-width="2.2"/>
+    <line x1="50" y1="200" x2="370" y2="60" stroke="#475569" stroke-width="1.8"/>
+    <line x1="110" y1="60" x2="160" y2="152" stroke="#dc2626" stroke-width="2.2"/>
+    <line x1="310" y1="200" x2="260" y2="108" stroke="#dc2626" stroke-width="2.2"/>
+    <polyline points="152,148 156,140 164,144" fill="none" stroke="#dc2626" stroke-width="1.5"/>
+    <polyline points="268,112 264,120 256,116" fill="none" stroke="#dc2626" stroke-width="1.5"/>
+    <text x="95" y="55" font-size="16" font-weight="bold" fill="#0f172a">A</text>
+    <text x="380" y="55" font-size="16" font-weight="bold" fill="#0f172a">B</text>
+    <text x="320" y="215" font-size="16" font-weight="bold" fill="#0f172a">C</text>
+    <text x="35" y="215" font-size="16" font-weight="bold" fill="#0f172a">D</text>
+    <text x="145" y="172" font-size="15" font-weight="bold" fill="#dc2626">H</text>
+    <text x="260" y="98" font-size="15" font-weight="bold" fill="#dc2626">K</text>
+  </g>
+  <!-- CÂU B: NỐI TỨ GIÁC AHCK -->
+  <g class="geo-stage geo-stage-b" data-stage="b" style="display: none;">
+    <line x1="110" y1="60" x2="260" y2="108" stroke="#ea580c" stroke-width="2" stroke-dasharray="4,4"/>
+    <line x1="160" y1="152" x2="310" y2="200" stroke="#ea580c" stroke-width="2" stroke-dasharray="4,4"/>
+  </g>
+  <!-- CÂU C: TRUNG ĐIỂM O CỦA HK VÀ ĐƯỜNG THẲNG AC -->
+  <g class="geo-stage geo-stage-c" data-stage="c" style="display: none;">
+    <line x1="110" y1="60" x2="310" y2="200" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="3,3"/>
+    <circle cx="210" cy="130" r="4" fill="#0f172a"/>
+    <text x="215" y="145" font-size="15" font-weight="bold" fill="#0f172a">O</text>
+  </g>
 </svg>"""
 
 def make_svg_hbh_bisectors():
@@ -192,37 +213,37 @@ slide_1_html = """
         <li>Các cạnh đối bằng nhau: $AB = CD$ và $AD = BC$.</li>
         <li>Các góc đối bằng nhau: $\widehat{A} = \widehat{C}$ và $\widehat{B} = \widehat{D}$.</li>
         <li>Hai đường chéo cắt nhau tại trung điểm của mỗi đường: $OA = OC$ và $OB = OD$.</li>
-        <li><strong>Nhận xét vàng:</strong> Hai góc kề một cạnh bất kì luôn bù nhau ($\widehat{A} + \widehat{B} = 180^\circ$).</li>
+        <li><strong>Nhận xét:</strong> Hai góc kề một cạnh bất kì luôn bù nhau ($\widehat{A} + \widehat{B} = 180^\circ$).</li>
       </ul>
     </div>
   </div>
 
   <h2 style="color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 15px;">
-    🎯 II. 5 DẤU HIỆU NHẬN BIẾT KINH ĐIỂN (VŨ KHÍ THỰC CHIẾN)
+    🎯 II. 5 DẤU HIỆU NHẬN BIẾT HÌNH BÌNH HÀNH
   </h2>
   <table style="width: 100%; border-collapse: collapse; font-size: 14.5px;" border="1">
     <thead>
       <tr style="background: #f1f5f9; color: #0f172a;">
         <th style="padding: 8px; width: 15%;">Nhóm Dấu hiệu</th>
         <th style="padding: 8px; width: 55%;">Nội dung Dấu hiệu</th>
-        <th style="padding: 8px; width: 30%;">Tần suất xuất hiện & Lưu ý</th>
+        <th style="padding: 8px; width: 30%;">Phạm vi ứng dụng & Lưu ý</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td style="padding: 8px; font-weight: bold; color: #2563eb;">1. Theo Cạnh</td>
-        <td style="padding: 8px;">• Dấu hiệu 1: Tứ giác có các cạnh đối song song là HBH (theo định nghĩa).<br>• Dấu hiệu 2: Tứ giác có các cạnh đối bằng nhau là HBH.<br>• <strong>Dấu hiệu 3 (Vũ khí #1):</strong> Tứ giác có <em>một cặp cạnh đối song song VÀ bằng nhau</em> là HBH.</td>
-        <td style="padding: 8px; color: #15803d;">Chiếm 70% bài toán hình học lớp 8. Nhanh nhất khi đã có sẵn 1 yếu tố song song.</td>
+        <td style="padding: 8px;">• Dấu hiệu 1: Tứ giác có các cạnh đối song song là HBH (theo định nghĩa).<br>• Dấu hiệu 2: Tứ giác có các cạnh đối bằng nhau là HBH.<br>• <strong>Dấu hiệu 3:</strong> Tứ giác có <em>một cặp cạnh đối song song VÀ bằng nhau</em> là HBH.</td>
+        <td style="padding: 8px; color: #15803d;">Áp dụng thuận tiện khi bài toán đã cho sẵn 1 yếu tố song song hoặc trung điểm.</td>
       </tr>
       <tr>
         <td style="padding: 8px; font-weight: bold; color: #d97706;">2. Theo Góc</td>
         <td style="padding: 8px;">• Dấu hiệu 4: Tứ giác có <em>các góc đối bằng nhau</em> là HBH ($\widehat{A} = \widehat{C}$ và $\widehat{B} = \widehat{D}$).</td>
-        <td style="padding: 8px; color: #b45309;">Bắt buộc phải đủ CẢ HAI CẶP GÓC ĐỐI. Kiểm tra 1 cặp là sai lầm!</td>
+        <td style="padding: 8px; color: #b45309;">Bắt buộc phải đủ CẢ HAI CẶP GÓC ĐỐI. Kiểm tra 1 cặp là chưa đủ kết luận.</td>
       </tr>
       <tr>
         <td style="padding: 8px; font-weight: bold; color: #7c3aed;">3. Theo Đường chéo</td>
         <td style="padding: 8px;">• Dấu hiệu 5: Tứ giác có <em>hai đường chéo cắt nhau tại trung điểm của mỗi đường</em> là HBH.</td>
-        <td style="padding: 8px; color: #6d28d9;">Tuyệt chiêu chứng minh 3 điểm thẳng hàng, đối xứng tâm và đồng quy.</td>
+        <td style="padding: 8px; color: #6d28d9;">Phương pháp trọng tâm chứng minh 3 điểm thẳng hàng, đối xứng tâm và đồng quy.</td>
       </tr>
     </tbody>
   </table>
@@ -242,7 +263,7 @@ def make_heuristic_diagram(target, intermediate, premise, why_text):
     return f"""
 <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
   <div style="font-weight: bold; color: #1e3a8a; margin-bottom: 6px; font-size: 14px;">
-    🧭 SƠ ĐỒ PHÂN TÍCH ĐI LÊN (HEURISTIC ANALYSIS — THẦY VŨ HỮU BÌNH):
+    🧭 SƠ ĐỒ PHÂN TÍCH TÌM HƯỚNG GIẢI:
   </div>
   <div style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13.5px; background: #ffffff; padding: 8px; border-radius: 4px; border: 1px dashed #94a3b8;">
     <span style="color: #b91c1c; font-weight: bold;">[Cần tìm/chứng minh]: {target}</span>
@@ -252,7 +273,7 @@ def make_heuristic_diagram(target, intermediate, premise, why_text):
     <span style="color: #15803d; font-weight: bold;">[Giả thiết/Định lý]: {premise}</span>
   </div>
   <div style="margin-top: 8px; font-size: 13.5px; color: #334155; line-height: 1.5;">
-    💡 <strong>Mấu chốt sư phạm:</strong> {why_text}
+    💡 <strong>Mấu chốt suy luận:</strong> {why_text}
   </div>
 </div>
 """
@@ -299,9 +320,9 @@ slides.append({
 # Bài 2: Bài tương tự 1 (Luyện tay - Mức 1)
 ana_2 = make_heuristic_diagram(
     target="Số đo góc B, C, D và các cạnh BC, CD, AD",
-    intermediate="Áp dụng công thức góc bù nhau và nửa chu vi",
+    intermediate="Áp dụng định lí hai góc kề bù nhau và các cạnh đối bằng nhau",
     premise="ABCD là HBH, góc A = 70°, chu vi = 36 cm, AB = 11 cm",
-    why_text="Luyện tập lặp lại có chủ đích để học sinh nắm vững thuật toán tính góc và cạnh hình bình hành mà không bị nhầm lẫn."
+    why_text="Hai góc kề bù nhau nên góc B = 180° - 70° = 110°. Nửa chu vi bằng AB + BC nên BC = 18 - 11 = 7 cm."
 )
 sol_2 = """
 <p><strong>a) Tính các góc của hình bình hành:</strong></p>
@@ -322,7 +343,7 @@ slides.append({
     "debai": "Cho hình bình hành $ABCD$ có góc $\widehat{A} = 70^\circ$.<br>a) Tính số đo ba góc còn lại của hình bình hành.<br>b) Biết chu vi hình bình hành bằng $36\\text{ cm}$ và cạnh $AB = 11\\text{ cm}$. Tính độ dài các cạnh $BC, CD, DA$.",
     "analysis": ana_2, "solution": sol_2,
     "pitfall": "Học sinh thường bấm máy nhầm 180 - 70 = 100 thay vì 110, hoặc nhầm cạnh đối diện thành cạnh kề.",
-    "extension": "Học sinh tự tin làm chủ dạng bài tính góc và chu vi hình bình hành cơ bản trước khi bước sang dạng biến thể đại số."
+    "extension": "Biết chu vi và một cạnh của hình bình hành, độ dài cạnh kề bằng nửa chu vi trừ đi cạnh đã biết: $BC = \\frac{P}{2} - AB$."
 })
 
 # Bài 3: Bài biến thể 2 (Đổi chiều tư duy - Mức 1)
@@ -330,7 +351,7 @@ ana_3 = make_heuristic_diagram(
     target="Số đo 4 góc và độ dài 4 cạnh của HBH",
     intermediate="Giải bài toán tìm hai số khi biết Tổng & Hiệu; Tổng & Tỉ số",
     premise="A - B = 40°, A + B = 180°; Chu vi = 48 cm, AB = 3*AD",
-    why_text="Đưa kiến thức hình học khớp nối với bài toán đại số tuyến tính cơ bản, rèn luyện tư duy tổng hợp cho học sinh THCS."
+    why_text="Tổng hai góc kề bằng 180° và hiệu bằng 40° đưa về tìm hai số biết tổng và hiệu. Cạnh AB = 3AD kết hợp nửa chu vi bằng 24 cm đưa về tìm hai số biết tổng và tỉ số."
 )
 sol_3 = """
 <p><strong>a) Tính các góc của hình bình hành:</strong></p>
@@ -354,7 +375,7 @@ slides.append({
     "debai": "Cho hình bình hành $ABCD$.<br>a) Biết hiệu số đo hai góc kề một cạnh là $\\widehat{A} - \\widehat{B} = 40^\\circ$. Hãy tính số đo bốn góc của hình bình hành.<br>b) Biết cạnh $AB$ dài gấp 3 lần cạnh $AD$ và chu vi hình bình hành bằng $48\\text{ cm}$. Tính độ dài mỗi cạnh của hình bình hành.",
     "analysis": ana_3, "solution": sol_3,
     "pitfall": "Học sinh thường quên chia đôi chu vi mà lấy luôn 48 : 4 = 12 dẫn đến tính sai hoàn toàn các cạnh.",
-    "extension": "Mối liên hệ giữa bài toán hình học và đại số cơ bản: Dùng tổng và tỉ số giải quyết rất gọn gàng các bài toán chu vi tứ giác."
+    "extension": "Nếu đề bài cho tỉ số hai góc $\\widehat{A} : \\widehat{B} = 2 : 3$, ta dùng tính chất dãy tỉ số bằng nhau với tổng $\\widehat{A} + \\widehat{B} = 180^\\circ$."
 })
 
 # Bài 4: Phát triển đường chéo (Mức 2)
@@ -396,7 +417,7 @@ ana_5 = make_heuristic_diagram(
     target="Chứng minh tứ giác ABCD là hình bình hành",
     intermediate="Tính góc D = 80°; kiểm tra Dấu hiệu 4 (góc đối) hoặc Dấu hiệu 1 (song song)",
     premise="Tứ giác ABCD có góc A = 100°, B = 80°, C = 100°",
-    why_text="Tổng 4 góc tứ giác là 360°. Sau khi tính góc D, ta có thể chứng minh tứ giác là HBH bằng 2 cách để khắc sâu dấu hiệu nhận biết."
+    why_text="Tổng bốn góc trong tứ giác bằng 360° giúp tính được góc D = 80°. Sau đó dùng Dấu hiệu 4 (các góc đối bằng nhau) hoặc Dấu hiệu 1 (hai cạnh đối song song)."
 )
 sol_5 = """
 <p><strong>a) Tính số đo góc D:</strong></p>
@@ -421,7 +442,7 @@ slides.append({
     "debai": "Cho tứ giác $ABCD$ có ba góc được đo như sau: $\\widehat{A} = 100^\\circ, \\widehat{B} = 80^\\circ, \\widehat{C} = 100^\\circ$.<br>a) Tính số đo của góc $\\widehat{D}$.<br>b) Tứ giác $ABCD$ có phải là hình bình hành không? Hãy giải thích bằng hai cách khác nhau (sử dụng Dấu hiệu 4 và Dấu hiệu 1).",
     "analysis": ana_5, "solution": sol_5,
     "pitfall": "Học sinh thường chỉ kiểm tra 1 cặp góc đối bằng nhau đã vội kết luận là HBH (chú ý: hình cánh diều cũng có thể có 1 cặp góc đối bằng nhau!).",
-    "extension": "Dấu hiệu nhận biết theo góc giúp xử lý rất nhanh các câu hỏi trắc nghiệm và bài toán đo đạc thực tế chỉ đo được góc."
+    "extension": "Tứ giác có hai cặp góc đối bằng nhau là hình bình hành; còn tứ giác có 3 góc vuông là hình chữ nhật."
 })
 
 # Bài 6: Bài tương tự 1 - Dấu hiệu cạnh đối bằng nhau (Mức 1)
@@ -462,7 +483,7 @@ ana_7 = make_heuristic_diagram(
     target="Chứng minh AECF và DEBF là các hình bình hành",
     intermediate="Chỉ ra: AE // CF và AE = CF; EB // DF và EB = DF",
     premise="ABCD là HBH (AB // CD, AB = CD); E trên AB, F trên CD có AE = CF",
-    why_text="Dấu hiệu 3 là vũ khí thực chiến mạnh nhất: chỉ cần 1 cặp cạnh đối vừa song song vừa bằng nhau là đủ kết luận HBH."
+    why_text="Chỉ cần chỉ ra một cặp cạnh đối vừa song song vừa bằng nhau (AE // CF và AE = CF) là đủ chứng minh AECF là hình bình hành."
 )
 sol_7 = """
 <p><strong>a) Chứng minh tứ giác AECF là hình bình hành:</strong></p>
@@ -487,7 +508,7 @@ slides.append({
     "debai": "Cho hình bình hành $ABCD$. Lấy điểm $E$ trên cạnh $AB$ và điểm $F$ trên cạnh $CD$ sao cho $AE = CF$.<br>a) Chứng minh tứ giác $AECF$ là hình bình hành.<br>b) Chứng minh tứ giác $DEBF$ là hình bình hành.<br>c) Chứng minh hai đoạn thẳng $AF$ và $CE$ song song và bằng nhau.",
     "analysis": ana_7, "solution": sol_7,
     "pitfall": "Học sinh thường hay chứng minh dài dòng qua tam giác bằng nhau mà không tận dụng Dấu hiệu 3 (nhanh hơn gấp đôi).",
-    "extension": "Mô hình lấy các đoạn bằng nhau trên hai cạnh đối diện là nền tảng của hàng loạt bài toán biến thể trong đề thi học kì."
+    "extension": "Khi lấy các đoạn bằng nhau trên hai cạnh đối của hình bình hành ($AE = CF$), các tứ giác mới tạo thành luôn có các cạnh đối song song và bằng nhau."
 })
 
 # Bài 8: Mô hình 5 HBH lồng nhau từ hai trung điểm (Mức 2)
@@ -495,7 +516,7 @@ ana_8 = make_heuristic_diagram(
     target="Chứng minh MINK là hình bình hành",
     intermediate="AMCN là HBH => AN // CM (IN // MK); MBND là HBH => DM // BN (IM // NK)",
     premise="M, N là trung điểm AB, CD của HBH ABCD",
-    why_text="Hai trung điểm đối diện sinh ra liên hoàn các hình bình hành lồng nhau. Tứ giác MINK có các cạnh đối song song nên là HBH."
+    why_text="Từ các hình bình hành AMCN và MBND, ta có AN // CM và DM // BN, suy ra tứ giác MINK có các cặp cạnh đối song song nên là hình bình hành."
 )
 sol_8 = """
 <p><strong>a) Chứng minh AMND và MBCN là hình bình hành:</strong></p>
@@ -522,7 +543,7 @@ slides.append({
     "debai": "Cho hình bình hành $ABCD$. Gọi $M, N$ lần lượt là trung điểm của các cạnh $AB$ và $CD$.<br>a) Chứng minh hai tứ giác $AMND$ và $MBCN$ là những hình bình hành.<br>b) Chứng minh đoạn thẳng $AN$ song song và bằng đoạn thẳng $CM$.<br>c) Gọi $I$ là giao điểm của $AN$ và $DM$, $K$ là giao điểm của $BN$ và $CM$. Chứng minh tứ giác $MINK$ là hình bình hành.",
     "analysis": ana_8, "solution": sol_8,
     "pitfall": "Học sinh thường quên không chứng minh tứ giác MBND là HBH mà tự tiện suy ra ngay IM // NK.",
-    "extension": "Mô hình hai trung điểm cạnh đối sinh ra 5 hình bình hành lồng nhau là bài toán trọng tâm kinh điển xuất hiện trong mọi đề kiểm tra."
+    "extension": "Hình bình hành MINK có tâm đối xứng trùng với tâm đối xứng của hình bình hành ABCD."
 })
 
 # --- DẠNG 3: VẬN DỤNG HÌNH BÌNH HÀNH CHỨNG MINH QUAN HỆ HÌNH HỌC ---
@@ -561,7 +582,7 @@ ana_10 = make_heuristic_diagram(
     target="Chứng minh ba điểm P, O, Q thẳng hàng",
     intermediate="Chứng minh BPDQ là hình bình hành có tâm đối xứng là O => PQ đi qua O",
     premise="BEDF là HBH => DE // BF (DP // BQ); ABCD là HBH => BP // DQ",
-    why_text="Chứng minh 3 điểm thẳng hàng bằng cách chỉ ra chúng là đường chéo của một hình bình hành đi qua tâm đối xứng O là tuyệt chiêu hình học THCS."
+    why_text="Chứng minh tứ giác BPDQ là hình bình hành nhận O làm trung điểm của đường chéo BD, do đó đường chéo thứ hai PQ cũng phải nhận O làm trung điểm và đi qua O."
 )
 sol_10 = """
 <p><strong>a) Chứng minh tứ giác BEDF là hình bình hành:</strong></p>
@@ -585,7 +606,7 @@ slides.append({
     "debai": "Cho hình bình hành $ABCD$ có $O$ là giao điểm của hai đường chéo $AC$ và $BD$. Trên đoạn thẳng $OA$ lấy điểm $E$, trên đoạn thẳng $OC$ lấy điểm $F$ sao cho $OE = OF$.<br>a) Chứng minh tứ giác $BEDF$ là hình bình hành.<br>b) Tia $DE$ cắt cạnh $AB$ tại điểm $P$, tia $BF$ cắt cạnh $CD$ tại điểm $Q$. Chứng minh ba điểm $P, O, Q$ thẳng hàng.",
     "analysis": ana_10, "solution": sol_10,
     "pitfall": "Học sinh thường hay kẻ thêm đường thẳng phụ phức tạp thay vì nhận diện tứ giác BPDQ là hình bình hành.",
-    "extension": "Phương pháp chứng minh ba điểm thẳng hàng bằng cách chỉ ra chúng là đường chéo của một hình bình hành đi qua tâm đối xứng là kỹ thuật kinh điển."
+    "extension": "Để chứng minh ba điểm thẳng hàng, ta có thể chứng minh chúng cùng nằm trên đường chéo của một hình bình hành có chung tâm đối xứng."
 })
 
 # Bài 11: Đoạn vuông góc AHCK và tính thẳng hàng H, O, K (Mức 2)
@@ -628,7 +649,7 @@ ana_12 = make_heuristic_diagram(
     target="Chứng minh tam giác ADE cân và DE song song BF",
     intermediate="Tia phân giác cắt đường song song tạo tam giác cân; DEBF có EB // DF và EB = DF",
     premise="DE là phân giác góc D; BF là phân giác góc B của HBH ABCD",
-    why_text="Quy luật hình học cốt tử: Một tia phân giác cắt một trong hai đường thẳng song song luôn tạo ra một tam giác cân."
+    why_text="Tia phân giác kết hợp với hai đường thẳng song song tạo ra cặp góc so le trong bằng nhau, suy ra tam giác ADE có hai góc bằng nhau nên là tam giác cân (AE = AD)."
 )
 sol_12 = """
 <p><strong>a) Chứng minh tam giác ADE và CBF là các tam giác cân:</strong></p>
@@ -652,7 +673,7 @@ slides.append({
     "debai": "Cho hình bình hành $ABCD$ ($AB > BC$). Tia phân giác của góc $\\widehat{D}$ cắt cạnh $AB$ tại điểm $E$, tia phân giác của góc $\\widehat{B}$ cắt cạnh $CD$ tại điểm $F$.<br>a) Chứng minh $\\triangle ADE$ là tam giác cân tại $A$ và $\\triangle CBF$ là tam giác cân tại $C$.<br>b) Chứng minh hai tam giác $\\triangle ADE$ và $\\triangle CBF$ bằng nhau.<br>c) Chứng minh tứ giác $DEBF$ là hình bình hành, từ đó suy ra $DE \\parallel BF$.",
     "analysis": ana_12, "solution": sol_12,
     "pitfall": "Học sinh thường hay nhầm lẫn tia phân giác của hai góc đối diện sẽ cắt nhau, trong khi ở hình bình hành chúng luôn song song.",
-    "extension": "Định lí đẹp: Trong hình bình hành, tia phân giác của hai góc đối diện luôn song song (hoặc trùng nhau nếu là hình thoi)."
+    "extension": "Trong hình bình hành, tia phân giác của hai góc đối diện luôn song song với nhau: $DE \\parallel BF$."
 })
 
 # --- DẠNG 4: TÂM ĐỐI XỨNG, ĐỒNG QUY VÀ TOÁN THỰC TẾ ---
@@ -696,7 +717,7 @@ ana_14 = make_heuristic_diagram(
     target="Chứng minh ba đoạn thẳng AC, MN, PQ đồng quy tại một điểm",
     intermediate="AMCN là HBH => MN qua trung điểm O của AC; APCQ là HBH => PQ qua trung điểm O của AC",
     premise="AM = CN trên AB, CD; AP = CQ trên AD, BC của HBH ABCD",
-    why_text="Đa số bài toán chứng minh 3 đường thẳng đồng quy ở Lớp 8 đều quy về chứng minh chúng là các đường chéo của những HBH có chung 1 đường chéo AC."
+    why_text="Các đoạn thẳng MN và PQ lần lượt là đường chéo của các hình bình hành AMCN và APCQ có chung đường chéo AC, nên cùng cắt nhau tại trung điểm O của AC."
 )
 sol_14 = """
 <p><strong>a) Chứng minh AMCN và APCQ là các hình bình hành:</strong></p>
@@ -719,7 +740,7 @@ slides.append({
     "debai": "Cho hình bình hành $ABCD$. Lấy điểm $M$ trên cạnh $AB$, điểm $N$ trên cạnh $CD$ sao cho $AM = CN$. Lấy điểm $P$ trên cạnh $AD$, điểm $Q$ trên cạnh $BC$ sao cho $AP = CQ$.<br>a) Chứng minh tứ giác $AMCN$ và tứ giác $APCQ$ là những hình bình hành.<br>b) Chứng minh ba đoạn thẳng $AC, MN, PQ$ cùng cắt nhau tại một điểm (đồng quy).",
     "analysis": ana_14, "solution": sol_14,
     "pitfall": "Học sinh thường cố gắng chứng minh các cặp cạnh song song bằng tam giác bằng nhau rất vất vả thay vì chỉ ra tâm đối xứng O chung.",
-    "extension": "Quy tắc chùm đường chéo: Mọi hình bình hành nhận đoạn AC làm đường chéo thì các đường chéo thứ hai đều đồng quy tại trung điểm O của AC."
+    "extension": "Các hình bình hành có chung một đường chéo thì các đường chéo còn lại luôn đồng quy tại trung điểm của đường chéo chung đó."
 })
 
 # Bài 15: Bài toán mở đầu SGK Trang 57 & 61 (Mức 2)
@@ -752,7 +773,7 @@ slides.append({
     "debai": "Bài toán mở đầu SGK (Trang 57 & 61): Hai con đường lớn $a$ và $b$ cắt nhau tạo thành một góc tại đỉnh $S$. Bên trong góc đó có một khu dân cư tại điểm $O$. Người ta cần mở một con đường thẳng đi qua $O$, cắt con đường $a$ tại điểm $A$ và cắt con đường $b$ tại điểm $B$ sao cho khoảng cách $OA = OB$ (tức là điểm $O$ nằm chính giữa hai nút giao).<br>a) Hãy nêu các bước dựng hình để xác định chính xác vị trí hai điểm $A$ và $B$.<br>b) Dựa vào kiến thức hình bình hành, hãy chứng minh cách dựng trên thỏa mãn $OA = OB$.",
     "analysis": ana_15, "solution": sol_15,
     "pitfall": "Học sinh thường vẽ mò một đường thẳng qua O rồi ước lượng bằng mắt sao cho OA = OB mà không biết thuật toán dựng điểm đối xứng K.",
-    "extension": "Đây là ứng dụng thực tế đỉnh cao của Dấu hiệu 1 và định lí về đường chéo hình bình hành trong trắc địa và quy hoạch giao thông."
+    "extension": "Bài toán giải quyết việc dựng đoạn thẳng đi qua một điểm cho trước và nhận điểm đó làm trung điểm, có hai đầu mút nằm trên hai đường thẳng cắt nhau."
 })
 
 # Bài 16: Toán thực tế cổng xếp & thang nâng chữ X (Mức 2)
@@ -760,7 +781,7 @@ ana_16 = make_heuristic_diagram(
     target="Giải thích vì sao ray cổng xếp và sàn nâng ô tô luôn song song",
     intermediate="Mỗi mắt lưới là HBH => cạnh đối luôn song song; Thang nâng chữ X có 2 thanh cắt tại trung điểm => HBH",
     premise="Cổng xếp gồm các thanh thép bằng nhau chéo nhau; Thang nâng ô tô cắt tại trung điểm O",
-    why_text="Cơ cấu hình bình hành (Pantograph / Scissor lift) là cơ cấu cơ học giữ hướng song song bất biến ở mọi góc mở."
+    why_text="Cơ cấu hình bình hành là cơ cấu cơ học giữ hướng song song bất biến ở mọi góc mở."
 )
 sol_16 = """
 <p><strong>a) Nguyên lí cổng xếp tự động:</strong></p>
@@ -785,7 +806,7 @@ slides.append({
     "debai": "Trong đời sống kỹ thuật và sản xuất:<br>a) Cổng xếp tự động ở các cơ quan, trường học gồm nhiều thanh thép bằng nhau bắt chéo liên kết với nhau bằng các khớp trục xoay, tạo thành các hình bình hành liên tiếp. Giải thích vì sao khi kéo dãn ra hoặc đẩy xếp gọn lại thì thanh ray trên và thanh ray dưới của cổng luôn luôn song song với nhau?<br>b) Một chiếc thang nâng xe ô tô kiểu chữ X có hai thanh nâng $AB$ và $CD$ cắt nhau tại trung điểm $O$ của mỗi thanh. Chứng minh rằng sàn nâng $AC$ luôn song song với mặt đất $BD$ ở mọi độ cao nâng.",
     "analysis": ana_16, "solution": sol_16,
     "pitfall": "Học sinh thường giải thích bằng cảm tính vật lý ('vì các thanh bằng nhau') mà không nêu được bản chất hình học: Tứ giác có hai đường chéo cắt nhau tại trung điểm là HBH.",
-    "extension": "Cơ cấu hình bình hành là ứng dụng phổ biến bậc nhất trong kỹ thuật cơ khí, từ giàn nâng thủy lực đến cần lấy điện tàu điện ngầm."
+    "extension": "Cơ cấu hình bình hành giúp giữ cho hai thanh đối diện luôn song song dù khoảng cách hoặc góc mở thay đổi."
 })
 
 # --- DẠNG 5: MỞ RỘNG VẬN DỤNG CAO ÔN THI VÀO LỚP 10 (~20%) ---
@@ -795,7 +816,7 @@ ana_17 = make_heuristic_diagram(
     target="Chứng minh ABDC là HBH và tam giác ECD cân tại D",
     intermediate="Tam giác MBD = MCA (g-c-g) => BD = AC; ACDE có CD // AE và CD = AE => ACDE là HBH => DE = AC",
     premise="M là trung điểm BC; BD // AC; E đối xứng B qua A (AE = AB)",
-    why_text="Tạo hình bình hành phụ để chuyển cạnh là phương pháp tư duy đặc trưng của Thầy Vũ Hữu Bình trong các bài toán bồi dưỡng HSG."
+    why_text="Tạo hình bình hành phụ để chuyển cạnh là phương pháp tư duy trọng tâm giúp đưa các đoạn thẳng cần so sánh về cùng một tam giác."
 )
 sol_17 = """
 <p><strong>a) Chứng minh tứ giác ABDC là hình bình hành:</strong></p>
@@ -824,7 +845,7 @@ slides.append({
     "debai": "Cho tam giác $ABC$. Gọi $M$ là trung điểm của cạnh $BC$. Kẻ đường thẳng qua $B$ song song với $AC$, cắt tia đối của tia $MA$ tại điểm $D$.<br>a) Chứng minh tứ giác $ABDC$ là hình bình hành.<br>b) Lấy điểm $E$ trên tia đối của tia $AB$ sao cho $AE = AB$. Chứng minh tứ giác $ACDE$ là hình bình hành.<br>c) Khảo sát điều kiện của tam giác $ABC$ để tam giác $ECD$ cân tại $D$.",
     "analysis": ana_17, "solution": sol_17,
     "pitfall": "Học sinh thường quên không chứng minh tính thẳng hàng của B, A, E trước khi kết luận CD // AE.",
-    "extension": "Kỹ thuật kéo dài trung tuyến và kẻ đường song song tạo HBH phụ là công cụ số 1 để giải các bài toán chứng minh bất đẳng thức hình học và trung tuyến."
+    "extension": "Phương pháp kéo dài trung tuyến một đoạn bằng chính nó và kẻ đường song song tạo hình bình hành phụ giúp chuyển các cạnh rời nhau về cùng một tam giác."
 })
 
 # Bài 18: Giao điểm 4 tia phân giác tạo hình chữ nhật (Mức 3)
@@ -854,7 +875,7 @@ slides.append({
     "debai": "Cho hình bình hành $ABCD$ ($AB > BC$). Các tia phân giác của bốn góc $\\widehat{A}, \\widehat{B}, \\widehat{C}, \\widehat{D}$ cắt nhau tạo thành một tứ giác.<br>Chứng minh rằng tứ giác tạo thành có bốn góc vuông (hình chữ nhật).",
     "analysis": ana_18, "solution": sol_18,
     "pitfall": "Học sinh thường cố gắng chứng minh hai đường chéo bằng nhau rất dài, trong khi chỉ cần chỉ ra 3 đến 4 góc vuông bằng tổng hai nửa góc 90°.",
-    "extension": "Bài toán kinh điển thi vào lớp 10: Tứ giác tạo bởi các đường phân giác của hình bình hành luôn luôn là một hình chữ nhật."
+    "extension": "Tứ giác tạo bởi các đường phân giác trong của một hình bình hành luôn luôn là một hình chữ nhật."
 })
 
 # Bài 19: Phát minh định lý đường trung bình qua HBH (Mức 3)
@@ -862,7 +883,7 @@ ana_19 = make_heuristic_diagram(
     target="Chứng minh DE // BC và DE = 1/2 BC (Định lí đường trung bình)",
     intermediate="ADCF là HBH => CF // AD và CF = AD => CF // BD và CF = BD => BDCF là HBH => DF // BC và DF = BC",
     premise="D, E là trung điểm AB, AC; Lấy F trên tia đối ED sao cho EF = ED",
-    why_text="Nhà toán học cổ đại đã phát minh định lý đường trung bình chính bằng cách tạo hình bình hành phụ kéo dài đường chéo."
+    why_text="Kéo dài đoạn ED lấy EF = ED để tạo hình bình hành phụ ADCF, từ đó suy ra CF song song và bằng BD, giúp chứng minh BDCF là hình bình hành."
 )
 sol_19 = """
 <p><strong>a) Chứng minh tứ giác ADCF là hình bình hành:</strong></p>
@@ -890,7 +911,7 @@ slides.append({
     "debai": "Cho tam giác $ABC$. Gọi $D, E$ lần lượt là trung điểm của hai cạnh $AB$ và $AC$. Trên tia đối của tia $ED$ lấy điểm $F$ sao cho $EF = ED$.<br>a) Chứng minh tứ giác $ADCF$ là hình bình hành.<br>b) Chứng minh tứ giác $BDCF$ là hình bình hành.<br>c) Từ đó chứng minh đoạn thẳng $DE$ song song với cạnh $BC$ và có độ dài bằng nửa cạnh $BC$: $DE \\parallel BC$ và $DE = \\frac{1}{2}BC$.",
     "analysis": ana_19, "solution": sol_19,
     "pitfall": "Học sinh thường quên giải thích ba điểm A, D, B thẳng hàng nên không suy ra được CF // BD một cách chặt chẽ.",
-    "extension": "Đây chính là phương pháp hình học tuyệt đẹp để chứng minh Định lí về đường trung bình của tam giác mà không cần dùng đến tam giác đồng dạng."
+    "extension": "Phương pháp này dùng tính chất hình bình hành để chứng minh Định lí đường trung bình của tam giác mà không cần dùng định lí Ta-lét hay tam giác đồng dạng."
 })
 
 # ==============================================================================
@@ -903,9 +924,11 @@ lesson_data = {
     "slides": slides
 }
 
+import datetime
+today_folder = datetime.datetime.now().strftime("%d.%m")
 output_file = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    'Ket_qua', 'Bai_12_Hinh_Binh_Hanh_Toan_8.html'
+    'Ket_qua', today_folder, 'Bai_12_Hinh_Binh_Hanh_Toan_8.html'
 )
 
 if __name__ == '__main__':

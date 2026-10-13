@@ -36,9 +36,10 @@
   3. *Bài Biến Thể 2 (Variation Drill - "Đổi chiều / Gài bẫy nhẹ"):* Giữ mô hình nhưng đổi chiều bài toán (ví dụ: bài mẫu cho cạnh tìm góc $\rightarrow$ biến thể cho góc tìm cạnh; hoặc phương trình ẩn ở mẫu cần quy đồng đổi dấu) để thử thách phản xạ và chống học vẹt.
   4. *Bài Mở Rộng / Thực Tế 3 (Extension / Real-world):* Mô hình hóa thực tiễn hoặc câu hỏi phân loại thi vào lớp 10.
 
-### Vá Sư Phạm 3 — Phương Pháp Phân Tích Đi Lên của Thầy Vũ Hữu Bình (Heuristic Analysis)
-- **Linh hồn sư phạm:** Trong khối `🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (`.analysis-box`)`, cấm tuyệt đối phán ngay lời giải xuôi như từ trên trời rơi xuống.
-- **Sơ đồ phân tích đi lên (Reverse Engineering):**
+### Vá Sư Phạm 3 — Phương Pháp Phân Tích Đi Lên (Sơ Đồ Phân Tích Tìm Hướng Giải)
+- **Linh hồn sư phạm:** Trong khối `🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI` (`.analysis-box`), cấm tuyệt đối phán ngay lời giải xuôi như từ trên trời rơi xuống.
+- **Tiêu đề giao diện (UI/Phiếu in):** Bắt buộc chỉ dùng tiêu đề chuẩn mực, trong sáng: `🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI:` hoặc `🧭 SƠ ĐỒ PHÂN TÍCH TÌM HƯỚNG GIẢI:`. **TUYỆT ĐỐI CẤM** để lộ các thuật ngữ nội bộ, nghiên cứu hay tên riêng như `(HEURISTIC ANALYSIS — THẦY VŨ HỮU BÌNH)` lên giao diện bài giảng hoặc phiếu bài tập của học sinh.
+- **Sơ đồ phân tích đi lên:**
   - Muốn chứng minh/tính được $A$
   - $\Leftarrow$ Ta cần phải có $B$
   - $\Leftarrow$ Để có $B$, ta cần dựa vào tính chất $C$ hoặc kẻ thêm yếu tố phụ $D$
@@ -87,6 +88,31 @@
   - Trong HTML/Web: Bắt buộc dùng `\overline{...}` trong MathJax/KaTeX hoặc CSS `<span style="text-decoration: overline;">...</span>`.
 - **100% Công thức toán học trong Word phải là Native Word Equation (`m:oMath`):** Tuyệt đối không để lọt chuỗi LaTeX thô (`\text{ƯCLN}`, `\frac...`) làm hỏng giao diện.
 - **Tập trung tối đa bài tập rèn luyện kỹ năng thực chiến (drill & practice):** Đặc biệt rèn kỹ năng cho học sinh yếu, trung bình lặp lại quen tay; lược bỏ lý thuyết rườm rà; cập nhật năm học 2026 - 2027 và bỏ cấp Phòng GD&ĐT.
+
+### Vá Sư Phạm 10 — Kỹ Thuật Vẽ Hình Tiến Trình & Đối Chiếu Sư Phạm (Pedagogical Progressive Geometry)
+- **Chuẩn 1: Chế độ "Chờ học sinh tự vẽ hình" -> 1-Click Hiện hình đối chiếu (Phím tắt `V`):**
+  + *Bản chất sư phạm:* Khi vừa chiếu đề bài toán hình học, **TUYỆT ĐỐI KHÔNG HIỆN SẴN HÌNH VẼ HOÀN CHỈNH** làm học sinh nhìn chép thụ động, mất cơ hội rèn luyện kỹ năng đọc đề, phân tích giả thiết và tự tay dùng thước, compa dựng hình vào vở.
+  + *Cơ chế hiển thị:* Khung hình vẽ mặc định phủ lớp che sư phạm `.diagram-cover-overlay`: *"HỌC SINH TỰ ĐỌC ĐỀ & VẼ HÌNH VÀO VỞ"*. Sau khi cả lớp vẽ xong, Thầy bấm nút `[👁️ Hiện hình đối chiếu]` trên khung hình hoặc nút `[📐 Hình Vẽ (V)]` trên thanh slide hoặc nhấn phím **`V`** để mở hình vẽ chuẩn xác cho học sinh đối chiếu, tự phát hiện lỗi sai.
+- **Chuẩn 2: Nấc nét vẽ tiến trình theo từng câu (a, b, c) — Multi-Stage Diagram:**
+  + *Bản chất sư phạm:* Đề bài hình học có nhiều câu (câu a, câu b, câu c), mỗi câu thường kẻ thêm đường phụ mới. **TUYỆT ĐỐI KHÔNG HIỆN TẤT CẢ CÁC ĐƯỜNG PHỤ NGAY TỪ CÂU A** (làm lộ hướng giải, rối mắt và học sinh bị ngợp).
+  + *Cơ chế phân tầng nét vẽ trong SVG:*
+    * `<g class="geo-stage geo-stage-a" data-stage="a">`: Nét vẽ cơ sở theo giả thiết ban đầu và Câu a.
+    * `<g class="geo-stage geo-stage-b" data-stage="b" style="display: none;">`: Nét vẽ thêm của Câu b (đổi màu nổi bật như `#ea580c`, nét đứt/liền tương ứng).
+    * `<g class="geo-stage geo-stage-c" data-stage="c" style="display: none;">`: Nét vẽ thêm của Câu c (đổi màu nổi bật như `#7c3aed`).
+  + *Thanh điều khiển nấc vẽ (`.diagram-stage-bar`):* Các nút bấm `[📐 Câu a (Gốc)]`, `[+ Nét Câu b]`, `[+ Nét Câu c]`, `[Toàn bộ]`. Nét vẽ mới có animation nhấp nháy highlight (`pulseNewStage`) giúp cả lớp tập trung ngay vào yếu tố phụ vừa kẻ thêm.
+
+### Vá Sư Phạm 11 — Nguyên Tắc Tinh Khiết Sư Phạm (Loại Bỏ Hoàn Toàn Lời Giải Thích Vô Nghĩa & Không Có Giá Trị Cho Bài Học)
+- **1. Đề bài & Tiêu đề:**
+  + Tuyệt đối CẤM chèn các gợi ý, mớm bài, nhãn dán phương pháp trong ngoặc đơn ở tên bài tập hoặc trong đề bài (như: `Bài 2.4 (Phân phối có dấu trừ)`, `(Áp dụng hằng đẳng thức)`, `(Dạng cơ bản)`).
+  + Chỉ giữ nguyên: Tên bài (Bài 1, Bài 2...) và đề bài toán học thuần túy, sạch sẽ, chuẩn mực.
+- **2. Khối Phân tích / Sơ đồ Hướng giải (`.analysis-box`):**
+  + Tiêu đề hiển thị luôn chuẩn mực: `🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI:` hoặc `🧭 SƠ ĐỒ PHÂN TÍCH TÌM HƯỚNG GIẢI:`.
+  + Tuyệt đối CẤM đưa các thuật ngữ lý thuyết nghiên cứu, biệt ngữ nội bộ lên UI/phiếu in (như: `(HEURISTIC ANALYSIS — THẦY VŨ HỮU BÌNH)`, `REVERSE ENGINEERING`...).
+  + Tuyệt đối CẤM các câu "tự bình luận sư phạm" vô nghĩa đối với học sinh (như: *"Luyện tập lặp lại có chủ đích để học sinh nắm vững...", "Rèn luyện tư duy tổng hợp cho học sinh THCS...", "Bài toán xuất hiện trong mọi đề kiểm tra..."*).
+  + Mọi phân tích phải đi thẳng vào **bản chất toán học phục vụ việc giải bài**: chỉ ra tại sao chọn biến đổi đó, tại sao kẻ thêm đường phụ đó, yếu tố trung gian là gì. Nếu một câu không mang lại giá trị toán học thực tế thì **BỎ NGAY LẬP TỨC**.
+- **3. Khối Lời giải / Mở rộng / Cạm bẫy:**
+  + CẤM các lời bình phẩm ba hoa, sáo rỗng, khoa trương (như: *"vũ khí thực chiến mạnh nhất", "tuyệt chiêu hình học", "nhà toán học cổ đại đã phát minh...", "công cụ số 1", "ứng dụng đỉnh cao"*).
+  + Khối `Cạm bẫy` chỉ nêu chính xác lỗi sai toán học học sinh hay mắc. Khối `Mở rộng` chỉ nêu hướng phát triển bài toán thực chất (trường hợp đặc biệt, bài toán đảo, liên hệ định lí khác).
 
 ---
 

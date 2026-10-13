@@ -60,7 +60,7 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
 - **2/ Tạo bài tập:**
   + File đầu vào (PDF bài học, PDF chuyên đề bài tập 5-10 trang, SGK trọn cuốn): đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/` (hoặc thư mục theo ngày `Dau_vao/[DD.MM]/`)
   + File kết quả (File Word đề thi, OLM, Game, File HTML bài dạy tương tác `[Ten_Bai_Day].html` khi chọn mục 9, trọn bộ PDF từng bài khi chọn mục 10, mô phỏng HTML tương tác offline khi chọn mục 11, hoặc đề Word từ ma trận khi chọn mục 12): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/[DD.MM]/`
-  + Khi chọn mục 9 (Xuất bài dạy HTML): Tuân thủ quy chuẩn riêng tại `.agents/rules/tao-bai-day-html.md`.
+  + Khi chọn mục 9 (Xuất bài dạy HTML): Tuân thủ quy chuẩn riêng tại `.agents/rules/tao-bai-day-html.md`. Bắt buộc thực hiện **Bản vá Sư phạm 10 (Vẽ hình tiến trình & đối chiếu)**: Mặc định phủ lớp che chờ học sinh tự đọc đề và vẽ hình vào vở trước khi mở đối chiếu (phím tắt `V`); Đề bài nhiều câu (a, b, c) bắt buộc phân nấc nét vẽ `geo-stage` (câu nào hiện nét câu đó, không hiện sẵn đường phụ gây rối mắt và lộ hướng giải).
   + Khi chọn mục 10 (Cắt PDF SGK thành từng bài học):
     * Đọc cuốn SGK/SBT PDF trong `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`.
     * Tự động xác định độ lệch số trang in vs số trang PDF (Offset).
@@ -196,6 +196,11 @@ Khi chọn "9. ⭐ Xuất bài dạy HTML (Dạy thêm, phụ đạo, bồi dư�
        - **Quy trình phản biện 2 lớp:**
          + *Lớp 1 (Tiền xử lý tại Helper):* Tự động quét chuỗi văn bản đầu vào (auto_wrap_unwrapped_latex). Bất kỳ biểu thức toán nào bị quên bọc dấu $ đều được tự động bọc lại để ép chuyển đổi sang Native Word Equation (m:oMath).
          + *Lớp 2 (Hậu kiểm tài liệu .docx - de_cuong_docx_auditor.py):* Master runner tự động mở file Word vừa tạo, quét toàn bộ Run/Paragraph và XML OMML để kiểm định. Nếu phát hiện sai sót, tự động khắc phục trực tiếp trên file và xuất Bảng Báo cáo Phản biện Chất lượng (Audit Report) đạt PASS 100% trước khi bàn giao.
+   12. **Vá 12 (Nguyên tắc Tinh khiết Sư phạm — Loại bỏ hoàn toàn lời giải thích vô nghĩa và không có giá trị cho bài học):**
+       - **Đề bài & Tiêu đề:** TUYỆT ĐỐI KHÔNG chèn gợi ý, mớm bài, nhãn dán trong ngoặc đơn (như `Bài 2.4 (Phân phối có dấu trừ)`, `(Áp dụng hằng đẳng thức)`, `(Dạng cơ bản)`). Đề bài chỉ cần Tên bài (Bài 1, Bài 2...) và nội dung toán học thuần túy, sạch sẽ.
+       - **Khối Phân tích / Hướng giải (`.analysis-box`):** Tiêu đề hiển thị luôn chuẩn mực: `🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI:` hoặc `🧭 SƠ ĐỒ PHÂN TÍCH TÌM HƯỚNG GIẢI:`. CẤM đính kèm thuật ngữ lý thuyết nghiên cứu như `(HEURISTIC ANALYSIS — THẦY VŨ HỮU BÌNH)`.
+       - **Cấm văn mẫu sáo rỗng & tự bình luận sư phạm:** Cấm tuyệt đối các câu ba hoa, khẩu hiệu, tự nói với chính mình không có giá trị cho học sinh giải bài (như: *"Luyện tập lặp lại có chủ đích để học sinh nắm vững...", "Rèn luyện tư duy tổng hợp cho học sinh THCS...", "vũ khí thực chiến mạnh nhất", "tuyệt chiêu hình học", "nhà toán học cổ đại..."*).
+       - **Tập trung 100% vào bản chất toán học:** Mọi câu giải thích, mấu chốt suy luận phải trực tiếp phục vụ việc giải bài (tại sao chọn biến đổi đó, tại sao kẻ thêm đường phụ đó, yếu tố trung gian là gì). Những lời giải thích vô nghĩa hoặc không có giá trị cho bài học phải BỎ NGAY LẬP TỨC.
 - **Đầu ra:** Xuất file HTML duy nhất tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/[Ten_Bai_Day].html`.
 - Tuân thủ quy chuẩn chi tiết tại `.agents/rules/tao-bai-day-html.md` và `TROLYTHIEN/2_TAO_BAI_TAP/PROMPT_TAO_BAI_DAY_HTML.md`.
 

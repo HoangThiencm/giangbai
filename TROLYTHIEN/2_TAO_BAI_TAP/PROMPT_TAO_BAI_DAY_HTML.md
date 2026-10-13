@@ -37,7 +37,7 @@
 > ⚠️ **BẢN VÁ KỶ LUẬT THỰC CHIẾN:** AI tuyệt đối không được nói lý thuyết suông rồi khi soạn thì "toàn tầm bậy" (bịa số lẻ, nghiệm căn quái dị, nhảy bước, sai kiến thức). Bắt buộc tuân thủ 8 bản vá:
 1. **Vá 1 (Thiết kế số liệu mẫu mực):** Nghiệm phương trình/hệ phương trình phải là số nguyên hoặc phân số tối giản đẹp. Tam giác vuông phải dùng bộ ba Pythagore nguyên $(3,4,5), (5,12,13)...$ hoặc góc đặc biệt ($30^\circ, 45^\circ, 60^\circ$). Cấm tam giác vi phạm bất đẳng thức tam giác. Biểu thức rút gọn phải tinh gọn, trong sáng.
 2. **Vá 2 (Cụm bài tập rèn luyện tương tự):** Cấm nhảy cóc lộn xộn. Mỗi dạng toán bắt buộc gồm cụm 3–4 bài: *Bài mẫu kinh điển $\rightarrow$ Bài tương tự 1 (luyện tay đổi số) $\rightarrow$ Bài biến thể 2 (gài bẫy nhẹ / đổi chiều tư duy) $\rightarrow$ Bài mở rộng / thực tế 3*.
-3. **Vá 3 (Phân tích đi lên Thầy Vũ Hữu Bình):** Khối `🧭 Phân tích tìm hướng giải` bắt buộc dùng sơ đồ phân tích đi lên ($A \Leftarrow B \Leftarrow C$). Chỉ rõ mấu chốt tại sao nghĩ ra cách vẽ đường phụ hoặc biến đổi trung gian.
+3. **Vá 3 (Sơ đồ phân tích tìm hướng giải):** Khối `🧭 Phân tích tìm hướng giải` bắt buộc dùng sơ đồ phân tích đi lên ($A \Leftarrow B \Leftarrow C$). Tiêu đề trên slide/phiếu in luôn chuẩn mực: `🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI:` hoặc `🧭 SƠ ĐỒ PHÂN TÍCH TÌM HƯỚNG GIẢI:`, tuyệt đối cấm đính kèm tên riêng hay thuật ngữ nội bộ như `(HEURISTIC ANALYSIS — THẦY VŨ HỮU BÌNH)`. Chỉ rõ mấu chốt tại sao nghĩ ra cách vẽ đường phụ hoặc biến đổi trung gian.
 4. **Vá 4 (Kỷ luật trình bày tự luận THCS):** Cấm 100% ký hiệu $\iff, <=>, \Leftrightarrow$. Dùng từ nối tự nhiên chuẩn SGK: `"Điều kiện xác định"`, `"Ta có"`, `"suy ra"`, `"nên"`, `"hay"`, `"do đó"`, `"Vậy..."`. Không nhảy bước biến đổi.
 5. **Vá 5 (Khóa chặt cấp học):** 100% kiến thức THCS. Cấm tuyệt đối định lý Sin, Cosin, công thức cộng lượng giác, góc tù $> 90^\circ$, bất đẳng thức Olympic/Cauchy nhiều biến. Không lấy kiến thức lớp trên dạy lớp dưới.
 6. **Vá 6 (Vẽ hình SVG chính xác 1:1):** Tính tọa độ giải tích Oxy chính xác 100%, góc vuông thật, tam giác chuẩn tỉ lệ, lề an toàn $\ge 40\text{px}$, không đè nhãn chữ, không lộ đáp án trên hình (để dấu `?`).
@@ -49,6 +49,16 @@
      + Trong HTML/Web: Bắt buộc dùng `\overline{...}` trong MathJax/KaTeX hoặc CSS `<span style="text-decoration: overline;">...</span>`.
    - 100% công thức toán học trong Word phải là Native Word Equation (`m:oMath`), tuyệt đối không để lọt chuỗi LaTeX thô (`\text{ƯCLN}`, `\frac...`) làm hỏng giao diện.
    - Tập trung tối đa bài tập rèn luyện kỹ năng thực chiến (drill & practice): Đặc biệt rèn kỹ năng cho học sinh yếu, trung bình lặp lại quen tay; lược bỏ lý thuyết rườm rà; cập nhật năm học 2026 - 2027 và bỏ cấp Phòng GD&ĐT.
+
+10. **Vá 10 (Kỹ thuật vẽ hình tiến trình & đối chiếu sư phạm - Pedagogical Progressive Geometry):**
+    - *Chuẩn đối chiếu (Chờ học sinh vẽ hình -> Đối chiếu):* Chiếu đề bài toán hình học, **TUYỆT ĐỐI KHÔNG HIỆN SẴN HÌNH VẼ HOÀN CHỈNH**. Mặc định phủ lớp che `.diagram-cover-overlay`: *"HỌC SINH TỰ VẼ HÌNH VÀO VỞ"*. Sau khi cả lớp tự đọc đề và vẽ xong vào vở, Thầy bấm nút `[👁️ Hiện hình đối chiếu]` trên khung hình hoặc nút `[📐 Hình Vẽ (V)]` trên thanh slide hoặc nhấn phím **`V`** để mở hình chuẩn đối chiếu.
+    - *Chuẩn tiến trình (Nấc vẽ theo từng câu a, b, c):* Đối với bài toán có nhiều câu, **TUYỆT ĐỐI KHÔNG HIỆN TẤT CẢ CÁC ĐƯỜNG PHỤ NGAY TỪ ĐẦU**. Bắt buộc gom nhóm nét vẽ trong SVG bằng các thẻ `<g class="geo-stage geo-stage-a" data-stage="a">` (câu a/gốc), `<g class="geo-stage geo-stage-b" data-stage="b" style="display: none;">` (câu b), `<g class="geo-stage geo-stage-c" data-stage="c" style="display: none;">` (câu c). Khi dạy câu nào thì chuyển sang nấc câu đó, nét mới tự động highlight để cả lớp dễ dàng theo dõi.
+
+11. **Vá 11 (Nguyên tắc Tinh khiết Sư phạm — Loại bỏ hoàn toàn lời giải thích vô nghĩa & không có giá trị cho bài học):**
+    - *Đề bài:* CẤM chèn gợi ý, mớm bài, nhãn dán trong ngoặc đơn (như `Bài 2.4 (Phân phối có dấu trừ)`, `(Áp dụng hằng đẳng thức)`). Chỉ ghi tên bài và đề bài thuần túy.
+    - *Khối Hướng giải:* Tiêu đề luôn chuẩn mực: `🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI:` hoặc `🧭 SƠ ĐỒ PHÂN TÍCH TÌM HƯỚNG GIẢI:`. CẤM đính kèm biệt ngữ nghiên cứu như `(HEURISTIC ANALYSIS — THẦY VŨ HỮU BÌNH)`.
+    - *Cấm văn mẫu sáo rỗng:* CẤM các câu tự bình luận vô nghĩa đối với học sinh (như: *"rèn luyện tư duy tổng hợp cho học sinh THCS", "vũ khí thực chiến mạnh nhất", "tuyệt chiêu hình học", "nhà toán học cổ đại..."*).
+    - *100% Toán học thực chất:* Mọi phân tích và lưu ý phải đi thẳng vào bản chất toán học giúp học sinh hiểu và giải bài. Lời giải thích nào không mang giá trị cho bài học thì BỎ NGAY LẬP TỨC.
 
 ---
 

@@ -105,11 +105,28 @@ def build_bai_day_html(lesson_data, output_path, template_path=None):
             svg_code = item.get("svg_code", "")
             if svg_code:
                 original_svgs_map[str(pid)] = svg_code
+                
+                # Tạo thanh nấc nếu svg_code có chứa geo-stage
+                stage_bar_html = ""
+                if "geo-stage-b" in svg_code:
+                    stage_c_btn = f"""<button type="button" class="btn-stage-step" data-step="c" onclick="setDiagramStage('{pid}', 'c')">+ Nét Câu c</button>""" if "geo-stage-c" in svg_code else ""
+                    stage_d_btn = f"""<button type="button" class="btn-stage-step" data-step="d" onclick="setDiagramStage('{pid}', 'd')">+ Nét Câu d</button>""" if "geo-stage-d" in svg_code else ""
+                    stage_bar_html = f"""
+      <div class="diagram-stage-bar" id="stageBar_{pid}">
+        <span class="stage-bar-title">TIẾN TRÌNH:</span>
+        <button type="button" class="btn-stage-step active" data-step="a" onclick="setDiagramStage('{pid}', 'a')">📐 Câu a (Gốc)</button>
+        <button type="button" class="btn-stage-step" data-step="b" onclick="setDiagramStage('{pid}', 'b')">+ Nét Câu b</button>
+        {stage_c_btn}
+        {stage_d_btn}
+        <button type="button" class="btn-stage-step" data-step="all" onclick="setDiagramStage('{pid}', 'all')">Toàn bộ</button>
+      </div>"""
+
                 left_panel = f"""
     <div class="diagram-panel" id="diagramPanel_{pid}">
       <div class="diagram-dock-header">
         <span class="dock-header-title">📐 HÌNH MINH HỌA 1:1</span>
         <div class="dock-header-btns">
+          <button type="button" class="btn-dock-ctrl btn-reveal-toggle" id="btnReveal_{pid}" onclick="toggleDiagramReveal('{pid}')" title="Ẩn/Hiện hình đối chiếu (Phím V)">👁️ Hiện hình (V)</button>
           <button type="button" class="btn-dock-ctrl btn-pos-toggle" id="btnPos_{pid}" onclick="toggleDiagramUnderProblem('{pid}')" title="Chuyển hình vẽ xuống phía dưới đề bài">⬇️ Dưới đề</button>
           <button type="button" class="btn-dock-ctrl btn-float-toggle" id="btnFloat_{pid}" onclick="toggleFloatDiagram('{pid}')" title="Tách hình nổi, kéo thả tự do khắp màn hình">🆓 Tách nổi</button>
           <button type="button" class="btn-dock-ctrl" onclick="zoomSlideDiagram('{pid}', 0.2)" title="Phóng to hình vẽ">➕</button>
@@ -118,6 +135,19 @@ def build_bai_day_html(lesson_data, output_path, template_path=None):
           <button type="button" class="btn-dock-ctrl" onclick="zoomActiveSlideDiagram('{pid}')" title="Phóng to toàn màn hình (Lightbox)">🔍</button>
         </div>
       </div>
+      {stage_bar_html}
+
+      <!-- LỚP PHỦ CHE HÌNH: CHỜ HỌC SINH TỰ VẼ VÀO VỞ TRƯỚC -->
+      <div class="diagram-cover-overlay" id="cover_{pid}">
+        <div class="cover-badge">📐 RÈN KỸ NĂNG VẼ HÌNH</div>
+        <div class="cover-icon">✏️</div>
+        <div class="cover-title">HỌC SINH TỰ VẼ HÌNH VÀO VỞ</div>
+        <div class="cover-instruction">Đọc kỹ giả thiết đề bài, dùng thước thẳng và compa vẽ hình chuẩn xác trước khi xem đối chiếu.</div>
+        <button type="button" class="btn-reveal-diagram" onclick="toggleDiagramReveal('{pid}')">
+          👁️ HIỆN HÌNH ĐỐI CHIẾU (Phím V)
+        </button>
+      </div>
+
       <div class="diagram-wrapper" id="diagramWrapper_{pid}">
         <div class="diagram-scalable" id="diagramScale_{pid}">
           {svg_code}
@@ -136,11 +166,13 @@ def build_bai_day_html(lesson_data, output_path, template_path=None):
     {left_panel}
     <div class="content-panel">
 """
+                quick_diagram_btn = f'<button class="nav-btn warning btn-diagram-toggle" onclick="toggleDiagramReveal(\'{pid}\')" title="Ẩn/Hiện hình đối chiếu (Phím V)">📐 Hình Vẽ (V)</button>'
             else:
                 body_layout = f"""
   <div class="slide-body-full">
     <div class="content-panel">
 """
+                quick_diagram_btn = ""
 
             slide_card = f"""
 <section class="slide-card{' active' if s_num == 1 else ''}" data-slide="{s_num}" data-problem-id="{pid}">
@@ -150,6 +182,7 @@ def build_bai_day_html(lesson_data, output_path, template_path=None):
       <span class="level-badge {level_class}">{level_text}</span>
     </div>
     <div class="slide-quick-ctrl">
+      {quick_diagram_btn}
       <button class="nav-btn info btn-analysis-toggle" onclick="toggleCurrentAnalysis()">🧭 Hướng Giải</button>
       <button class="nav-btn success btn-solution-toggle" onclick="toggleCurrentSolution()">💡 Lời Giải</button>
       <button class="nav-btn primary" onclick="nextSlide()">Bài Tiếp ▶</button>

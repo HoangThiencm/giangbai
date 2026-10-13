@@ -672,6 +672,170 @@
       font-style: italic;
     }
 
+    /* ========================================================================= */
+    /* TIẾN TRÌNH VẼ HÌNH HỌC SƯ PHẠM (CHỜ HỌC SINH VẼ & NẤC NÉT VẼ TỪNG CÂU) */
+    /* ========================================================================= */
+    /* Lớp phủ che hình vẽ - Chờ học sinh tự vẽ hình vào vở */
+    .diagram-cover-overlay {
+      position: absolute;
+      top: 42px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(248, 250, 252, 0.97) 0%, rgba(241, 245, 249, 0.98) 100%);
+      backdrop-filter: blur(6px);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 20px;
+      text-align: center;
+      border-radius: 0 0 10px 10px;
+      border: 2px dashed #3b82f6;
+      box-shadow: inset 0 2px 12px rgba(59, 130, 246, 0.08);
+      transition: opacity 0.25s ease, visibility 0.25s;
+    }
+    .diagram-panel.is-revealed .diagram-cover-overlay {
+      display: none !important;
+    }
+    .cover-badge {
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      box-shadow: 0 2px 6px rgba(37,99,235,0.25);
+    }
+    .cover-icon {
+      font-size: 44px;
+      margin-bottom: 8px;
+      animation: floatBounce 2.5s ease-in-out infinite;
+    }
+    @keyframes floatBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    .cover-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 6px;
+      letter-spacing: 0.2px;
+    }
+    .cover-instruction {
+      font-size: 13px;
+      color: #475569;
+      line-height: 1.5;
+      max-width: 320px;
+      margin-bottom: 16px;
+    }
+    .btn-reveal-diagram {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 13.5px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-reveal-diagram:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+      background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    }
+
+    /* Thanh điều khiển tiến trình nấc nét vẽ hình (Multi-stage) */
+    .diagram-stage-bar {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      width: 100%;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      flex-wrap: wrap;
+    }
+    .stage-bar-title {
+      color: #475569;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-right: 2px;
+      letter-spacing: 0.3px;
+    }
+    .btn-stage-step {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .btn-stage-step:hover {
+      background: #eff6ff;
+      border-color: #3b82f6;
+      color: #1d4ed8;
+    }
+    .btn-stage-step.active {
+      background: #2563eb;
+      border-color: #1d4ed8;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    }
+    .btn-dock-ctrl.btn-reveal-toggle {
+      background: #eff6ff;
+      border-color: #3b82f6;
+      color: #1d4ed8;
+    }
+    .btn-dock-ctrl.btn-reveal-toggle.is-active {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+      color: #475569;
+    }
+    .nav-btn.warning.btn-diagram-toggle {
+      background: #d97706;
+      border-color: #b45309;
+      color: #ffffff;
+    }
+    .nav-btn.warning.btn-diagram-toggle.is-active {
+      background: #059669;
+      border-color: #047857;
+    }
+
+    /* Hiệu ứng vẽ nét mới */
+    .geo-stage {
+      transition: opacity 0.3s ease;
+    }
+    .geo-stage.just-revealed {
+      animation: pulseNewStage 1.2s ease-out;
+    }
+    @keyframes pulseNewStage {
+      0% { opacity: 0; filter: drop-shadow(0 0 8px #f59e0b); }
+      50% { opacity: 1; filter: drop-shadow(0 0 14px #ea580c); stroke-width: 3.5px; }
+      100% { opacity: 1; filter: none; }
+    }
+
     .slide-float-photo {
       position: absolute;
       z-index: 9400;
@@ -4763,6 +4927,13 @@ function casioRenderNatural(expr) {
         return;
       }
 
+      // Phím V: Bật/Tắt hình vẽ đối chiếu (Chờ học sinh vẽ hình -> Đối chiếu)
+      if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault();
+        toggleCurrentDiagramReveal();
+        return;
+      }
+
       // 8. Phím E: Bật/Tắt chế độ sửa bài
       if (e.key === 'e' || e.key === 'E') {
         e.preventDefault();
@@ -5030,6 +5201,102 @@ function casioRenderNatural(expr) {
       });
     }
 
+    // =========================================================================
+    // TIẾN TRÌNH VẼ HÌNH HỌC SƯ PHẠM (CHỜ HỌC SINH VẼ & NẤC NÉT VẼ TỪNG CÂU)
+    // =========================================================================
+    function toggleDiagramReveal(pid) {
+      const panel = document.getElementById(`diagramPanel_${pid}`);
+      if (!panel) return;
+      const isRevealed = panel.classList.toggle('is-revealed');
+      const cover = document.getElementById(`cover_${pid}`);
+      const btnReveal = document.getElementById(`btnReveal_${pid}`);
+      const card = panel.closest('.slide-card');
+      const quickBtn = card ? card.querySelector('.btn-diagram-toggle') : null;
+
+      if (cover) {
+        cover.style.display = isRevealed ? 'none' : 'flex';
+      }
+      const label = isRevealed ? '🙈 Ẩn hình' : '👁️ Hiện hình (V)';
+      const quickLabel = isRevealed ? '🙈 Ẩn hình (V)' : '📐 Hiện hình (V)';
+      if (btnReveal) {
+        btnReveal.innerText = label;
+        btnReveal.classList.toggle('is-active', isRevealed);
+      }
+      if (quickBtn) {
+        quickBtn.innerText = quickLabel;
+        quickBtn.classList.toggle('is-active', isRevealed);
+      }
+    }
+
+    function toggleCurrentDiagramReveal() {
+      const activeCard = document.querySelector(`.slide-card[data-slide="${currentSlide}"]`);
+      if (!activeCard) return;
+      const panel = activeCard.querySelector('.diagram-panel');
+      if (!panel) return;
+      const pid = activeCard.dataset.problemId;
+      if (pid) toggleDiagramReveal(pid);
+    }
+
+    function setDiagramStage(pid, stage) {
+      const panel = document.getElementById(`diagramPanel_${pid}`);
+      if (!panel) return;
+      // Nếu hình đang bị che, tự động mở hình ra để học sinh đối chiếu
+      if (!panel.classList.contains('is-revealed')) {
+        toggleDiagramReveal(pid);
+      }
+      const svg = panel.querySelector('svg');
+      if (!svg) return;
+
+      const stageGroups = svg.querySelectorAll('.geo-stage');
+      if (stageGroups.length === 0) return;
+
+      const stageOrder = ['a', 'b', 'c', 'd'];
+      const targetIdx = stageOrder.indexOf(stage);
+
+      stageGroups.forEach(g => {
+        const gStage = g.dataset.stage;
+        const gIdx = stageOrder.indexOf(gStage);
+        if (stage === 'all' || (gIdx !== -1 && gIdx <= targetIdx)) {
+          g.style.display = '';
+          if (gStage === stage) {
+            g.classList.add('just-revealed');
+            setTimeout(() => g.classList.remove('just-revealed'), 1200);
+          }
+        } else {
+          g.style.display = 'none';
+        }
+      });
+
+      // Cập nhật trạng thái active trên thanh nấc
+      const stageBar = document.getElementById(`stageBar_${pid}`);
+      if (stageBar) {
+        stageBar.querySelectorAll('.btn-stage-step').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.step === stage);
+        });
+      }
+    }
+
+    function initPedagogicalDiagrams() {
+      document.querySelectorAll('.diagram-panel').forEach(panel => {
+        const idParts = panel.id.split('_');
+        if (idParts.length < 2) return;
+        const pid = idParts[1];
+        const svg = panel.querySelector('svg');
+        if (!svg) return;
+
+        // Quét xem SVG có các nấc geo-stage không
+        const stageGroups = svg.querySelectorAll('.geo-stage');
+        const stageBar = document.getElementById(`stageBar_${pid}`);
+        if (stageGroups.length > 0) {
+          if (stageBar) stageBar.style.display = 'flex';
+          // Mặc định nấc ban đầu chỉ hiện câu a
+          setDiagramStage(pid, 'a');
+        } else {
+          if (stageBar) stageBar.style.display = 'none';
+        }
+      });
+    }
+
     // Khởi tạo hệ thống
     function syncToolbarOffset() {
       const bar = document.querySelector('.top-control-bar');
@@ -5052,6 +5319,7 @@ function casioRenderNatural(expr) {
     bindFloatPanelDrag();
     loadAllSavedImages();
     initEditableBlocks();
+    initPedagogicalDiagrams();
     showSlide(1);
     syncToolbarOffset();
     document.documentElement.setAttribute('data-lesson-boot', 'ok');
