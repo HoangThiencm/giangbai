@@ -215,18 +215,18 @@
                     </button>
                 </div>
                 <div class="flex flex-wrap gap-1 border-b border-slate-200 bg-slate-50 px-3 pt-1">
-                    <button type="button" id="tabBtnOverview" class="tab-btn active"><i class="fas fa-chart-pie mr-2"></i>Tổng quan &amp; Theo dõi</button>
-                    <button type="button" id="tabBtnKeys" class="tab-btn"><i class="fas fa-key mr-2"></i>Cài đặt AI &amp; API Key</button>
+                    <button type="button" id="tabBtnOverview" class="tab-btn"><i class="fas fa-chart-pie mr-2"></i>Tổng quan &amp; Theo dõi</button>
+                    <button type="button" id="tabBtnKeys" class="tab-btn active"><i class="fas fa-key mr-2"></i>Cài đặt AI &amp; API Key</button>
                 </div>
                 <div class="min-h-0 flex-1 overflow-y-auto">
-                    <div id="userAiTabOverview" class="p-0">
+                    <div id="userAiTabOverview" class="hidden p-0">
                         <div id="teacherLotrinhPanel" class="teacher-lotrinh-panel">
                             <div class="teacher-lotrinh-panel-inner px-5 py-6 text-sm text-teal-50/90">
                                 Đang tải thông tin theo dõi giáo viên...
                             </div>
                         </div>
                     </div>
-                    <div id="userAiTabKeys" class="hidden space-y-5 px-5 py-5">
+                    <div id="userAiTabKeys" class="space-y-5 px-5 py-5">
                         <div id="userAiLoginHint" class="hidden rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
                             Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để lưu key lên CSDL.
                         </div>
@@ -265,19 +265,20 @@
                                 </label>
                             </div>
                             <textarea id="userAiMistralKeys" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs outline-none focus:ring-2 focus:ring-violet-500" placeholder="Mỗi dòng một API key Mistral"></textarea>
+                            <p class="mt-1 text-xs text-slate-500">Ô để trống thì key của module đó được giữ nguyên. Muốn xóa hết, bấm Xóa key.</p>
                         </div>
                         <div id="userAiMeta" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
                             Chưa có dữ liệu key.
                         </div>
                         <div id="userAiTestResults" class="hidden space-y-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs"></div>
                         <p id="userAiSettingsStatus" class="min-h-[1.25rem] text-sm font-semibold text-slate-500"></p>
-                    </div>
-                </div>
-                <div id="userAiKeysFooter" class="hidden flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <button type="button" id="userAiDeleteBtn" class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-bold text-rose-600 hover:bg-rose-50">Xóa key</button>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" id="userAiTestBtn" class="rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-50">Kiểm tra Key</button>
-                        <button type="button" id="userAiSaveBtn" class="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-bold text-white hover:bg-indigo-700">Lưu lên CSDL</button>
+                        <div id="userAiKeysFooter" class="flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <button type="button" id="userAiDeleteBtn" class="rounded-lg border border-rose-200 px-4 py-2 text-sm font-bold text-rose-600 hover:bg-rose-50">Xóa key</button>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" id="userAiTestBtn" class="rounded-lg border border-indigo-200 bg-white px-4 py-2 text-sm font-bold text-indigo-700 hover:bg-indigo-50">Kiểm tra Key</button>
+                                <button type="button" id="userAiSaveBtn" class="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-bold text-white hover:bg-indigo-700">Lưu lên CSDL</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>`;
@@ -309,7 +310,7 @@
         document.getElementById('userAiTestBtn').addEventListener('click', () => UserAiSettings.testGeminiKeys());
         document.getElementById('userAiSaveBtn').addEventListener('click', () => UserAiSettings.saveSettings());
         document.getElementById('userAiDeleteBtn').addEventListener('click', () => UserAiSettings.deleteKeys());
-        UserAiSettings.switchTab('overview');
+        UserAiSettings.switchTab('keys');
     }
 
     function fillForm(payload) {
@@ -346,7 +347,7 @@
 
         switchTab(tabName) {
             ensureModal();
-            const tab = tabName === 'keys' ? 'keys' : 'overview';
+            const tab = tabName === 'overview' ? 'overview' : 'keys';
             const overview = document.getElementById('userAiTabOverview');
             const keys = document.getElementById('userAiTabKeys');
             const footer = document.getElementById('userAiKeysFooter');
@@ -471,23 +472,28 @@
             persistFallbackModel(selectedModelValue('userAiGeminiFallbackModel', 'userAiGeminiFallbackModelCustom', 'gemini-2.5-flash'));
             const geminiLines = parseKeys(document.getElementById('userAiGeminiKeys')?.value || '');
             const mistralLines = parseKeys(document.getElementById('userAiMistralKeys')?.value || '');
-            persistLocalKeys(geminiLines, mistralLines, { wipeEmpty: true });
+            const body = {};
+            if (geminiLines.length) body.keys = geminiLines;
+            if (mistralLines.length) body.mistral_keys = mistralLines;
+            if (!body.keys && !body.mistral_keys) {
+                setStatus('Ô để trống nên key Gemini và Mistral đang lưu được giữ nguyên.', 'warning');
+                showToast('Chưa nhập key mới. Key các module đang có được giữ nguyên.', 'warning');
+                UserAiSettings.updateBadge();
+                return;
+            }
             setStatus('Đang lưu lên CSDL...', '');
             try {
-                const { res, data } = await api('POST', {
-                    keys: geminiLines,
-                    mistral_keys: mistralLines,
-                });
+                const { res, data } = await api('POST', body);
                 if (res.status === 401) {
                     setLoginHint(true);
-                    setStatus('Đã lưu trên máy. Đăng nhập lại để lưu lên CSDL.', 'warning');
-                    showToast('Đã lưu trên máy. Vui lòng đăng nhập lại để lưu lên CSDL.', 'warning');
+                    setStatus('Model đã lưu trên máy. Đăng nhập lại để lưu key lên CSDL. Key đang có không bị xóa.', 'warning');
+                    showToast('Phiên đăng nhập đã hết hạn. Key trên CSDL được giữ nguyên.', 'warning');
                     UserAiSettings.updateBadge();
                     return;
                 }
                 if (!res.ok || !data.ok) {
-                    setStatus(data.error || 'Lưu CSDL thất bại. Key vẫn được giữ trên máy.', 'error');
-                    showToast(data.error || 'Lưu CSDL thất bại.', 'error');
+                    setStatus(data.error || 'Lưu CSDL thất bại. Key trên CSDL không đổi.', 'error');
+                    showToast(data.error || 'Lưu CSDL thất bại. Key trên CSDL không đổi.', 'error');
                     UserAiSettings.updateBadge();
                     return;
                 }
@@ -496,10 +502,14 @@
                 persistModel(model);
                 UserAiSettings.updateBadge();
                 setStatus('Đã lưu lên CSDL và đồng bộ toàn hệ thống.', 'success');
-                showToast(`Đã lưu lên CSDL: Gemini ${(data.keys || geminiLines).length} key, Mistral ${(data.mistral_keys || mistralLines).length} key.`, 'success');
+                const kept = [];
+                if (!geminiLines.length) kept.push('Gemini');
+                if (!mistralLines.length) kept.push('Mistral');
+                const keptNote = kept.length ? ` Giữ nguyên ${kept.join(' và ')}.` : '';
+                showToast(`Đã lưu lên CSDL: Gemini ${(data.keys || geminiLines).length} key, Mistral ${(data.mistral_keys || mistralLines).length} key.${keptNote}`, 'success');
             } catch {
-                setStatus('Đã lưu trên máy. Không kết nối được CSDL.', 'warning');
-                showToast('Đã lưu trên máy. Không kết nối được CSDL.', 'warning');
+                setStatus('Không kết nối được CSDL. Key trên CSDL không đổi.', 'warning');
+                showToast('Không kết nối được CSDL. Key trên CSDL không đổi.', 'warning');
                 UserAiSettings.updateBadge();
             }
         },

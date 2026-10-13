@@ -47,15 +47,19 @@ Gọi tiếp tool `ask_question` với ĐÚNG 12 lựa chọn:
 
 ## 4. Quy ước thư mục đầu vào và kết quả (Bắt buộc không lưu lung tung)
 Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư mục `TROLYTHIEN/`:
+- 🔴 **QUY TẮC ĐẶT TÊN THƯ MỤC THEO NGÀY (BẮT BUỘC TỪ NAY VỀ SAU):**
+  + Mọi file kết quả khi xuất bản (`Ket_qua/`) **BẮT BUỘC ĐẶT TRONG THƯ MỤC CON THEO NGÀY HIỆN TẠI** (định dạng `DD.MM`, ví dụ hôm nay ngày 13/10 là: `13.10`).
+  + Đường dẫn chuẩn: `TROLYTHIEN/[PHAN_MUC]/Ket_qua/[DD.MM]/` (ví dụ: `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/13.10/`, `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/13.10/`, `TROLYTHIEN/8_TAO_BAO_CAO/Ket_qua/13.10/`).
+  + Tuyệt đối không lưu tản mạn trực tiếp ngoài gốc `Ket_qua/`.
 - **1/ Soạn Giáo án (KHBD):**
   + File đầu vào (PDF SGK, PPCT, tài liệu): đặt tại `TROLYTHIEN/1_SOAN_KHBD/Dau_vao/`
-  + File kết quả (File Word .docx KHBD hoàn chỉnh): tự động lưu tại `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/`
+  + File kết quả (File Word .docx KHBD hoàn chỉnh): tự động lưu tại `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/[DD.MM]/`
   + Tích hợp NLS và AI: Trong các hoạt động dạy học có năng lực số, năng lực AI thì **bắt buộc phải in đậm, in nghiêng phần tích hợp** (đồng bộ 100% với tiêu chuẩn thẩm định duyệt giáo án).
   + Bắt buộc có Sơ đồ tư duy (Mindmap) trong các tiết Ôn tập / Luyện tập chung (tại Hoạt động 2.1) và Bắt buộc có hình vẽ toán học trong các bài Hình học (tuân thủ `.agents/rules/soankhbd.md`).
   + Chuẩn hóa công thức Toán: Ký hiệu chia hết hiển thị đúng 3 chấm dọc (`\vdots` $\rightarrow$ $⋮$), không chia hết (`\not\vdots` $\rightarrow$ $∤$), tuyệt đối không để sót chữ *vdots* in nghiêng.
 - **2/ Tạo bài tập:**
-  + File đầu vào (PDF bài học, PDF chuyên đề bài tập 5-10 trang, SGK trọn cuốn): đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`
-  + File kết quả (File Word đề thi, OLM, Game, File HTML bài dạy tương tác `[Ten_Bai_Day].html` khi chọn mục 9, trọn bộ PDF từng bài khi chọn mục 10, mô phỏng HTML tương tác offline khi chọn mục 11, hoặc đề Word từ ma trận khi chọn mục 12): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`
+  + File đầu vào (PDF bài học, PDF chuyên đề bài tập 5-10 trang, SGK trọn cuốn): đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/` (hoặc thư mục theo ngày `Dau_vao/[DD.MM]/`)
+  + File kết quả (File Word đề thi, OLM, Game, File HTML bài dạy tương tác `[Ten_Bai_Day].html` khi chọn mục 9, trọn bộ PDF từng bài khi chọn mục 10, mô phỏng HTML tương tác offline khi chọn mục 11, hoặc đề Word từ ma trận khi chọn mục 12): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/[DD.MM]/`
   + Khi chọn mục 9 (Xuất bài dạy HTML): Tuân thủ quy chuẩn riêng tại `.agents/rules/tao-bai-day-html.md`.
   + Khi chọn mục 10 (Cắt PDF SGK thành từng bài học):
     * Đọc cuốn SGK/SBT PDF trong `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`.
@@ -165,20 +169,35 @@ Khi cần sửa tương tác trên canvas, cung cấp https://www.hoangthiencm.i
 
 ## 7. Quy chuẩn cho Tính năng 9 thuộc Nhánh 3 (Tạo bài dạy HTML từ PDF bài học / bài tập)
 Khi chọn "9. ⭐ Xuất bài dạy HTML (Dạy thêm, phụ đạo, bồi dưỡng - Phân dạng & Giải từng bước)":
-- **Tôn chỉ sư phạm:** Đóng vai trò **Nhà nghiên cứu giáo dục toán học & Tác giả viết sách chuyên khảo kinh điển** (phong cách Thầy Vũ Hữu Bình, Nguyễn Ngọc Đạm, Tôn Thân...). Tuyệt đối không làm thợ chép nhặt SGK máy móc.
-- **5 Trụ cột học thuật cốt tử:**
-  1. **Lý thuyết bản chất & Bổ đề mở rộng:** Khái quát triết lý toán học, công thức giải nhanh và tính chất suy rộng quan trọng SGK không nói rõ nhưng thi cử hay gặp.
-  2. **Phân loại dạng bài khoa học:** Tên dạng chuẩn xác $\rightarrow$ Dấu hiệu nhận biết đặc trưng (quét đề trong 3s) $\rightarrow$ Thuật toán tư duy 3–4 bước.
-  3. **Phân tích tìm hướng giải (Thinking-Aloud — `.analysis-box`):** Vạch trần con đường tư duy, chỉ ra mấu chốt tại sao lại nghĩ ra phép biến đổi; có nút toggle `🧭 Hướng Giải` (Phím `H`).
-  4. **Lời giải mẫu mực & Đánh giá sư phạm:** Lời giải chuẩn SGK (cấm $\iff$) $\rightarrow$ Cảnh báo cạm bẫy học sinh thường mất điểm oan (`.pitfall-box`) $\rightarrow$ Khai thác, mở rộng và phát triển bài toán (`.extension-box`).
-  5. **Phân tầng đánh giá năng lực (Bản vá Ma trận tỷ lệ):** Phân bổ khoa học: **~40% Thông hiểu — Rèn luyện kỹ thuật giải** (thực chiến kỹ thuật giải, thành thạo thuật toán, .level-1), **~40% Vận dụng** (biến thể, cài bẫy, toán thực tiễn đời sống, .level-2), và **~20% Vận dụng cao** (ẩn phụ nâng cao, biện luận tham số $, cực trị, bồi dưỡng HSG & thi vào 10 chuyên, .level-3). Kèm Bảng rubric tự đánh giá năng lực A4.\n- **Thiết kế điều khiển đứng lớp & In ấn A4:**
-  + Phím `H` / `🧭 Hướng Giải`: Mở gợi mở tư duy cho học sinh trước khi xem giải.
-  + Phím `Space` / `Enter` / `💡 Lời Giải`: 1-chạm bật/tắt lời giải mẫu mực hoàn chỉnh.
-  + Phím mũi tên `→` / `Sau ▶`: Chuyển ngay sang bài tiếp theo không bị kẹt.
-  + Công cụ giảng dạy: Lazer quang học (`L`), Bút vẽ (`P`), Bảng viết toàn màn hình (`W`), Chèn chữ live note (`T`), Máy tính Casio fx-580 (`C`), Cỡ chữ tivi $\ge 40\text{px}$.
-  + Phiếu in A4: Tự động gom thành tài liệu chuyên đề chuẩn sách bài tập: Tóm tắt phương pháp $\rightarrow$ Ví dụ mẫu $\rightarrow$ Bài tập phân tầng 3 mức $\rightarrow$ Bảng rubric tự đánh giá năng lực; ẩn toàn bộ lời giải và cạm bẫy.
+- **Tôn chỉ sư phạm:** Đóng vai trò **Nhà nghiên cứu giáo dục toán học & Tác giả viết sách chuyên khảo kinh điển** (phong cách Thầy Vũ Hữu Bình, Nguyễn Ngọc Đạm, Tôn Thân...). Tuyệt đối không làm thợ chép nhặt SGK máy móc và không soạn đề cẩu thả.
+- **Hệ thống 8 Bản vá Sư phạm thực chiến (Chuẩn Tôn Thân — Vũ Hữu Bình — Chống soạn tầm bậy):**
+  1. **Vá 1 (Thiết kế số liệu mẫu mực):** Nghiệm phương trình/hệ phương trình phải là số nguyên hoặc phân số tối giản đẹp. Tam giác vuông dùng bộ ba Pythagore nguyên $(3,4,5), (5,12,13)...$ hoặc góc đặc biệt ($30^\circ, 45^\circ, 60^\circ$). Cấm tam giác vi phạm bất đẳng thức tam giác. Biểu thức rút gọn tinh gọn, trong sáng.
+  2. **Vá 2 (Cụm bài tập rèn luyện tương tự):** Cấm nhảy cóc lộn xộn. Mỗi dạng toán bắt buộc gồm cụm 3–4 bài: *Bài mẫu kinh điển $\rightarrow$ Bài tương tự 1 (luyện tay đổi số) $\rightarrow$ Bài biến thể 2 (gài bẫy nhẹ / đổi chiều tư duy) $\rightarrow$ Bài mở rộng / thực tế 3*.
+  3. **Vá 3 (Phân tích đi lên Thầy Vũ Hữu Bình):** Khối `🧭 Phân tích tìm hướng giải` (`.analysis-box`) bắt buộc dùng sơ đồ phân tích đi lên ($A \Leftarrow B \Leftarrow C$). Chỉ rõ mấu chốt tại sao nghĩ ra cách vẽ đường phụ hoặc biến đổi trung gian. Nút toggle `🧭 Hướng Giải` (Phím `H`).
+  4. **Vá 4 (Kỷ luật trình bày tự luận THCS):** Cấm 100% ký hiệu $\iff, <=>, \Leftrightarrow$. Dùng từ nối tự nhiên chuẩn SGK: `"Điều kiện xác định"`, `"Ta có"`, `"suy ra"`, `"nên"`, `"hay"`, `"do đó"`, `"Vậy..."`. Không nhảy bước biến đổi. Nút toggle `💡 Lời Giải` (Phím `Space`/`Enter`).
+  5. **Vá 5 (Khóa chặt cấp học):** 100% kiến thức THCS. Cấm tuyệt đối định lý Sin, Cosin, công thức cộng lượng giác, góc tù $> 90^\circ$, bất đẳng thức Olympic/Cauchy nhiều biến. Không lấy kiến thức lớp trên dạy lớp dưới.
+  6. **Vá 6 (Vẽ hình SVG chính xác 1:1):** Tính tọa độ giải tích Oxy chính xác 100%, góc vuông thật, tam giác chuẩn tỉ lệ, lề an toàn $\ge 40\text{px}$, không đè nhãn chữ, không lộ đáp án trên hình (để dấu `?`).
+  7. **Vá 7 (Cảnh báo cạm bẫy sát sườn):** Khối `⚠️ Cạm bẫy` (`.pitfall-box`) phải chỉ ra đúng lỗi học sinh hay bị trừ điểm khi đi thi (quên ĐKXĐ, quên thử lại, chia 2 vế cho 0 làm mất nghiệm, nhầm $\sin/\cos$, bấm máy Casio nhầm Rad/Deg).
+  8. **Vá 8 (Cơ chế phân tầng Kép: Chiếu & In A4):** Slide trực quan cho GV đứng lớp (Lazer `L`, Bút vẽ `P`, Bảng viết `W`, Chèn chữ live note `T`, Máy tính Casio fx-580 `C`, Cỡ chữ tivi $\ge 40\text{px}$). Chế độ in A4 (`Ctrl + P`) tự động ẩn toàn bộ lời giải và cạm bẫy để xuất thành phiếu bài tập rèn luyện chuẩn sách bài tập chuyên đề kèm Bảng Rubric tự đánh giá năng lực.
+  9. **Vá 9 (Kỹ thuật số tự nhiên có gạch trên đầu & Chuẩn hóa công thức Word Equation):** 
+     - Số tự nhiên có các chữ số cần gạch ngang trên đầu biểu thị số nhiều chữ số ($\overline{ab}, \overline{abc}, \overline{3*5}, \overline{17*}, \overline{2x3y}$...):
+       + Trong Word (.docx): BẮT BUỘC dùng cấu trúc Overbar chuẩn `<m:bar><m:barPr><m:pos m:val="top"/></m:barPr><m:e>...</m:e></m:bar>`. TUYỆT ĐỐI CẤM dùng accent `<m:acc>` (vì dấu mũ accent làm gãy nét, biến thành ký tự rác hoặc dấu móc đè lên chữ số).
+       + Trong HTML/Web: Dùng `\overline{...}` trong MathJax/KaTeX hoặc CSS `text-decoration: overline;`.
+     - 100% công thức toán học trong Word phải là Native Word Equation (`m:oMath`), tuyệt đối không để lọt chuỗi LaTeX thô (`\text{ƯCLN}`, `\frac...`) làm hỏng giao diện.
+     - Đề cương ôn tập phải tối đa hóa bài tập rèn kỹ năng thực chiến (đặc biệt học sinh yếu, trung bình lặp lại quen tay), cắt giảm lý thuyết rườm rà; năm học chuẩn 2026 - 2027 và bỏ cấp Phòng GD&ĐT.
+  10. **Vá 10 (Triệt tiêu ô vuông nét đứt / Empty Placeholder trong Word Equation):**
+      - **Hiện tượng:** Word Equation xuất hiện ô vuông chấm chấm (⬚ / placeholder), thường gặp ở:
+        + Trước số âm trong ngoặc: (-2; 1) hiển thị thành ( ⬚ - 2 ; 1 ).
+        + Cặp ngoặc nhọn rỗng: { ⬚ } khi viết thứ tự thực hiện phép tính.
+      - **Nguyên nhân kỹ thuật:** Dấu ngoặc rỗng sinh thẻ <m:e/> rỗng (vị trí chờ nhập liệu). Dấu trừ - trong (-2; 1) bị XSLT Office (MML2OMML.XSL) hiểu nhầm thành ký tự phân cách (sepChr), sinh ra phần tử rỗng <m:e/> đứng trước số 2.
+      - **Quy tắc xử lý:** Dấu ngoặc mô tả quy tắc trong văn bản phải viết text thường ( ), [ ], { } (tuyệt đối không bọc $). Số âm trong ngoặc được engine tự động bọc (-2 -> ({-2} trước khi biên dịch OMML để ngăn Office hiểu nhầm dấu trừ là sepChr.
+   11. **Vá 11 (Vòng tự động phản biện & rà soát chất lượng công thức toán học - Auto-Auditor):**
+       - **Mục tiêu:** Tuyệt đối không để lọt công thức LaTeX thô (\mathrm, \text, \frac, \sqrt...), không để lọt tiêu đề lặp từ (Bài Đáp số Đề), không để lọt ký hiệu cấm (<=>), và không để lọt ô vuông rỗng (<m:e/>).
+       - **Quy trình phản biện 2 lớp:**
+         + *Lớp 1 (Tiền xử lý tại Helper):* Tự động quét chuỗi văn bản đầu vào (auto_wrap_unwrapped_latex). Bất kỳ biểu thức toán nào bị quên bọc dấu $ đều được tự động bọc lại để ép chuyển đổi sang Native Word Equation (m:oMath).
+         + *Lớp 2 (Hậu kiểm tài liệu .docx - de_cuong_docx_auditor.py):* Master runner tự động mở file Word vừa tạo, quét toàn bộ Run/Paragraph và XML OMML để kiểm định. Nếu phát hiện sai sót, tự động khắc phục trực tiếp trên file và xuất Bảng Báo cáo Phản biện Chất lượng (Audit Report) đạt PASS 100% trước khi bàn giao.
 - **Đầu ra:** Xuất file HTML duy nhất tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/[Ten_Bai_Day].html`.
-- Tuân thủ quy chuẩn chi tiết tại `.agents/rules/tao-bai-day-html.md`.
+- Tuân thủ quy chuẩn chi tiết tại `.agents/rules/tao-bai-day-html.md` và `TROLYTHIEN/2_TAO_BAI_TAP/PROMPT_TAO_BAI_DAY_HTML.md`.
 
 ## 8. Quy chuẩn kỹ thuật cho Nhánh 12
 Khi chọn "12/ Chuẩn hoá văn bản (Hành chính / Đảng)", đọc Word `.docx` trong `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Dau_vao/`. Áp dụng `TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/PROMPT_CHUAN_HOA_VAN_BAN.md` trước khi xuất file.

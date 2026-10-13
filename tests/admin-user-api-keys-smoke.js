@@ -62,6 +62,8 @@ requireMatch(admin, /Dùng key chung/, 'user list must show the shared-key state
 requireMatch(admin, /const defaultTeacherPages = \['lotrinhtoan6', 'thongketientrinh', 'thanhtich', 'thoikhoabieu', 'xaydungphuluc'\];/, 'new teacher accounts must not pre-check quanlyvanban.');
 
 requireMatch(index, /setToolCardsVisible\(\s*'\[data-tool="teacher-documents"\]',\s*allowedSet\.has\('quanlyvanban'\) && features\.quanlyvanban !== false\s*\)/, 'document card must follow the quanlyvanban permission.');
+requireMatch(index, /const canViewDocuments = allowedSet\.has\('quanlyvanban'\) && accountFeatures\.quanlyvanban !== false;/, 'teacher hub must not force document access on.');
+requireAbsent(index, /const canViewDocuments = true/, 'index must not hard-code document access.');
 requireMatch(index, /function teacherHasWorkspaceHub\(allowedSet\)[\s\S]*allowedSet\.has\('quanlyvanban'\)/, 'workspace hub still checks quanlyvanban.');
 
 requireMatch(settings, /UserAiSettings\.switchTab\(tabName === 'overview' \? 'overview' : 'keys'\)/, 'AI settings must open the keys tab by default.');

@@ -42,14 +42,14 @@ def build_bai_day_html(lesson_data, output_path, template_path=None):
     slides = lesson_data.get("slides", [])
     total_slides = len(slides)
 
-    # 1. Thẩm định sư phạm nghiêm ngặt
+    # 1. Thẩm định sư phạm nghiêm ngặt (Chuẩn Tôn Thân — Vũ Hữu Bình)
     content_str = json.dumps(slides, ensure_ascii=False)
     if re.search(r'(\\iff|\\Leftrightarrow|<=>)', content_str):
-        print("⚠️ CẢNH BÁO: Phát hiện ký hiệu tương đương \\iff trong nội dung bài tập! Cần sửa sang ngôn ngữ tự nhiên chuẩn THCS.")
+        print("⚠️ CẢNH BÁO SƯ PHẠM ĐỎ: Phát hiện ký hiệu tương đương \\iff trong nội dung bài tập! Cấm dùng ở THCS, bắt buộc đổi sang ngôn ngữ tự nhiên SGK ('nên', 'hay', 'suy ra', 'do đó').")
 
-    forbidden_c3 = re.findall(r'(định lý sin|định lí sin|định lý côsin|định lí côsin|regiomontanus)', content_str, re.IGNORECASE)
+    forbidden_c3 = re.findall(r'(định lý sin|định lí sin|định lý côsin|định lí côsin|regiomontanus|công thức cộng lượng giác|đạo hàm|tích phân)', content_str, re.IGNORECASE)
     if forbidden_c3:
-        raise ValueError(f"LỖI VI PHẠM SƯ PHẠM: Phát hiện kiến thức cấp 3 bị cấm: {set(forbidden_c3)}")
+        raise ValueError(f"LỖI VI PHẠM SƯ PHẠM: Phát hiện kiến thức cấp 3 bị cấm trong tài liệu THCS: {set(forbidden_c3)}")
 
     jump_options = []
     slides_html = []

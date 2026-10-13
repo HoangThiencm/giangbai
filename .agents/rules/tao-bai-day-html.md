@@ -16,49 +16,77 @@
 
 ---
 
-## 2. NGUYÊN TẮC BẤT DI BẤT DỊCH: GIỚI HẠN VÙNG KIẾN THỨC THEO CẤP HỌC (Curriculum Scope Constraint)
+## 2. HỆ THỐNG 8 BẢN VÁ SƯ PHẠM THỰC CHIẾN (CHUẨN TÔN THÂN — VŨ HỮU BÌNH) — CHỐNG SOẠN TẦM BẬY
 
-1. **CHỈ SỬ DỤNG KIẾN THỨC CỦA CẤP HỌC ĐANG DẠY VÀ CÁC LỚP DƯỚI:**
-   - Bài học thuộc cấp 2 (THCS) thì **100% CHỈ ĐƯỢC DÙNG KIẾN THỨC CỦA CẤP 2 (THCS)**.
-   - **TUYỆT ĐỐI CẤM đưa kiến thức Cấp 3 (THPT) vào bài giảng Cấp 2:**
-     + ❌ **CẤM:** Định lý Sin, Định lý Côsin (đây là kiến thức Toán 10 THPT).
-     + ❌ **CẤM:** Công thức cộng lượng giác $\tan(a \pm b), \sin(a \pm b), \cos(a \pm b)$ (Toán 11 THPT).
-     + ❌ **CẤM:** Khái niệm góc lượng giác tù/tổng quát $> 90^\circ$ (Toán 9 THCS chỉ học tỉ số lượng giác của góc nhọn $0^\circ < \alpha < 90^\circ$ trong tam giác vuông; nếu gặp tam giác tù thì phải kẻ đường cao ngoài để đưa về tam giác vuông và dùng góc kề bù nhọn).
-     + ❌ **CẤM:** Bất đẳng thức Cauchy/AM-GM đa biến nâng cao, bài toán cực trị Regiomontanus, giải tích, đạo hàm.
-2. **KHÔNG LẤY KIẾN THỨC LỚP TRÊN CHO BÀI LỚP DƯỚI:**
-   - Tuyệt đối không lấy kiến thức Lớp 9 dạy cho bài Lớp 6, 7, 8 (ví dụ: không dùng căn bậc hai hay tỉ số lượng giác lớp 9 cho bài hình học lớp 7, 8).
-3. **CẤM TUYỆT ĐỐI KÝ HIỆU TƯƠNG ĐƯƠNG $\iff$ Ở CẤP 2 THCS:**
-   - Cấp THCS chưa học mệnh đề tương đương logic. Lạm dụng `\iff`, `\Leftrightarrow`, `<=>` là lỗi phản sư phạm, thi vào lớp 10 bị trừ điểm.
-   - Bắt buộc dùng văn phong tự nhiên chuẩn SGK: `"nên"`, `"hay"`, `"suy ra"`, `"hoặc"`, `"do đó"`, `"ta có"`.
+> ⚠️ **BẢN VÁ KỶ LUẬT THỰC CHIẾN — TUYỆT ĐỐI KHÔNG SOẠN BỪA, KHÔNG BỊA ĐỀ CẨU THẢ:**  
+> AI thường mắc tật xấu "nói lý thuyết suông thì hay nhưng khi soạn thì toàn tầm bậy": số liệu lẻ quái dị, nghiệm xấu, giải tắt, vi phạm vùng kiến thức cấp học, thiếu tính hệ thống. 8 Bản vá dưới đây là kim chỉ nam bắt buộc tuân thủ 100% trong mọi tình huống.
 
----
+### Vá Sư Phạm 1 — Kỹ Thuật Thiết Kế Số Liệu Mẫu Mực (Zero Bịa Số Lẻ / Nghiệm Xấu)
+- **Triết lý Tôn Thân — Vũ Hữu Bình:** Số liệu trong toán THCS phải được gọt giũa tỉ mỉ, có chủ đích sư phạm để làm nổi bật vẻ đẹp tư duy, không để học sinh sa lầy vào tính toán hỗn độn.
+- **Quy chuẩn số liệu:**
+  1. *Đại số (Phương trình, Hệ phương trình, Rút gọn):* Nghiệm bắt buộc phải là số nguyên đẹp (ví dụ $x = 2, x = -3$) hoặc phân số tối giản mẫu số nhỏ ($x = \frac{1}{2}, x = -\frac{3}{4}$). **TUYỆT ĐỐI CẤM** nghiệm chứa căn thức quái dị vô căn cứ (như $\frac{5 \pm \sqrt{73}}{4}$) trừ khi là bài chuyên đề giải phương trình bậc hai (Toán 9). Biểu thức rút gọn xong phải tinh gọn, trong sáng.
+  2. *Hình học:* Bắt buộc thỏa mãn bất đẳng thức tam giác ($|b-c| < a < b+c$). Ưu tiên sử dụng bộ ba Pythagore nguyên kinh điển: $(3, 4, 5)$, $(5, 12, 13)$, $(6, 8, 10)$, $(8, 15, 17)$, $(7, 24, 25)$ hoặc các góc đặc biệt ($30^\circ, 45^\circ, 60^\circ$).
+  3. *Số đo góc:* Số đo góc trong bài toán thuần túy phải là số nguyên chẵn độ ($30^\circ, 45^\circ, 60^\circ, 90^\circ, 120^\circ$). Tuyệt đối không bịa số đo góc lẻ thập phân vô nghĩa, trừ bài toán thực tế đo bóng cây/hải đăng làm tròn đến phút/độ theo yêu cầu đề bài.
 
-## 3. Hệ Thống 5 Trụ Cột Học Thuật Thực Chiến
+### Vá Sư Phạm 2 — Cấu Trúc Cụm Bài Tập Rèn Luyện Tương Tự (Clustered & Parallel Drill)
+- **Triết lý Sư phạm:** Học sinh THCS rèn luyện kỹ năng thông qua lặp lại có chủ đích. **CẤM NHẢY CÓC** (mỗi bài một kiểu dị biệt khiến học sinh hoang mang, mất phương hướng).
+- **Mỗi Dạng toán bắt buộc đi theo cụm 3–4 bài đồng bộ:**
+  1. *Ví dụ Mẫu (Model Problem):* Đề bài kinh điển + Hướng tư duy + Lời giải mẫu mực từng dòng.
+  2. *Bài Tương Tự 1 (Parallel Drill - "Luyện tay"):* Giữ nguyên 100% mô hình và phương pháp giải của bài mẫu, chỉ thay đổi số liệu đẹp để học sinh bắt chước quy trình, tự làm và tự tin làm chủ kỹ năng.
+  3. *Bài Biến Thể 2 (Variation Drill - "Đổi chiều / Gài bẫy nhẹ"):* Giữ mô hình nhưng đổi chiều bài toán (ví dụ: bài mẫu cho cạnh tìm góc $\rightarrow$ biến thể cho góc tìm cạnh; hoặc phương trình ẩn ở mẫu cần quy đồng đổi dấu) để thử thách phản xạ và chống học vẹt.
+  4. *Bài Mở Rộng / Thực Tế 3 (Extension / Real-world):* Mô hình hóa thực tiễn hoặc câu hỏi phân loại thi vào lớp 10.
 
-1. **Khái quát Lý thuyết & Bản chất Toán học (Core Insights & Proper Lemmas):**
-   - Không chép vẹt định nghĩa đơn thuần của SGK.
-   - Làm rõ bản chất: Vì sao lại sinh ra khái niệm/phương pháp này? Kỹ thuật bấm máy tính Casio hỗ trợ kiểm tra kết quả.
-   - Chỉ cung cấp Bổ đề thuần túy trong phạm vi cấp học (ví dụ: Tính chất hai góc phụ nhau, công thức diện tích tam giác nhọn qua sin, hệ thức liên hệ đường cao tam giác vuông).
+### Vá Sư Phạm 3 — Phương Pháp Phân Tích Đi Lên của Thầy Vũ Hữu Bình (Heuristic Analysis)
+- **Linh hồn sư phạm:** Trong khối `🧭 PHÂN TÍCH TÌM HƯỚNG GIẢI (`.analysis-box`)`, cấm tuyệt đối phán ngay lời giải xuôi như từ trên trời rơi xuống.
+- **Sơ đồ phân tích đi lên (Reverse Engineering):**
+  - Muốn chứng minh/tính được $A$
+  - $\Leftarrow$ Ta cần phải có $B$
+  - $\Leftarrow$ Để có $B$, ta cần dựa vào tính chất $C$ hoặc kẻ thêm yếu tố phụ $D$
+  - $\Leftarrow$ Yếu tố $C, D$ đã có sẵn từ giả thiết đề bài!
+  - Luôn trả lời câu hỏi cốt tử của học sinh: *"Tại sao lại nghĩ ra cách vẽ thêm đường vuông góc $AH$?"*, *"Tại sao lại tách hạng tử $5x = 2x + 3x$ thay vì cách khác?"*.
 
-2. **Hệ thống Phân loại Dạng bài & Bài tập Gom nhóm Rèn kỹ năng (Clustered Problem Taxonomy):**
-   - Phân loại rõ ràng theo từng kỹ thuật giải.
-   - Gom nhóm các bài tập tương tự để học sinh luyện tay nhiều lần cho thành thạo thuật toán.
-   - Đảm bảo đầy đủ các mạch kiến thức cốt lõi của bài học (ví dụ ở Bài 12 Toán 9: Bắt buộc phải có hệ thống bài tập chuyên đề **GIẢI TAM GIÁC VUÔNG** cho cả 2 trường hợp: biết 1 cạnh & 1 góc nhọn; biết 2 cạnh).
-
-3. **Phân tích Tìm tòi Hướng giải (Thinking-Aloud / Heuristic Exploration) — LINH HỒN SƯ PHẠM:**
-   - Bắt buộc có khối **🧭 Phân tích tìm hướng giải (`.analysis-box`)**: Giúp học sinh nhận diện dấu hiệu, chọn công thức phù hợp và định hướng các bước làm bài.
-
-4. **Đánh giá, Bình luận Sư phạm & Cảnh báo Cạm bẫy (`.pitfall-box` & `.extension-box`):**
-   - Cảnh báo cạm bẫy sát sườn học sinh THCS (nhầm cạnh đối/kề, nhầm $\sin/\cos$, bấm máy sai chế độ Deg/Rad, làm tròn góc sai quy chuẩn).
-   - Mở rộng phát triển vừa sức thi vào lớp 10.
-
-5. **Phân tầng Đánh giá Năng lực (Chuẩn Ma Trận 80% — 20%):**
-   - **80% Trung bình — Khá:** Gom nhóm rèn luyện kỹ thuật nền tảng và vận dụng thực tế vừa sức.
-   - **20% Khá — Giỏi:** Mở rộng tư duy theo từng dạng bài, không quá khó, không bồi dưỡng HSG cao siêu.
-   - Kèm **Bảng Rubric Tự Đánh giá Năng lực** trên phiếu in A4.
-  + Sử dụng các từ liên kết tự nhiên: `"nên"`, `"hay"`, `"suy ra"`, `"hoặc"`, `"do đó"`, `"ta có"`.
-  + Ví dụ chuẩn SGK:
+### Vá Sư Phạm 4 — Kỷ Luật Trình Bày Tự Luận Mẫu Mực (Cấm $\iff$ & Cấm Nhảy Bước)
+- **Cấm 100% ký hiệu tương đương $\iff$, `<=>`, `\Leftrightarrow`:**
+  - Học sinh THCS dùng $\iff$ thi vào lớp 10 bị trừ điểm nặng hoặc mất điểm cả câu do chưa học logic vị từ.
+  - Bắt buộc dùng văn phong tự nhiên chuẩn SGK: `"Điều kiện xác định: ..."`, `"Ta có:"`, `"Phương trình đã cho viết lại thành:"`, `"suy ra"`, `"nên"`, `"hay"`, `"do đó"`, `"Kết luận: Vậy..."`.
+  - Ví dụ chuẩn SGK:
     $$\begin{cases} 2x + 1 = 0 \quad \text{hoặc} \quad 3x - 1 = 0 \\ 2x = -1 \quad \text{hay} \quad x = -\frac{1}{2} \\ 3x = 1 \quad \text{hay} \quad x = \frac{1}{3} \end{cases}$$
+- **Cấm nhảy bước biến đổi ẩu:**
+  - Mọi bước biến đổi trung gian (chuyển vế đổi dấu, quy đồng khử mẫu, phân tích đa thức thành nhân tử, so sánh điều kiện xác định, đơn vị đo) phải được trình bày tường minh để học sinh học theo.
+
+### Vá Sư Phạm 5 — Khóa Chặt Vùng Kiến Thức Cấp Học (Curriculum Scope Constraint)
+1. **100% Kiến thức Cấp 2 THCS:**
+   - ❌ **CẤM:** Định lý Sin, Định lý Côsin (Toán 10 THPT).
+   - ❌ **CẤM:** Công thức cộng lượng giác $\tan(a \pm b), \sin(a \pm b), \cos(a \pm b)$ (Toán 11 THPT).
+   - ❌ **CẤM:** Góc lượng giác tù $> 90^\circ$ (Toán 9 THCS chỉ học góc nhọn trong tam giác vuông; nếu gặp tam giác tù thì kẻ đường cao ngoài để đưa về tam giác vuông kề bù nhọn).
+   - ❌ **CẤM:** Bất đẳng thức Cauchy/AM-GM đa biến cao siêu, bài toán cực trị giải tích, đạo hàm.
+2. **Không lấy kiến thức lớp trên dạy bài lớp dưới:**
+   - Tuyệt đối không lấy căn thức hay hệ thức lượng lớp 9 dạy cho bài lớp 7, 8.
+
+### Vá Sư Phạm 6 — Bản Vẽ Hình Học SVG Chuẩn Xác 1:1 Bằng Tọa Độ Giải Tích
+- **Không vẽ ước lượng:** Mọi điểm, đoạn thẳng, đường tròn phải tính bằng tọa độ Oxy chuẩn xác 100%.
+- Tam giác vuông: Góc vuông phải $90^\circ$ thật, có ký hiệu góc vuông chuẩn.
+- ViewBox tối thiểu $480 \times 260$, lề an toàn $\ge 40\text{px}$, nhãn đỉnh không đè lên cạnh/góc.
+- **Tuyệt đối không lộ đáp án:** Yếu tố cần tính để dấu `?` hoặc để trống theo đúng SGK.
+
+### Vá Sư Phạm 7 — Cảnh Báo Cạm Bẫy Sát Sườn Đi Thi (`.pitfall-box`)
+- Chỉ ra đúng các lỗi sai "chí mạng" học sinh THCS hay bị trừ điểm oan:
+  - Quên điều kiện xác định của biểu thức (mẫu khác 0, biểu thức dưới căn $\ge 0$).
+  - Quên đặt điều kiện của ẩn trong bài toán thực tế (số người, số sản phẩm $\in \mathbb{N}^*$; vận tốc $> 0$).
+  - Chia hai vế cho biểu thức chứa biến khi chưa biết nó khác 0 $\rightarrow$ làm mất nghiệm.
+  - Nhầm lẫn giữa cạnh đối và cạnh kề trong tỉ số lượng giác.
+  - Bấm máy tính Casio sai chế độ đo góc (Radian thay vì Degree).
+
+### Vá Sư Phạm 8 — Cơ Chế Hai Chế Độ Độc Lập: Giảng Dạy Tương Tác & Phiếu In A4
+- **Chế độ trình chiếu:** Dành cho giáo viên trên lớp (Tivi/máy chiếu, chữ lớn $\ge 40\text{px}$, phím tắt `H` gợi mở hướng giải, phím `Space`/`Enter` hiện lời giải, bút vẽ, thước, bảng viết).
+- **Chế độ In A4 (`Ctrl + P`):** Tự động ẩn toàn bộ giao diện slide, ẩn 100% lời giải và cạm bẫy $\rightarrow$ Xuất ra phiếu học tập A4 gồm: Phần I (Lý thuyết cốt lõi) $\rightarrow$ Phần II (Ví dụ mẫu mực) $\rightarrow$ Phần III (Bài tập rèn luyện tương tự chừa dòng kẻ làm bài) $\rightarrow$ Phần IV (Bảng Rubric tự đánh giá năng lực).
+
+### Vá Sư Phạm 9 — Kỹ Thuật Số Tự Nhiên Có Gạch Trên Đầu & Chuẩn Hóa Công Thức Word Equation
+- **Số tự nhiên có các chữ số gạch trên đầu ($\overline{ab}, \overline{abc}, \overline{3*5}, \overline{17*}, \overline{2x3y}$...):**
+  - Trong Word (.docx): BẮT BUỘC dùng cấu trúc Overbar `<m:bar><m:barPr><m:pos m:val="top"/></m:barPr><m:e>...</m:e></m:bar>`, TUYỆT ĐỐI CẤM dùng accent `<m:acc>` (vì dấu mũ accent làm gãy nét, biến thành ký tự rác hoặc dấu móc chéo đè lên chữ số).
+  - Trong HTML/Web: Bắt buộc dùng `\overline{...}` trong MathJax/KaTeX hoặc CSS `<span style="text-decoration: overline;">...</span>`.
+- **100% Công thức toán học trong Word phải là Native Word Equation (`m:oMath`):** Tuyệt đối không để lọt chuỗi LaTeX thô (`\text{ƯCLN}`, `\frac...`) làm hỏng giao diện.
+- **Tập trung tối đa bài tập rèn luyện kỹ năng thực chiến (drill & practice):** Đặc biệt rèn kỹ năng cho học sinh yếu, trung bình lặp lại quen tay; lược bỏ lý thuyết rườm rà; cập nhật năm học 2026 - 2027 và bỏ cấp Phòng GD&ĐT.
 
 ---
 
@@ -188,3 +216,13 @@ Khi bấm **`[🖨️ In Phiếu Bài Tập (A4)]`** (hoặc `Ctrl + P`):
 - **BẮT BUỘC SỬ DỤNG ENGINE DUY NHẤT:** Toàn bộ quá trình thẩm định dữ liệu bài học và render HTML được thực hiện thông qua module `TROLYTHIEN/engine/builder_bai_day_html.py`.
 - **CẤM TUYỆT ĐỐI SINH FILE `.PY` RÁC:** Không tạo script python riêng cho từng bài học (`build_bai_04.py`, `build_bai_12.py`, `verify_bai_12.py`...). Dữ liệu bài học được nạp trực tiếp qua JSON hoặc function dictionary.
 - Khi cần kiểm tra nhanh, chỉ dùng scratch space và tự xóa ngay lập tức.
+
+
+---
+
+## 9. Vòng Phản Biện & Hậu Kiểm Tự Động Chất Lượng Công Thức Toán (Deep XML Math Auditing)
+
+- **Nguyên tắc cốt tử:** Tuyệt đối KHÔNG kiểm tra hời hợt trên bề mặt `paragraph.text` (vì `python-docx` bỏ qua text trong `<m:oMath>`). Bắt buộc quét sâu vào từng thẻ XML `<m:t>` nằm trong `<m:oMath>`.
+- **Triệt tiêu tàn dư LaTeX thô:** Mọi ký hiệu toán học như `ƯCLN`, `BCNN` phải dùng chuẩn `\text{ƯCLN}` hoặc hiển thị thẳng text tiếng Việt trong Equation; cấm thay thế thành `\mathrm{UCLN}` gây lỗi Word hiển thị nguyên chuỗi `\mathrm{UCLN}` ra màn hình.
+- **Triệt tiêu Empty Placeholder:** Không để lọt thẻ `<m:e/>` rỗng trong XML. Mọi cặp ngoặc có số mũ như `-(A+B)^2` bắt buộc bọc cơ số `-{(A+B)}^2` để tránh mồ côi dấu mở ngoặc.
+- **Tiêu đề đáp án:** Phải dùng Heading chuẩn (`Đáp số & Hướng dẫn Đề số X`), cấm để lặp từ ngớ ngẩn (`Bài Đáp số Đề X`).

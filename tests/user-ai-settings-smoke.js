@@ -54,5 +54,9 @@ assert.match(settings, /accept="\.txt,text\/plain"/, "nạp key từ file .txt")
 assert.match(settings, /Đăng nhập lại/, "báo rõ khi hết phiên đăng nhập");
 assert.match(settings, /heroKeyStatus/, "updateBadge cập nhật #heroKeyStatus");
 assert.match(settings, /isStudent\(\)|userRole.*student/, "không hiện cài đặt AI cho học sinh");
+assert.match(settings, /switchTab\(tabName === 'overview' \? 'overview' : 'keys'\)/, "mở modal vào thẳng tab keys");
+assert.match(settings, /if \(geminiLines\.length\) body\.keys = geminiLines/, "không gửi Gemini rỗng");
+assert.match(settings, /if \(mistralLines\.length\) body\.mistral_keys = mistralLines/, "không gửi Mistral rỗng khi để trống");
+assert.match(settings, /Lưu lên CSDL/, "có nút Lưu lên CSDL");
 
 console.log("user-ai-settings smoke: passed");
