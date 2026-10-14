@@ -55,10 +55,36 @@ __pycache__/
 *.7z
 *.tar.gz
 
-# Thư mục ảnh cắt tạm & debug phát sinh trong quá trình xử lý
-TROLYTHIEN/**/pdf_pages/
-TROLYTHIEN/**/Ket_qua/debug_pages/
+# ==============================================================================
+# CHẶN CÁC TỆP VÀ THƯ MỤC ẢNH RÁC TRÍCH XUẤT TỪ PDF / OCR / DEBUG / RUNTIME
+# ==============================================================================
+**/pages/
+**/*_pages/
+**/pdf_pages/
+**/debug_pages/
+**/temp_pdf_pages/
+**/temp_pages/
+**/crop_pages/
+**/ocr_pages/
+**/extracted_pages/
 tools/temp_pdf_pages/
+tools/test_*.png
+tools/test_*.jpg
+tools/temp_*
+
+# Ảnh tạm clipboard & runtime cache
+**/.runtime/
+**/clipboard_images/
+**/.cache/
+**/ocr_cache/
+
+# Ảnh trang PDF phát sinh trong thư mục Đầu vào của Trợ lý Thiên
+TROLYTHIEN/**/Dau_vao/**/pages/
+TROLYTHIEN/**/Dau_vao/**/*_pages/
+TROLYTHIEN/**/Dau_vao/**/page_*.png
+TROLYTHIEN/**/Dau_vao/**/page_*.jpg
+TROLYTHIEN/**/Dau_vao/**/page_*.jpeg
+TROLYTHIEN/**/Dau_vao/**/page_*.webp
 
 # Ứng dụng Desktop PySide6 & Bản đóng gói (tránh nặng GitHub)
 app_trolythien/
@@ -66,7 +92,3 @@ dist/
 build/
 *.spec
 *.exe
-TROLYTHIEN/4_DUYET_DE/Dau_vao/de_cuong_toan8_pages/page_1.png
-TROLYTHIEN/4_DUYET_DE/Dau_vao/de_cuong_toan8_pages/page_2.png
-TROLYTHIEN/4_DUYET_DE/Dau_vao/de_cuong_toan8_pages/page_3.png
-TROLYTHIEN/4_DUYET_DE/Ket_qua/Phan_Bien_De_Cuong_Toan_8.md
