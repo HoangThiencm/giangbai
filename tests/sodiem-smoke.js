@@ -7,7 +7,7 @@ const requireMatch = (text, pattern, message) => { if (!pattern.test(text)) thro
 
 const page = read('sodiem.html');
 const api = read('api/sodiem.php');
-['security-guard.js', 'access-control.js', 'xlsx.full.min.js', 'canvas-confetti', 'wheelCanvas', 'spinWheel', 'api/exam.php/student-classes', 'class-students', 'localStorage', 'exportExcel', 'questionInput', 'timer', 'winnerModal'].forEach(token => requireMatch(page, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `Missing ${token} in sodiem.html.`));
+['security-guard.js', 'access-control.js', 'xlsx.full.min.js', 'canvas-confetti', 'wheelCanvas', 'spinWheel', 'api/sodiem.php?action=classes', 'class-students', 'localStorage', 'exportExcel', 'questionInput', 'timer', 'winnerModal'].forEach(token => requireMatch(page, new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `Missing ${token} in sodiem.html.`));
 ['saveStatus','triggerAutoSave','saveBookSilent','beforeunload','keepalive','hasPendingChanges'].forEach(token=>requireMatch(page,new RegExp(token),`Missing auto-save: ${token}.`));
 requireMatch(page, /Đã hoàn thành vòng kiểm tra/, 'Wheel must reset after a completed score column.');
 requireMatch(page, /scores\[col\]===undefined/, 'Wheel must identify students without a score.');
@@ -25,17 +25,21 @@ requireMatch(page, /function addStudent\(\)\{students\.push\(normalizeStudent\(\
 requireMatch(page, /function pasteStudents\(\)\{[\s\S]*renderAll\(\);persist\(\);triggerAutoSave\(\)\}/, 'Pasting students must auto-save.');
 requireMatch(api, /CREATE TABLE IF NOT EXISTS gradebooks/, 'Gradebook schema is required.');
 ['load', 'save', 'classes'].forEach(action => requireMatch(api, new RegExp(`action === '${action}'`), `API must provide ${action} action.`));
+requireMatch(api, /FROM gradebooks WHERE teacher_id = \? AND TRIM\(class_name\) <> ''/, 'Class list must come from the signed-in teacher only.');
 requireMatch(api, /FROM gradebooks WHERE teacher_id = \? AND class_name = \? AND subject = \? AND academic_year = \? LIMIT 1/, 'Load must filter gradebooks by teacher_id.');
 requireMatch(api, /teacher_id <> \?/, 'Copied gradebooks must be compared against other teachers only.');
 requireMatch(api, /function sodiem_marks_are_copied/, 'Load must detect a gradebook copied from another teacher.');
 if (/fallbackStmt/.test(api)) throw new Error('Load must not fall back to another teacher gradebook.');
 if (/FROM gradebooks WHERE class_name = \? AND subject = \? AND academic_year = \?(?! AND teacher_id)/.test(api)) throw new Error('Gradebook rows must not be loaded without teacher_id.');
+if (/UNION SELECT class_name/.test(api)) throw new Error('Class list must not union every teacher gradebook.');
 requireMatch(page, /function currentTeacherKey\(\)\{return sessionTeacherId\?`id:\$\{sessionTeacherId\}`:'anonymous'\}/, 'sodiem.html must scope the cache key by the signed-in user id.');
+requireMatch(page, /remoteOk\?\[\]:\(cached\?\.students/, 'A successful load must not merge another cache into the gradebook.');
 requireMatch(page, /fetch\('api\/me\.php'/, 'sodiem.html must resolve the signed-in user before reading the cache.');
 requireMatch(page, /cached\.ownerId!==currentTeacherKey\(\)/, 'sodiem.html must ignore a cache written for another user.');
 requireMatch(page, /key=\(\)=>`sodiem:\$\{currentTeacherKey\(\)\}:\$\{\$\('classSelect'\)\.value\}:\$\{\$\('subject'\)\.value\}:2025-2026`/, 'sodiem.html cache key must include the current teacher.');
 const tao = read('taobaitap.html');
 requireMatch(tao, /const sodiemTeacherKey = \(\) => sodiemSessionTeacherId \? `id:\$\{sodiemSessionTeacherId\}` : 'anonymous'/, 'taobaitap.html must scope the sổ điểm cache by the signed-in user id.');
+requireMatch(tao, /students = mergeSodiemStudents\(remote\.roster \|\| \[\], bookStudents, \[\]\)/, 'taobaitap.html must not merge another teacher cache after a successful load.');
 requireMatch(tao, /fetch\('api\/me\.php'/, 'taobaitap.html must resolve the signed-in user before reading the cache.');
 requireMatch(tao, /const sodiemStorageKey = \(className, subject\) => `sodiem:\$\{sodiemTeacherKey\(\)\}:\$\{className\}:\$\{subject \|\| 'Toán'\}:\$\{SODIEM_YEAR\}`/, 'taobaitap.html cache key must include the current teacher.');
 requireMatch(tao, /cached\.ownerId !== sodiemTeacherKey\(\)/, 'taobaitap.html must ignore a cache written for another user.');

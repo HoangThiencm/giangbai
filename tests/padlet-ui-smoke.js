@@ -36,4 +36,12 @@ assert.match(html, /id="previewExternalLink"/, 'preview modal must include an ex
 assert.match(html, /Mở tab mới/, 'preview modal must label the external open action');
 assert.match(html, /previewExternalLink[\s\S]*external\.href = openUrl/, 'previewFile must assign the external open URL');
 
+const access = fs.readFileSync(path.join(__dirname, '..', 'access-control.js'), 'utf8');
+const padletLinkAt = access.indexOf("const isOpenPadletLink = pageKey === 'padlet' && !!getQueryParamInsensitive(params, 'board');");
+const tokenGateAt = access.indexOf('if (!token)');
+assert.ok(padletLinkAt > 0, 'a public Padlet board link must be recognized');
+assert.ok(tokenGateAt > padletLinkAt, 'the public Padlet bypass must be declared before the login redirect');
+assert.match(access, /if \(isOpenExamLink \|\| isOpenPadletLink\) \{\s*return;\s*\}/, 'a public Padlet board link must skip the login redirect');
+assert.match(access, /if \(isOpenPadletLink\) return;/, 'a signed-in student must not be blocked from a shared Padlet board');
+
 console.log('padlet UI smoke: passed');

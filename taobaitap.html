@@ -14373,7 +14373,7 @@ module.exports = {
                 students: students || [],
                 history: history || []
             }));
-            localStorage.setItem('sodiem:last_class', className);
+            localStorage.setItem(`sodiem:${sodiemTeacherKey()}:last_class`, className);
             return key;
         };
 
@@ -14411,6 +14411,7 @@ module.exports = {
         };
 
         const fetchSodiemClasses = async () => {
+            await ensureSodiemTeacher();
             const classes = [];
             try {
                 const response = await fetch('api/sodiem.php?action=classes', { credentials: 'include' });
@@ -14423,7 +14424,7 @@ module.exports = {
                 }
             } catch (e) {}
             (await readSodiemLocalBooks()).forEach((entry) => { if (entry.className) classes.push(entry.className); });
-            const lastClass = localStorage.getItem('sodiem:last_class');
+            const lastClass = localStorage.getItem(`sodiem:${sodiemTeacherKey()}:last_class`);
             if (lastClass) classes.push(lastClass);
             return [...new Set(classes.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
         };
@@ -14451,9 +14452,10 @@ module.exports = {
                     if (configuredColumns.length) columns = configuredColumns;
                     if (book) {
                         try { history = JSON.parse(book.history_log_json || '[]') || []; } catch (e) { history = []; }
+                    } else {
+                        history = [];
                     }
-                    const merged = mergeSodiemStudents(remote.roster || [], bookStudents, cached?.students || []);
-                    if (merged.length) students = merged;
+                    students = mergeSodiemStudents(remote.roster || [], bookStudents, []);
                 }
             } catch (e) {}
             return { className: classLabel, subject: subjectLabel, columns, students, history, remoteOk, key };
@@ -14519,7 +14521,7 @@ module.exports = {
                 fetchSodiemClasses().then((list) => {
                     if (cancelled) return;
                     setClasses(list);
-                    const lastClass = localStorage.getItem('sodiem:last_class') || '';
+                    const lastClass = localStorage.getItem(`sodiem:${sodiemTeacherKey()}:last_class`) || '';
                     setClassName((current) => current || (lastClass && (list.includes(lastClass) || lastClass) ? lastClass : (list[0] || '')));
                 });
                 return () => {

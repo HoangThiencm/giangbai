@@ -1,15 +1,14 @@
-# IMPLEMENT: Cô lập sổ điểm theo giáo viên
+# IMPLEMENT: Cô lập danh sách lớp và điểm theo giáo viên
 
 ## Đã làm
-1. `api/sodiem.php`: `GET action=load` chỉ đọc sổ của đúng `teacher_id`. Đã xóa fallback sang giáo viên khác. Nếu điểm và nhận xét của sổ này trùng sổ giáo viên khác cùng lớp, môn, năm học thì xóa phần điểm/nhận xét/lịch sử của bản sao và trả `gradebook = null`. `POST action=save` cũng không ghi lại bản sao đó.
-2. `sodiem.html`: chờ `api/me.php`, khóa cache là `sodiem:id:${userId}:${lớp}:${môn}:2025-2026`. Cache không có `ownerId` đúng tài khoản đang đăng nhập thì bỏ qua.
-3. `taobaitap.html`: cùng khóa theo `user.id` và cùng quy tắc `ownerId`.
-4. `tests/sodiem-smoke.js`: chặn fallback, bắt buộc so sánh `teacher_id <> ?`, và kiểm tra khóa theo user id.
+1. `api/sodiem.php`: danh sách lớp yêu cầu đăng nhập. Chỉ trả lớp trong sổ của đúng `teacher_id` và lớp được gán trên tài khoản. Không còn gộp mọi lớp từ mọi sổ giáo viên. Giáo viên chưa có sổ và chưa được gán lớp thì mới thấy danh sách lớp của trường, không kèm điểm.
+2. Khóa duy nhất của `gradebooks` được chỉnh để gồm `teacher_id`. Lưu sổ của giáo viên này không ghi đè sổ của giáo viên khác.
+3. Sổ mới hơn mà điểm và nhận xét trùng sổ cũ hơn của giáo viên khác thì bị xóa phần điểm. Sổ gốc giữ nguyên.
+4. `sodiem.html` và `taobaitap.html`: cache và lớp vừa mở gắn `id` tài khoản đang đăng nhập. Tải sổ thành công thì không trộn cache máy. Không còn lấy danh sách lớp chung từ `api/exam.php`.
 
 ## Chưa đụng
-- Không đổi schema `gradebooks`.
-- Không xóa sổ gốc của giáo viên đã nhập điểm trước.
-- Cache trình duyệt cũ (khóa không có user id) không được đọc lại.
+- Không đổi schema cột. Không đổi Padlet.
+- Hai sổ đã lệch nhau (mỗi người đã sửa thêm điểm riêng) không bị xóa.
 
 ## Kiểm thử
 - `php -l api/sodiem.php`: không lỗi cú pháp. Dùng `C:\Users\HoangThien\AppData\Local\Temp\php-portable-834\php.exe`.
@@ -18,4 +17,4 @@
 
 ## Bước tiếp
 Antigravity IDE, chat mới: `/verify`
-Trang trên hosting chỉ đổi sau khi commit và push `main`.
+Hosting chỉ đổi sau khi commit và push `main`.

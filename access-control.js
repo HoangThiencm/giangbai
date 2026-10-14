@@ -100,6 +100,7 @@ async function accessControlMain() {
     const isOpenExamLink = pageKey === 'thitructuyen'
         && ((params.get('mode') === 'student' && !!getQueryParamInsensitive(params, 'examId'))
             || params.get('from') === 'taobaitap');
+    const isOpenPadletLink = pageKey === 'padlet' && !!getQueryParamInsensitive(params, 'board');
     const token = localStorage.getItem('authToken');
     const isPublicVanbanPage = [
         'quanlyvanban.html',
@@ -132,7 +133,7 @@ async function accessControlMain() {
         return;
     }
 
-    if (isOpenExamLink) {
+    if (isOpenExamLink || isOpenPadletLink) {
         return;
     }
 
@@ -269,6 +270,8 @@ async function accessControlMain() {
             'soankhbd', 'xaydungphuluc', 'duyetgiaoan', 'duyetde', 'nghiencuubaihoc', 'matrande', 'tronde', 'kttx',
             'vietbaocao', 'thanhtich', 'taovideo'
         ]);
+        if (isOpenPadletLink) return;
+
         if (teacherOnlyPageKeys.has(pageKey)) {
             alert('Chức năng này chỉ dành cho giáo viên.');
             window.location.href = 'index.html';
