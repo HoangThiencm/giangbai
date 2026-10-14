@@ -14289,12 +14289,15 @@ module.exports = {
         const SODIEM_YEAR = '2025-2026';
         const SODIEM_DEFAULT_COLUMNS = ['KTTX 1', 'KTTX 2', 'KTTX 3', 'KTTX 4'];
 
-        const sodiemStorageKey = (className, subject) => `sodiem:${className}:${subject || 'Toán'}:${SODIEM_YEAR}`;
+        const sodiemTeacherKey = () => (localStorage.getItem('userEmail') || localStorage.getItem('userName') || 'default').trim().toLowerCase();
+        const sodiemStorageKey = (className, subject) => `sodiem:${sodiemTeacherKey()}:${className}:${subject || 'Toán'}:${SODIEM_YEAR}`;
 
         const parseSodiemStorageKey = (storageKey) => {
             if (!storageKey || !storageKey.startsWith('sodiem:')) return null;
             if (storageKey === 'sodiem:last_class' || storageKey === 'sodiem:questions') return null;
-            const body = storageKey.slice('sodiem:'.length);
+            const prefix = `sodiem:${sodiemTeacherKey()}:`;
+            if (!storageKey.startsWith(prefix)) return null;
+            const body = storageKey.slice(prefix.length);
             const yearAt = body.lastIndexOf(':');
             if (yearAt <= 0) return null;
             const year = body.slice(yearAt + 1);

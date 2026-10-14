@@ -25,4 +25,13 @@ requireMatch(page, /function addStudent\(\)\{students\.push\(normalizeStudent\(\
 requireMatch(page, /function pasteStudents\(\)\{[\s\S]*renderAll\(\);persist\(\);triggerAutoSave\(\)\}/, 'Pasting students must auto-save.');
 requireMatch(api, /CREATE TABLE IF NOT EXISTS gradebooks/, 'Gradebook schema is required.');
 ['load', 'save', 'classes'].forEach(action => requireMatch(api, new RegExp(`action === '${action}'`), `API must provide ${action} action.`));
+requireMatch(api, /FROM gradebooks WHERE teacher_id = \? AND class_name = \? AND subject = \? AND academic_year = \? LIMIT 1/, 'Load must filter gradebooks by teacher_id.');
+if (/fallbackStmt/.test(api)) throw new Error('Load must not fall back to another teacher gradebook.');
+if (/FROM gradebooks WHERE class_name = \? AND subject = \? AND academic_year = \?/.test(api)) throw new Error('Gradebook rows must not be loaded without teacher_id.');
+requireMatch(page, /function currentTeacherKey\(\)\{return \(localStorage\.getItem\('userEmail'\)\|\|localStorage\.getItem\('userName'\)\|\|'default'\)\.trim\(\)\.toLowerCase\(\)\}/, 'sodiem.html must scope the cache key by userEmail or userName.');
+requireMatch(page, /key=\(\)=>`sodiem:\$\{currentTeacherKey\(\)\}:\$\{\$\('classSelect'\)\.value\}:\$\{\$\('subject'\)\.value\}:2025-2026`/, 'sodiem.html cache key must include the current teacher.');
+const tao = read('taobaitap.html');
+requireMatch(tao, /const sodiemTeacherKey = \(\) => \(localStorage\.getItem\('userEmail'\) \|\| localStorage\.getItem\('userName'\) \|\| 'default'\)\.trim\(\)\.toLowerCase\(\)/, 'taobaitap.html must scope the sổ điểm cache by userEmail or userName.');
+requireMatch(tao, /const sodiemStorageKey = \(className, subject\) => `sodiem:\$\{sodiemTeacherKey\(\)\}:\$\{className\}:\$\{subject \|\| 'Toán'\}:\$\{SODIEM_YEAR\}`/, 'taobaitap.html cache key must include the current teacher.');
+requireMatch(tao, /if \(!storageKey\.startsWith\(prefix\)\) return null/, 'taobaitap.html must ignore another teacher local gradebook.');
 console.log('sodiem smoke: PASS');

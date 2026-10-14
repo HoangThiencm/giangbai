@@ -23,7 +23,8 @@
 <div id="questionToast" role="status" class="fixed z-50 bottom-5 right-5 hidden rounded-lg bg-emerald-600 px-4 py-3 text-white shadow-lg"></div>
 <script>
 const defaults=['KTTX 1','KTTX 2','KTTX 3','KTTX 4']; let columns=[...defaults],students=[],history=[],deletedStudentKeys=[],selectedWinner=null,rotation=0,timerSeconds=30,timerId=null,usedQuestions=[],selectedQuestion='',presentationIndex=0,presentationFontSize=42,presentationImageScale=1.0;
-const $=id=>document.getElementById(id), key=()=>`sodiem:${$('classSelect').value}:${$('subject').value}:2025-2026`;
+function currentTeacherKey(){return (localStorage.getItem('userEmail')||localStorage.getItem('userName')||'default').trim().toLowerCase()}
+const $=id=>document.getElementById(id), key=()=>`sodiem:${currentTeacherKey()}:${$('classSelect').value}:${$('subject').value}:2025-2026`;
 document.querySelectorAll('.nav').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));btn.classList.add('active');$(btn.dataset.tab).classList.add('active');if(btn.dataset.tab==='wheel')drawWheel();if(btn.dataset.tab==='reports')renderReports()});
 function normalizeStudent(row,i){return {id:row.id||row.student_id||crypto.randomUUID(),sbd:row.sbd||row.username||'',name:row.name||row.full_name||`Học sinh ${i+1}`,scores:row.scores||{},comment:row.comment||''}}
 function classNames(data){return (data.classes||[]).map(item=>typeof item==='string'?item:(item.class_name||item.name||'')).filter(Boolean)}

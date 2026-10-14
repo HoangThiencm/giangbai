@@ -114,19 +114,19 @@ def build_de_cuong_toan_6(output_path):
     ])
     
     add_exercise(doc, "3.2", "Thực hiện phép tính:", [
-        "a) $100 : [45 - (18 - 3 \\cdot 5)^2]$",
+        "a) $100 : [34 - (18 - 3 \\cdot 5)^2]$",
         "b) $120 : [45 - (17 - 3 \\cdot 4)^2]$",
-        "c) $80 : [35 - (15 - 2 \\cdot 6)^2]$",
-        "d) $160 : [25 - (18 - 7 \\cdot 2)^2]$",
+        "c) $80 : [29 - (15 - 2 \\cdot 6)^2]$",
+        "d) $160 : [26 - (18 - 7 \\cdot 2)^2]$",
         "e) $200 : [119 - (25 - 2 \\cdot 3)]$",
-        "f) $150 : [28 - (16 - 3 \\cdot 4)^2]$",
-        "g) $90 : [24 - (15 - 3 \\cdot 3)^2]$",
+        "f) $150 : [31 - (16 - 3 \\cdot 4)^2]$",
+        "g) $90 : [24 - (15 - 4 \\cdot 3)^2]$",
         "h) $180 : [45 - (18 - 3 \\cdot 5)^2]$"
     ])
     
     add_exercise(doc, "3.3", "Thực hiện phép tính:", [
-        "a) $140 : [35 - (16 - 3 \\cdot 4)^2]$",
-        "b) $120 : [54 - (18 - 4 \\cdot 3)^2]$",
+        "a) $140 : [36 - (16 - 3 \\cdot 4)^2]$",
+        "b) $120 : [56 - (18 - 4 \\cdot 3)^2]$",
         "c) $80 - [130 - (12 - 4)^2]$",
         "d) $150 - [10^2 - (14 - 11)^2 \\cdot 2026^0]$",
         "e) $480 : [75 + (7^2 - 8 \\cdot 3) : 5]$",
@@ -399,7 +399,7 @@ def build_de_cuong_toan_6(output_path):
     add_exercise(doc, "1 (2,5 điểm)", "Thực hiện phép tính:", [
         "a) $74 + 185 + 26 + 115$",
         "b) $45 \\cdot 78 + 45 \\cdot 22 - 350$",
-        "c) $80 : [35 - (15 - 2 \\cdot 6)^2]$"
+        "c) $80 : [29 - (15 - 2 \\cdot 6)^2]$"
     ])
     add_exercise(doc, "2 (2,0 điểm)", "Tìm số tự nhiên $x$, biết:", [
         "a) $4x + 18 = 54$",
@@ -419,7 +419,7 @@ def build_de_cuong_toan_6(output_path):
     add_exercise(doc, "1 (2,5 điểm)", "Thực hiện phép tính:", [
         "a) $125 \\cdot 27 \\cdot 8$",
         "b) $36 \\cdot 85 + 15 \\cdot 36 - 600$",
-        "c) $160 : [25 - (18 - 7 \\cdot 2)^2]$"
+        "c) $160 : [26 - (18 - 7 \\cdot 2)^2]$"
     ])
     add_exercise(doc, "2 (2,0 điểm)", "Tìm số tự nhiên $x$, biết:", [
         "a) $5x - 23 = 47$",
@@ -459,7 +459,7 @@ def build_de_cuong_toan_6(output_path):
     add_exercise(doc, "1 (2,5 điểm)", "Thực hiện phép tính:", [
         "a) $83 + 365 + 17 + 135$",
         "b) $52 \\cdot 84 + 16 \\cdot 52 - 200$",
-        "c) $150 : [28 - (16 - 3 \\cdot 4)^2]$"
+        "c) $150 : [31 - (16 - 3 \\cdot 4)^2]$"
     ])
     add_exercise(doc, "2 (2,0 điểm)", "Tìm số tự nhiên $x$, biết:", [
         "a) $6x - 27 = 33$",
@@ -479,7 +479,7 @@ def build_de_cuong_toan_6(output_path):
     add_exercise(doc, "1 (2,5 điểm)", "Thực hiện phép tính:", [
         "a) $67 + 158 + 33 + 42$",
         "b) $43 \\cdot 76 + 43 \\cdot 24 - 300$",
-        "c) $90 : [24 - (15 - 3 \\cdot 3)^2]$"
+        "c) $90 : [24 - (15 - 4 \\cdot 3)^2]$"
     ])
     add_exercise(doc, "2 (2,0 điểm)", "Tìm số tự nhiên $x$, biết:", [
         "a) $7x + 15 = 57$",
@@ -519,7 +519,7 @@ def build_de_cuong_toan_6(output_path):
     add_exercise(doc, "1 (2,5 điểm)", "Thực hiện phép tính:", [
         "a) $142 + 258 + 58 + 42$",
         "b) $35 \\cdot 118 - 35 \\cdot 18 + 500$",
-        "c) $100 : [30 - (12 - 2 \\cdot 4)^2]$"
+        "c) $100 : [36 - (12 - 2 \\cdot 4)^2]$"
     ])
     add_exercise(doc, "2 (2,0 điểm)", "Tìm số tự nhiên $x$, biết:", [
         "a) $4x - 19 = 45$",
@@ -539,7 +539,7 @@ def build_de_cuong_toan_6(output_path):
     add_exercise(doc, "1 (2,5 điểm)", "Thực hiện phép tính:", [
         "a) $25 \\cdot 37 \\cdot 4$",
         "b) $84 \\cdot 45 + 55 \\cdot 84 - 400$",
-        "c) $140 : [35 - (16 - 3 \\cdot 4)^2]$"
+        "c) $140 : [36 - (16 - 3 \\cdot 4)^2]$"
     ])
     add_exercise(doc, "2 (2,0 điểm)", "Tìm số tự nhiên $x$, biết:", [
         "a) $8x - 35 = 45$",
@@ -559,7 +559,7 @@ def build_de_cuong_toan_6(output_path):
     add_exercise(doc, "1 (2,5 điểm)", "Thực hiện phép tính:", [
         "a) $63 + 175 + 37 + 125$",
         "b) $67 \\cdot 54 + 46 \\cdot 67 - 700$",
-        "c) $120 : [54 - (18 - 4 \\cdot 3)^2]$"
+        "c) $120 : [56 - (18 - 4 \\cdot 3)^2]$"
     ])
     add_exercise(doc, "2 (2,0 điểm)", "Tìm số tự nhiên $x$, biết:", [
         "a) $9x - 24 = 48$",
@@ -614,7 +614,7 @@ def build_de_cuong_toan_6(output_path):
         add_answer_item(doc, _ans)
     add_answer_header(doc, 5)
     for _ans in [
-        "Bài 1: a) 600; b) 5000; c) 12.",
+        "Bài 1: a) 600; b) 5000; c) 10.",
         "Bài 2: a) $x = 10$; b) $x = 12$; c) $x = 3$.",
         "Bài 3: $\\text{BCNN}(8, 10, 12) = 120$. Bội chung trong khoảng 350 đến 450 là 360 em.",
         "Bài 4: a) Chu vi 32 m, diện tích 60 $\\text{m}^2$; b) 240 viên gạch; c) Tiền gạch: 8 400 000 đ, tiền công: 3 000 000 đ, tổng: 11 400 000 đồng.",
@@ -641,7 +641,7 @@ def build_de_cuong_toan_6(output_path):
         add_answer_item(doc, _ans)
     add_answer_header(doc, 8)
     for _ans in [
-        "Bài 1: a) 500; b) 4000; c) 7.",
+        "Bài 1: a) 500; b) 4000; c) 5.",
         "Bài 2: a) $x = 16$; b) $x = 13$; c) $x = 4$.",
         "Bài 3: $\\text{BCNN}(10, 12, 15) = 60$. Bội chung trong khoảng 200 đến 250 là 240 em.",
         "Bài 4: a) Chu vi 68 m, diện tích 280 $\\text{m}^2$; b) Diện tích ao 36 $\\text{m}^2$, diện tích còn lại 244 $\\text{m}^2$; c) Hàng rào 65 m.",

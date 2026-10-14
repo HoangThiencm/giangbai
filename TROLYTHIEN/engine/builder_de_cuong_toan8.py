@@ -323,7 +323,7 @@ def build_de_cuong_toan_8(output_path):
         "a) Rút gọn biểu thức: $A = (x + 3)^2 - (x - 2)(x + 2) - 6x$",
         "b) Tìm $x$, biết: $(2x - 1)^2 - 4x(x - 2) = 9$"
     ])
-    add_exercise(doc, "3 (1,5 điểm)", "Một khu vườn hình chữ nhật có chiều dài gấp đôi chiều rộng. Nếu tăng chiều rộng thêm 3 m và giảm chiều dài đi 2 m thì diện tích tăng thêm 36 $\\text{m}^2$. Tính kích thước ban đầu của khu vườn.")
+    add_exercise(doc, "3 (1,5 điểm)", "Một khu vườn hình chữ nhật có chiều dài gấp đôi chiều rộng. Nếu tăng chiều rộng thêm 3 m và giảm chiều dài đi 2 m thì diện tích tăng thêm 34 $\\text{m}^2$. Tính kích thước ban đầu của khu vườn.")
     add_exercise(doc, "4 (3,0 điểm)", "Cho tam giác $ABC$ vuông tại $A$ ($AB < AC$), đường trung tuyến $AM$. Gọi $D$ là điểm đối xứng với $A$ qua $M$.", [
         "a) Chứng minh tứ giác $ABDC$ là hình chữ nhật.",
         "b) Gọi $I$ là trung điểm của $AC$. Kẻ $IK \\parallel BC$ ($K \\in AB$). Chứng minh $K$ là trung điểm của $AB$.",
@@ -354,7 +354,7 @@ def build_de_cuong_toan_8(output_path):
     add_test_header(doc, 3, "8")
     add_exercise(doc, "1 (2,5 điểm)", "Thực hiện phép tính:", [
         "a) $4x^2(2x - 3y + 1)$",
-        "b) $(2x - 1)(2x + 1) - (x + 3)^2$",
+        "b) $\\left(2x - 1\\right)\\left(2x + 1\\right) - {\\left(x + 3\\right)}^2$",
         "c) $(18x^3y^4 - 12x^2y^3 + 6xy^2) : (6xy^2)$"
     ])
     add_exercise(doc, "2 (2,0 điểm)", "Rút gọn biểu thức và tìm $x$:", [
@@ -399,7 +399,7 @@ def build_de_cuong_toan_8(output_path):
         "a) Rút gọn biểu thức: $E = (3x - 1)(3x + 1) - (3x - 2)^2$",
         "b) Tìm $x$, biết: $(x + 2)^2 - (x - 3)(x + 3) = 13$"
     ])
-    add_exercise(doc, "3 (1,5 điểm)", "Một mảnh đất hình chữ nhật có chu vi 50 m. Nếu tăng chiều rộng thêm 5 m và giảm chiều dài đi 5 m thì diện tích tăng thêm 25 $\\text{m}^2$. Tính diện tích mảnh đất ban đầu.")
+    add_exercise(doc, "3 (1,5 điểm)", "Một mảnh đất hình chữ nhật có chiều dài hơn chiều rộng 5 m và chu vi bằng 50 m. Tính diện tích mảnh đất ban đầu.")
     add_exercise(doc, "4 (3,0 điểm)", "Cho hình thoi $ABCD$ có hai đường chéo $AC$ và $BD$ cắt nhau tại $O$. Qua $O$ kẻ các đường thẳng song song với các cạnh của hình thoi.", [
         "a) Chứng minh các đường chéo của hình thoi vuông góc với nhau.",
         "b) Gọi $E, F, G, H$ lần lượt là trung điểm của các cạnh $AB, BC, CD, DA$. Chứng minh tứ giác $EFGH$ là hình chữ nhật.",
@@ -508,7 +508,7 @@ def build_de_cuong_toan_8(output_path):
     for _ans in [
         "Bài 1: a) $6x^3 - 8x^2 + 2x$; b) $x - 6$; c) $3xy - 2$.",
         "Bài 2: a) $A = 13$ (không phụ thuộc vào $x$); b) $-4x + 1 + 8x = 9 \\Rightarrow 4x = 8 \\Rightarrow x = 2$.",
-        "Bài 3: Gọi chiều rộng ban đầu là $x$ (m), chiều dài là $2x$ (m). Ta có $(2x - 2)(x + 3) - 2x^2 = 36 \\Rightarrow 4x - 6 = 36 \\Rightarrow x = 10$. Chiều rộng 10 m, chiều dài 20 m.",
+        "Bài 3: Gọi chiều rộng ban đầu là $x$ (m), chiều dài là $2x$ (m). Ta có $(2x - 2)(x + 3) - 2x^2 = 34 \\Rightarrow 4x - 6 = 34 \\Rightarrow x = 10$. Chiều rộng 10 m, chiều dài 20 m.",
         "Bài 4: a) Tứ giác có 2 đường chéo cắt nhau tại trung điểm và có 1 góc vuông; b) Đường trung bình; c) Hình bình hành có $AM = MC = BC/2$ nên là hình thoi.",
         "Bài 5: $P = (x - 3)^2 + 5 \\ge 5$. GTNN là 5 khi $x = 3$."
     ]:

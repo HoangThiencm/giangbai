@@ -49,6 +49,10 @@ def build_bai_giang_html(lecture_data, output_html_path, template_path=None):
     # Lắp ráp danh sách slides HTML
     slides_html_list = []
     for idx, s in enumerate(slides, 1):
+        if s.get("full_slide_html"):
+            slides_html_list.append(s["full_slide_html"])
+            continue
+
         s_title = s.get("title", f"NỘI DUNG {idx}")
         tiet = s.get("tiet", 1)
         max_steps = s.get("max_steps", 1)
@@ -57,13 +61,17 @@ def build_bai_giang_html(lecture_data, output_html_path, template_path=None):
 
         slide_item = f"""
     <!-- SLIDE {idx}: {s_title} -->
-    <section class="slide-item{active_class}" data-slide-index="{idx}" data-tiet="{tiet}" data-max-steps="{max_steps}">
+    <section class="slide-item{active_class}" id="s{idx}" data-slide-index="{idx}" data-tiet="{tiet}" data-max-steps="{max_steps}">
       <header class="slide-header">
-        <span class="slide-lesson-title">{mon_hoc.upper()} {lop} &bull; BỘ SÁCH KẾT NỐI TRI THỨC</span>
-        <span class="slide-heading-text">TIẾT {tiet} &bull; {ten_bai.upper()}</span>
-        <span class="slide-index-badge">{idx} / {total_slides}</span>
+        <div>
+          <span class="slide-lesson-title">{ten_bai.upper()}</span>
+        </div>
+        <div>
+          <span class="slide-heading-text">{s_title}</span>
+          <span class="slide-index-badge">{idx} / {total_slides}</span>
+        </div>
       </header>
-      <div class="slide-content-grid" style="min-height:68vh; padding:24px 20px;">
+      <div class="slide-content-grid">
         {body_html}
       </div>
     </section>

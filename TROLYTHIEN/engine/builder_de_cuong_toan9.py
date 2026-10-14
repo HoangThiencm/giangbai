@@ -288,7 +288,7 @@ def build_de_cuong_toan_9(output_path):
     
     add_exercise(doc, "13.2", "Một mảnh đất hình chữ nhật có chu vi 72 m. Chiều dài hơn chiều rộng 12 m. Tính diện tích mảnh đất đó bằng cách lập hệ phương trình.")
     
-    add_exercise(doc, "13.3", "Một hình chữ nhật có chu vi 100 m. Nếu tăng chiều rộng thêm 5 m và giảm chiều dài 5 m thì diện tích tăng thêm 50 $\\text{m}^2$. Tính diện tích hình chữ nhật ban đầu.")
+    add_exercise(doc, "13.3", "Một hình chữ nhật có chu vi 100 m. Nếu tăng chiều rộng thêm 5 m và giảm chiều dài 5 m thì diện tích tăng thêm 25 $\\text{m}^2$. Tính diện tích hình chữ nhật ban đầu.")
     
     # DẠNG 14
     add_heading_3(doc, "Dạng 14: Bài toán năng suất, làm chung làm riêng và phần trăm")
@@ -517,7 +517,7 @@ def build_de_cuong_toan_9(output_path):
         "a) Tìm điều kiện xác định của $\\sqrt{x^2 + 1}$.",
         "b) Rút gọn: $F = \\sqrt{14 - 6\\sqrt{5}} + \\sqrt{5}$"
     ])
-    add_exercise(doc, "3 (2,0 điểm)", "Một hình chữ nhật có chu vi 100 m. Nếu tăng chiều rộng thêm 5 m và giảm chiều dài 5 m thì diện tích tăng thêm 50 $\\text{m}^2$. Tính diện tích hình chữ nhật ban đầu.")
+    add_exercise(doc, "3 (2,0 điểm)", "Một hình chữ nhật có chu vi 100 m. Nếu tăng chiều rộng thêm 5 m và giảm chiều dài 5 m thì diện tích tăng thêm 25 $\\text{m}^2$. Tính diện tích hình chữ nhật ban đầu.")
     add_exercise(doc, "4 (3,0 điểm)", "Cho tam giác $ABC$ vuông tại $A$ có $\\widehat{B} = 30^\\circ$ và $BC = 12\\text{ cm}$.", [
         "a) Tính độ dài các cạnh $AC$ và $AB$.",
         "b) Kẻ đường cao $AH$. Tính $AH$ và $BH$.",

@@ -54,12 +54,12 @@ def run_all():
         print(f"   • Dung lượng file: {os.path.getsize(fpath):,} bytes")
         print(f"   • Số đoạn văn: {report.get('paragraphs', 0)}")
         print(f"   • Số công thức Word Equation chuẩn (OMML): {report.get('omath_count', 0)}")
-        print(f"   • Ô vuông rỗng (Empty Placeholders): {report.get('empty_placeholders', 0)}")
-        print(f"   • Lỗi tiêu đề đã tự động sửa: {report.get('fixed_issues', 0)}")
-        print(f"   • Kết luận phản biện: {report.get('status', 'OK')}")
-        if report.get('issues'):
-            for iss in report['issues'][:3]:
-                print(f"     - {iss}")
+        print(f"   • Vòng 1 (Phản biện Toán học & Số liệu): {report.get('round_1_math_logic', 'PASS')}")
+        print(f"   • Vòng 2 (Phản biện Cấu trúc XML & Equation): {report.get('round_2_xml_omml', 'PASS')} (Sửa: {report.get('fixed_issues', 0)} lỗi, Ô rỗng: {report.get('empty_placeholders', 0)})")
+        print(f"   • Vòng 3 (Cấp chứng nhận chất lượng): {report.get('status', 'OK')}")
+        if report.get('unresolved_errors'):
+            for err in report['unresolved_errors'][:3]:
+                print(f"     ⚠️ {err}")
         print("-" * 65)
         
     print("\nHOÀN TẤT XUẤT TRỌN BỘ 4 KHỐI LỚP (TOÁN 6, 7, 8, 9) TẠI THƯ MỤC:")
