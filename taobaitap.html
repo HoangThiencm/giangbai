@@ -14414,7 +14414,7 @@ module.exports = {
             await ensureSodiemTeacher();
             const classes = [];
             try {
-                const response = await fetch('api/sodiem.php?action=classes', { credentials: 'include' });
+                const response = await fetch(`api/sodiem.php?action=classes&owner=${encodeURIComponent(sodiemSessionTeacherId || '')}`, { credentials: 'include', cache: 'no-store' });
                 if (response.ok) {
                     const data = await response.json();
                     (data.classes || []).forEach((item) => {
@@ -14440,11 +14440,13 @@ module.exports = {
             let students = (cached?.students || []).map(normalizeSodiemStudent);
             let remoteOk = false;
             try {
-                const response = await fetch(`api/sodiem.php?action=load&class_name=${encodeURIComponent(classLabel)}&subject=${encodeURIComponent(subjectLabel)}&academic_year=${encodeURIComponent(SODIEM_YEAR)}`, { credentials: 'include' });
+                const response = await fetch(`api/sodiem.php?action=load&class_name=${encodeURIComponent(classLabel)}&subject=${encodeURIComponent(subjectLabel)}&academic_year=${encodeURIComponent(SODIEM_YEAR)}&owner=${encodeURIComponent(sodiemSessionTeacherId || '')}`, { credentials: 'include', cache: 'no-store' });
                 if (response.ok) {
                     remoteOk = true;
                     const remote = await response.json();
-                    const book = remote.gradebook || null;
+                    let book = remote.gradebook || null;
+                    if (String(remote.owner_id ?? '') !== String(sodiemSessionTeacherId || '')) book = null;
+                    else if (book && String(book.owner_id ?? '') !== String(sodiemSessionTeacherId || '')) book = null;
                     let bookStudents = [];
                     let configuredColumns = [];
                     try { bookStudents = JSON.parse(book?.students_data_json || '[]') || []; } catch (e) { bookStudents = []; }
@@ -14484,6 +14486,7 @@ module.exports = {
                 const response = await fetch('api/sodiem.php?action=save', {
                     method: 'POST',
                     credentials: 'include',
+                    cache: 'no-store',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         class_name: loaded.className,

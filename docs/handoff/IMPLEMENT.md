@@ -1,20 +1,19 @@
-# IMPLEMENT: Cô lập danh sách lớp và điểm theo giáo viên
+# IMPLEMENT: Chặn sổ điểm dùng chung giữa hai giáo viên
 
 ## Đã làm
-1. `api/sodiem.php`: danh sách lớp yêu cầu đăng nhập. Chỉ trả lớp trong sổ của đúng `teacher_id` và lớp được gán trên tài khoản. Không còn gộp mọi lớp từ mọi sổ giáo viên. Giáo viên chưa có sổ và chưa được gán lớp thì mới thấy danh sách lớp của trường, không kèm điểm.
-2. Khóa duy nhất của `gradebooks` được chỉnh để gồm `teacher_id`. Lưu sổ của giáo viên này không ghi đè sổ của giáo viên khác.
-3. Sổ mới hơn mà điểm và nhận xét trùng sổ cũ hơn của giáo viên khác thì bị xóa phần điểm. Sổ gốc giữ nguyên.
-4. `sodiem.html` và `taobaitap.html`: cache và lớp vừa mở gắn `id` tài khoản đang đăng nhập. Tải sổ thành công thì không trộn cache máy. Không còn lấy danh sách lớp chung từ `api/exam.php`.
+1. `api/sodiem.php`: lưu sổ không còn `ON DUPLICATE KEY UPDATE`. Chỉ `UPDATE` đúng `teacher_id` đang đăng nhập. Chưa có dòng thì `INSERT`. Nếu khóa duy nhất cũ không gồm `teacher_id` chặn insert, hệ thống xóa khóa đó rồi insert lại. Không sửa dòng của giáo viên khác. Xóa khóa thất bại thì trả lỗi, không ghi đè.
+2. Khi mở hoặc lưu, sổ mới hơn mà phần lớn ô điểm trùng sổ của giáo viên khác (ít nhất 8 ô, khớp từ 85% ô cùng học sinh và cùng cột) bị xóa điểm và nhận xét. Sổ cũ hơn giữ nguyên.
+3. Danh sách lớp chỉ còn lớp trong sổ của đúng giáo viên và lớp được gán trên tài khoản. Giáo viên chưa có sổ và chưa được gán lớp thì không thấy mọi lớp của trường.
+4. Phản hồi sổ điểm có `Cache-Control: no-store` và `owner_id`. `sodiem.html`, `taobaitap.html` tải kèm mã giáo viên, không dùng cache trình duyệt, và bỏ sổ nếu `owner_id` không đúng tài khoản đang đăng nhập.
 
 ## Chưa đụng
-- Không đổi schema cột. Không đổi Padlet.
-- Hai sổ đã lệch nhau (mỗi người đã sửa thêm điểm riêng) không bị xóa.
+- Không đổi Padlet. Không thêm cột mới vào bảng.
+- Hai sổ đã lệch nhiều hơn mức trên không bị xóa.
 
 ## Kiểm thử
-- `php -l api/sodiem.php`: không lỗi cú pháp. Dùng `C:\Users\HoangThien\AppData\Local\Temp\php-portable-834\php.exe`.
-- `node tests/sodiem-smoke.js`: PASS. Node dùng `C:\Users\HoangThien\AppData\Local\OpenAI\Codex\runtimes\cua_node\cfb32733c877621e\bin\node.exe`.
+- `php -l api/sodiem.php`
+- `node tests/sodiem-smoke.js`
 - Chưa đăng nhập hai tài khoản trên trình duyệt.
 
 ## Bước tiếp
-Antigravity IDE, chat mới: `/verify`
-Hosting chỉ đổi sau khi commit và push `main`.
+Hosting chỉ đổi sau khi commit và push `main`. Sau đó đăng xuất, mở lại sổ điểm bằng Ctrl+F5 trên từng tài khoản.

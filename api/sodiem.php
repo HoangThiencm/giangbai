@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/helpers.php';
 
+header('Cache-Control: no-store, no-cache, must-revalidate, private');
+header('Pragma: no-cache');
+header('Vary: Cookie');
+
 function sodiem_teacher(PDO $pdo): array {
     if (empty($_SESSION['user_id'])) respond(['error' => 'Cần đăng nhập tài khoản giáo viên.'], 401);
     $stmt = $pdo->prepare("SELECT id, role, class_name FROM users WHERE id = ? AND role IN ('teacher', 'admin') AND is_active = 1 LIMIT 1");
@@ -27,28 +31,39 @@ function ensure_gradebook_schema(PDO $pdo): void {
     sodiem_ensure_owner_unique($pdo);
 }
 
-function sodiem_ensure_owner_unique(PDO $pdo): void {
-    $wanted = ['teacher_id', 'class_name', 'subject', 'academic_year'];
+function sodiem_unique_indexes(PDO $pdo): array {
     $indexes = [];
     foreach ($pdo->query('SHOW INDEX FROM gradebooks')->fetchAll() as $row) {
         $name = (string)($row['Key_name'] ?? '');
         if ($name === '' || $name === 'PRIMARY' || (int)($row['Non_unique'] ?? 1) === 1) continue;
         $indexes[$name][(int)($row['Seq_in_index'] ?? 0)] = (string)($row['Column_name'] ?? '');
     }
-    $hasOwnerKey = false;
+    $ordered = [];
     foreach ($indexes as $name => $columns) {
         ksort($columns);
-        $ordered = array_values($columns);
-        if ($ordered === $wanted) {
-            $hasOwnerKey = true;
-            continue;
-        }
-        if (!in_array('teacher_id', $ordered, true) && preg_match('/^[A-Za-z0-9_]+$/', $name)) {
-            try {
-                $pdo->exec('ALTER TABLE gradebooks DROP INDEX `' . $name . '`');
-            } catch (Throwable $e) {
-            }
-        }
+        $ordered[$name] = array_values($columns);
+    }
+    return $ordered;
+}
+
+function sodiem_drop_shared_unique(PDO $pdo): void {
+    $wanted = ['teacher_id', 'class_name', 'subject', 'academic_year'];
+    foreach (sodiem_unique_indexes($pdo) as $name => $columns) {
+        if ($columns === $wanted || in_array('teacher_id', $columns, true)) continue;
+        if (!preg_match('/^[A-Za-z0-9_]+$/', $name)) continue;
+        $pdo->exec('ALTER TABLE gradebooks DROP INDEX `' . $name . '`');
+    }
+}
+
+function sodiem_ensure_owner_unique(PDO $pdo): void {
+    $wanted = ['teacher_id', 'class_name', 'subject', 'academic_year'];
+    try {
+        sodiem_drop_shared_unique($pdo);
+    } catch (Throwable $e) {
+    }
+    $hasOwnerKey = false;
+    foreach (sodiem_unique_indexes($pdo) as $columns) {
+        if ($columns === $wanted) $hasOwnerKey = true;
     }
     if (!$hasOwnerKey) {
         try {
@@ -89,6 +104,37 @@ function sodiem_marks_are_copied(array $mine, array $other): bool {
         if (!isset($other[$key]) || $other[$key] != $mark) return false;
     }
     return true;
+}
+
+function sodiem_score_cells(array $map): array {
+    $cells = [];
+    foreach ($map as $name => $mark) {
+        $scores = $mark['scores'] ?? [];
+        if (!is_array($scores)) continue;
+        foreach ($scores as $column => $score) {
+            $cells[$name . "\0" . $column] = (string)$score;
+        }
+    }
+    return $cells;
+}
+
+function sodiem_marks_overlap(array $mine, array $other): bool {
+    if (sodiem_marks_are_copied($mine, $other)) return true;
+    $left = sodiem_score_cells($mine);
+    $right = sodiem_score_cells($other);
+    if (!$left || !$right) return false;
+    $same = 0;
+    $conflict = 0;
+    foreach ($left as $key => $score) {
+        if (!isset($right[$key])) continue;
+        if ($right[$key] === $score) $same++;
+        else $conflict++;
+    }
+    if ($same < 8) return false;
+    $compared = $same + $conflict;
+    if ($compared === 0 || ($same / $compared) < 0.85) return false;
+    $smaller = min(count($left), count($right));
+    return $smaller > 0 && ($same / $smaller) >= 0.6;
 }
 
 function sodiem_other_mark_maps(PDO $pdo, int $teacherId, string $class, string $subject, string $year): array {
@@ -136,13 +182,7 @@ if ($method === 'GET' && $action === 'classes') {
     foreach (teacher_managed_classes($teacher) as $className) {
         $details[$className] = $details[$className] ?? 0;
     }
-    if (!$details) {
-        $school = $pdo->query("SELECT class_name, COUNT(*) AS count FROM users WHERE role = 'student' AND is_active = 1 AND TRIM(class_name) <> '' GROUP BY class_name")->fetchAll();
-        foreach ($school as $row) {
-            $className = trim((string)$row['class_name']);
-            if ($className !== '') $details[$className] = (int)$row['count'];
-        }
-    } else {
+    if ($details) {
         $school = $pdo->query("SELECT class_name, COUNT(*) AS count FROM users WHERE role = 'student' AND is_active = 1 AND TRIM(class_name) <> '' GROUP BY class_name")->fetchAll();
         foreach ($school as $row) {
             $className = trim((string)$row['class_name']);
@@ -165,16 +205,37 @@ if ($method === 'GET' && $action === 'load') {
     if ($book) {
         $mine = sodiem_mark_map($book['students_data_json'] ?? '');
         foreach (sodiem_other_mark_maps($pdo, (int)$teacher['id'], $class, $subject, $year) as $other) {
-            if (!sodiem_marks_are_copied($mine, $other['map']) || !sodiem_is_newer_copy($book, $other)) continue;
+            if (!sodiem_marks_overlap($mine, $other['map']) || !sodiem_is_newer_copy($book, $other)) continue;
             $clear = $pdo->prepare('UPDATE gradebooks SET students_data_json = ?, history_log_json = ? WHERE teacher_id = ? AND class_name = ? AND subject = ? AND academic_year = ?');
             $clear->execute(['[]', '[]', (int)$teacher['id'], $class, $subject, $year]);
             $book = null;
             break;
         }
     }
+    if ($book) $book['owner_id'] = (int)$teacher['id'];
     $rosterStmt = $pdo->prepare("SELECT id, username, full_name, class_name FROM users WHERE role = 'student' AND is_active = 1 AND class_name = ? ORDER BY full_name, username");
     $rosterStmt->execute([$class]);
-    respond(['gradebook' => $book ?: null, 'roster' => $rosterStmt->fetchAll()]);
+    respond(['gradebook' => $book ?: null, 'roster' => $rosterStmt->fetchAll(), 'owner_id' => (int)$teacher['id']]);
+}
+
+function sodiem_insert_gradebook(PDO $pdo, int $teacherId, string $class, string $subject, string $year, string $columnsJson, string $studentsJson, string $historyJson): void {
+    $stmt = $pdo->prepare('INSERT INTO gradebooks (teacher_id, class_name, subject, academic_year, columns_config_json, students_data_json, history_log_json) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    try {
+        $stmt->execute([$teacherId, $class, $subject, $year, $columnsJson, $studentsJson, $historyJson]);
+        return;
+    } catch (PDOException $e) {
+        if (!in_array((string)$e->getCode(), ['23000', '23001'], true)) throw $e;
+    }
+    try {
+        sodiem_drop_shared_unique($pdo);
+    } catch (Throwable $e) {
+        respond(['error' => 'Không lưu được vì sổ này đang dùng chung khóa với giáo viên khác.'], 409);
+    }
+    try {
+        $stmt->execute([$teacherId, $class, $subject, $year, $columnsJson, $studentsJson, $historyJson]);
+    } catch (PDOException $e) {
+        respond(['error' => 'Không lưu đè sổ điểm của giáo viên khác.'], 409);
+    }
 }
 
 if ($method === 'POST' && $action === 'save') {
@@ -189,15 +250,24 @@ if ($method === 'POST' && $action === 'save') {
     if (!is_array($students)) $students = [];
     if (!is_array($history)) $history = [];
     $mine = sodiem_mark_map(json_encode($students, JSON_UNESCAPED_UNICODE));
+    $cleared = false;
     foreach (sodiem_other_mark_maps($pdo, (int)$teacher['id'], $class, $subject, $year) as $other) {
-        if (!sodiem_marks_are_copied($mine, $other['map'])) continue;
+        if (!sodiem_marks_overlap($mine, $other['map'])) continue;
         $students = sodiem_clear_copied_students($students);
         $history = [];
+        $cleared = true;
         break;
     }
-    $stmt = $pdo->prepare('INSERT INTO gradebooks (teacher_id, class_name, subject, academic_year, columns_config_json, students_data_json, history_log_json) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE columns_config_json = VALUES(columns_config_json), students_data_json = VALUES(students_data_json), history_log_json = VALUES(history_log_json)');
-    $stmt->execute([(int)$teacher['id'], $class, $subject, $year, json_encode($columns, JSON_UNESCAPED_UNICODE), json_encode($students, JSON_UNESCAPED_UNICODE), json_encode($history, JSON_UNESCAPED_UNICODE)]);
-    respond(['status' => 'ok']);
+    $columnsJson = json_encode($columns, JSON_UNESCAPED_UNICODE);
+    $studentsJson = json_encode($students, JSON_UNESCAPED_UNICODE);
+    $historyJson = json_encode($history, JSON_UNESCAPED_UNICODE);
+    $teacherId = (int)$teacher['id'];
+    $update = $pdo->prepare('UPDATE gradebooks SET columns_config_json = ?, students_data_json = ?, history_log_json = ? WHERE teacher_id = ? AND class_name = ? AND subject = ? AND academic_year = ?');
+    $update->execute([$columnsJson, $studentsJson, $historyJson, $teacherId, $class, $subject, $year]);
+    $exists = $pdo->prepare('SELECT id FROM gradebooks WHERE teacher_id = ? AND class_name = ? AND subject = ? AND academic_year = ? LIMIT 1');
+    $exists->execute([$teacherId, $class, $subject, $year]);
+    if (!$exists->fetch()) sodiem_insert_gradebook($pdo, $teacherId, $class, $subject, $year, $columnsJson, $studentsJson, $historyJson);
+    respond(['status' => 'ok', 'cleared' => $cleared, 'owner_id' => $teacherId]);
 }
 
 respond(['error' => 'Hành động không hợp lệ.'], 404);
