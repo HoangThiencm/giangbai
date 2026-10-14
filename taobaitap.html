@@ -14289,7 +14289,20 @@ module.exports = {
         const SODIEM_YEAR = '2025-2026';
         const SODIEM_DEFAULT_COLUMNS = ['KTTX 1', 'KTTX 2', 'KTTX 3', 'KTTX 4'];
 
-        const sodiemTeacherKey = () => (localStorage.getItem('userEmail') || localStorage.getItem('userName') || 'default').trim().toLowerCase();
+        let sodiemSessionTeacherId = '';
+        let sodiemTeacherReady = null;
+        const sodiemTeacherKey = () => sodiemSessionTeacherId ? `id:${sodiemSessionTeacherId}` : 'anonymous';
+        const ensureSodiemTeacher = () => {
+            if (!sodiemTeacherReady) sodiemTeacherReady = (async () => {
+                try {
+                    const response = await fetch('api/me.php', { credentials: 'include', cache: 'no-store' });
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    sodiemSessionTeacherId = String(data.user?.id || '');
+                } catch (e) {}
+            })();
+            return sodiemTeacherReady;
+        };
         const sodiemStorageKey = (className, subject) => `sodiem:${sodiemTeacherKey()}:${className}:${subject || 'Toán'}:${SODIEM_YEAR}`;
 
         const parseSodiemStorageKey = (storageKey) => {
@@ -14311,7 +14324,16 @@ module.exports = {
             };
         };
 
-        const readSodiemLocalBooks = () => {
+        const readSodiemCachedBook = (storageKey) => {
+            try {
+                const cached = JSON.parse(localStorage.getItem(storageKey) || 'null');
+                if (!cached || cached.ownerId !== sodiemTeacherKey()) return null;
+                return cached;
+            } catch (e) { return null; }
+        };
+
+        const readSodiemLocalBooks = async () => {
+            await ensureSodiemTeacher();
             const books = [];
             try {
                 for (let i = 0; i < localStorage.length; i++) {
@@ -14319,7 +14341,7 @@ module.exports = {
                     const parsedKey = parseSodiemStorageKey(storageKey);
                     if (!parsedKey || !parsedKey.className) continue;
                     let book = null;
-                    try { book = JSON.parse(localStorage.getItem(storageKey) || 'null'); } catch (e) { book = null; }
+                    book = readSodiemCachedBook(storageKey);
                     if (!book || typeof book !== 'object') continue;
                     books.push({ key: storageKey, ...parsedKey, book });
                 }
@@ -14341,9 +14363,12 @@ module.exports = {
             return normalizeSodiemStudent({ name: parts[0] || line }, index);
         });
 
-        const writeSodiemLocalBook = ({ className, subject, columns, students, history }) => {
+        const writeSodiemLocalBook = async ({ className, subject, columns, students, history }) => {
+            await ensureSodiemTeacher();
+            if (!sodiemSessionTeacherId) return '';
             const key = sodiemStorageKey(className, subject);
             localStorage.setItem(key, JSON.stringify({
+                ownerId: sodiemTeacherKey(),
                 columns: columns || [],
                 students: students || [],
                 history: history || []
@@ -14397,7 +14422,7 @@ module.exports = {
                     });
                 }
             } catch (e) {}
-            readSodiemLocalBooks().forEach((entry) => { if (entry.className) classes.push(entry.className); });
+            (await readSodiemLocalBooks()).forEach((entry) => { if (entry.className) classes.push(entry.className); });
             const lastClass = localStorage.getItem('sodiem:last_class');
             if (lastClass) classes.push(lastClass);
             return [...new Set(classes.filter(Boolean))].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true }));
@@ -14406,9 +14431,9 @@ module.exports = {
         const fetchSodiemStudents = async (className, subject) => {
             const classLabel = String(className || '').trim();
             const subjectLabel = String(subject || 'Toán').trim() || 'Toán';
+            await ensureSodiemTeacher();
             const key = sodiemStorageKey(classLabel, subjectLabel);
-            let cached = null;
-            try { cached = JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { cached = null; }
+            const cached = readSodiemCachedBook(key);
             let columns = Array.isArray(cached?.columns) && cached.columns.length ? cached.columns.slice() : SODIEM_DEFAULT_COLUMNS.slice();
             let history = Array.isArray(cached?.history) ? cached.history.slice() : [];
             let students = (cached?.students || []).map(normalizeSodiemStudent);
@@ -14439,7 +14464,7 @@ module.exports = {
             const students = (loaded.students || []).map((student) => ({ ...student, scores: { ...(student.scores || {}) } }));
             let cachedHit = null;
             try {
-                const cachedBook = JSON.parse(localStorage.getItem(loaded.key) || 'null');
+                const cachedBook = readSodiemCachedBook(loaded.key);
                 cachedHit = (cachedBook?.students || []).find((student) => String(student.id) === String(studentId)) || null;
             } catch (e) { cachedHit = null; }
             const target = students.find((student) => String(student.id) === String(studentId))
@@ -14451,7 +14476,7 @@ module.exports = {
             if (column && !columns.includes(column)) columns.push(column);
             target.scores[column] = numericScore;
             const history = [...(loaded.history || []), { studentId: target.id, column, score: numericScore, at: new Date().toISOString(), source: 'taobaitap-presentation' }];
-            writeSodiemLocalBook({ className: loaded.className, subject: loaded.subject, columns, students, history });
+            await writeSodiemLocalBook({ className: loaded.className, subject: loaded.subject, columns, students, history });
             let savedRemote = false;
             try {
                 const response = await fetch('api/sodiem.php?action=save', {
@@ -14573,7 +14598,7 @@ module.exports = {
                 spinRef.current = requestAnimationFrame(tick);
             };
 
-            const applyPastedRoster = () => {
+            const applyPastedRoster = async () => {
                 const label = String(className || '').trim();
                 if (!label) {
                     setSaveNote('Nhập hoặc chọn tên lớp trước khi dán danh sách.');
@@ -14587,7 +14612,7 @@ module.exports = {
                 const subjectLabel = String(subject || 'Toán').trim() || 'Toán';
                 const columns = columnOptions.filter((name) => name !== 'Điểm miệng' || (book.columns || []).includes('Điểm miệng'));
                 const nextColumns = columns.length ? columns : SODIEM_DEFAULT_COLUMNS.slice();
-                writeSodiemLocalBook({ className: label, subject: subjectLabel, columns: nextColumns, students: rows, history: book.history || [] });
+                await writeSodiemLocalBook({ className: label, subject: subjectLabel, columns: nextColumns, students: rows, history: book.history || [] });
                 setBook({ className: label, subject: subjectLabel, columns: nextColumns, students: rows, history: book.history || [], remoteOk: false, key: sodiemStorageKey(label, subjectLabel) });
                 setClasses((prev) => prev.includes(label) ? prev : [...prev, label].sort((a, b) => a.localeCompare(b, 'vi', { numeric: true })));
                 setPicked(null);

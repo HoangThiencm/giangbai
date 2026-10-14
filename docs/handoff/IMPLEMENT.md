@@ -1,19 +1,21 @@
 # IMPLEMENT: Cô lập sổ điểm theo giáo viên
 
 ## Đã làm
-1. `api/sodiem.php`: nhánh `GET action=load` chỉ đọc `gradebooks` theo `teacher_id`, `class_name`, `subject`, `academic_year`. Đã xóa `fallbackStmt`. Giáo viên chưa có sổ thì `gradebook` là `null`, `roster` vẫn trả về.
-2. `sodiem.html`: `currentTeacherKey()` lấy `userEmail`, rồi `userName`, rồi `default`. Khóa cache là `sodiem:${currentTeacherKey()}:${class}:${subject}:2025-2026`.
-3. `taobaitap.html`: `sodiemStorageKey` dùng cùng định danh. `parseSodiemStorageKey` bỏ qua khóa không thuộc giáo viên đang đăng nhập, nên danh sách lớp local không đọc sổ của tài khoản khác.
-4. `tests/sodiem-smoke.js`: chặn fallback không có `teacher_id`, và kiểm tra khóa cache ở `sodiem.html` cùng `taobaitap.html`.
+1. `api/sodiem.php`: `GET action=load` chỉ đọc sổ của đúng `teacher_id`. Đã xóa fallback sang giáo viên khác. Nếu điểm và nhận xét của sổ này trùng sổ giáo viên khác cùng lớp, môn, năm học thì xóa phần điểm/nhận xét/lịch sử của bản sao và trả `gradebook = null`. `POST action=save` cũng không ghi lại bản sao đó.
+2. `sodiem.html`: chờ `api/me.php`, khóa cache là `sodiem:id:${userId}:${lớp}:${môn}:2025-2026`. Cache không có `ownerId` đúng tài khoản đang đăng nhập thì bỏ qua.
+3. `taobaitap.html`: cùng khóa theo `user.id` và cùng quy tắc `ownerId`.
+4. `tests/sodiem-smoke.js`: chặn fallback, bắt buộc so sánh `teacher_id <> ?`, và kiểm tra khóa theo user id.
 
 ## Chưa đụng
-- Không đổi schema `gradebooks`. Không đổi `save`. Không đổi `sodiem:last_class` và `sodiem:questions`.
-- Không chuyển dữ liệu cache cũ (khóa không có user) sang khóa mới.
+- Không đổi schema `gradebooks`.
+- Không xóa sổ gốc của giáo viên đã nhập điểm trước.
+- Cache trình duyệt cũ (khóa không có user id) không được đọc lại.
 
 ## Kiểm thử
 - `php -l api/sodiem.php`: không lỗi cú pháp. Dùng `C:\Users\HoangThien\AppData\Local\Temp\php-portable-834\php.exe`.
 - `node tests/sodiem-smoke.js`: PASS. Node dùng `C:\Users\HoangThien\AppData\Local\OpenAI\Codex\runtimes\cua_node\cfb32733c877621e\bin\node.exe`.
-- Chưa chạy hai tài khoản thật trên trình duyệt.
+- Chưa đăng nhập hai tài khoản trên trình duyệt.
 
 ## Bước tiếp
 Antigravity IDE, chat mới: `/verify`
+Trang trên hosting chỉ đổi sau khi commit và push `main`.
