@@ -57,7 +57,11 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
   + File kết quả (File Word .docx KHBD hoàn chỉnh): tự động lưu tại `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/[DD.MM]/`
   + Tích hợp NLS và AI: Trong các hoạt động dạy học có năng lực số, năng lực AI thì **bắt buộc phải in đậm, in nghiêng phần tích hợp** (đồng bộ 100% với tiêu chuẩn thẩm định duyệt giáo án).
   + Bắt buộc có Sơ đồ tư duy (Mindmap) trong các tiết Ôn tập / Luyện tập chung (tại Hoạt động 2.1) và Bắt buộc có hình vẽ toán học trong các bài Hình học (tuân thủ `.agents/rules/soankhbd.md`).
-  + Chuẩn hóa công thức Toán: Ký hiệu chia hết hiển thị đúng 3 chấm dọc (`\vdots` $\rightarrow$ $⋮$), không chia hết (`\not\vdots` $\rightarrow$ $∤$), tuyệt đối không để sót chữ *vdots* in nghiêng.
+  + Chuẩn hóa công thức Toán & Ký hiệu góc trong Word Equation:
+    * Ký hiệu góc trong LaTeX (`\widehat{A}`, `\widehat{ABC}`, `\hat{A}`): Tuyệt đối không để xảy ra lỗi thẻ `m:limUpp` của bộ lọc Microsoft MML2OMML.XSL làm dấu mũ caret `^` bay lơ lửng trên trời cao.
+    * Bắt buộc sử dụng hàm `latex_to_omml` từ `TROLYTHIEN.engine.de_cuong_docx_helper` (đã tích hợp tự động vá XML sang `<m:acc><m:accPr><m:chr m:val="̂"/></m:accPr><m:e>...</m:e></m:acc>`) để ký hiệu góc luôn ôm khít đỉnh chữ cái một cách hoàn mỹ.
+    * Ký hiệu gạch ngang trên đầu đoạn thẳng / số thập phân vô hạn (`\overline{...}`): Tự động chuyển thành `<m:bar>` với `<m:pos m:val="top"/>` (thanh bar chuẩn Word Equation), không để biến dạng thành accent chắp vá.
+    * Ký hiệu chia hết hiển thị đúng 3 chấm dọc (`\vdots` $\rightarrow$ $⋮$), không chia hết (`\not\vdots` $\rightarrow$ $∤$), tuyệt đối không để sót chữ *vdots* in nghiêng.
 - **2/ Tạo bài tập:**
   + File đầu vào (PDF bài học, PDF chuyên đề bài tập 5-10 trang, SGK trọn cuốn): đặt tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/` (hoặc thư mục theo ngày `Dau_vao/[DD.MM]/`)
   + File kết quả (File Word đề thi, OLM, Game, File HTML bài dạy tương tác `[Ten_Bai_Day].html` khi chọn mục 9, trọn bộ PDF từng bài khi chọn mục 10, mô phỏng HTML tương tác offline khi chọn mục 11, hoặc đề Word từ ma trận khi chọn mục 12): tự động lưu tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/[DD.MM]/`

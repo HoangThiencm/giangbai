@@ -814,5 +814,77 @@
         "printed_range": "Trang 75"
       }
     ]
+  },
+  "hdtn_6": {
+    "input_pdf_default": "TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/hoat-dong-trai-nghiem-huong-nghiep-6.pdf",
+    "output_dir_default": "TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/PDF_Tung_Bai/HDTN_6",
+    "lessons": [
+      {
+        "title": "00_HDTN6_Trang_bia_Loi_noi_dau_Muc_luc_Trang_1-4",
+        "start_page": 1,
+        "end_page": 5,
+        "printed_range": "Trang 1 - 4"
+      },
+      {
+        "title": "HDTN6_Chu_de_1_Em_voi_nha_truong_Trang_5-10",
+        "start_page": 6,
+        "end_page": 11,
+        "printed_range": "Trang 5 - 10"
+      },
+      {
+        "title": "HDTN6_Chu_de_2_Kham_pha_ban_than_Trang_11-15",
+        "start_page": 12,
+        "end_page": 16,
+        "printed_range": "Trang 11 - 15"
+      },
+      {
+        "title": "HDTN6_Chu_de_3_Trach_nhiem_voi_ban_than_Trang_16-20",
+        "start_page": 17,
+        "end_page": 21,
+        "printed_range": "Trang 16 - 20"
+      },
+      {
+        "title": "HDTN6_Chu_de_4_Ren_luyen_ban_than_Trang_21-26",
+        "start_page": 22,
+        "end_page": 27,
+        "printed_range": "Trang 21 - 26"
+      },
+      {
+        "title": "HDTN6_Chu_de_5_Em_voi_gia_dinh_Trang_27-31",
+        "start_page": 28,
+        "end_page": 32,
+        "printed_range": "Trang 27 - 31"
+      },
+      {
+        "title": "HDTN6_Chu_de_6_Em_voi_cong_dong_Trang_32-36",
+        "start_page": 33,
+        "end_page": 37,
+        "printed_range": "Trang 32 - 36"
+      },
+      {
+        "title": "HDTN6_Chu_de_7_Em_voi_thien_nhien_va_moi_truong_Trang_37-42",
+        "start_page": 38,
+        "end_page": 43,
+        "printed_range": "Trang 37 - 42"
+      },
+      {
+        "title": "HDTN6_Chu_de_8_Kham_pha_the_gioi_nghe_nghiep_Trang_43-46",
+        "start_page": 44,
+        "end_page": 47,
+        "printed_range": "Trang 43 - 46"
+      },
+      {
+        "title": "HDTN6_Chu_de_9_Hieu_ban_than_Chon_dung_nghe_Trang_47-50",
+        "start_page": 48,
+        "end_page": 51,
+        "printed_range": "Trang 47 - 50"
+      },
+      {
+        "title": "HDTN6_Phu_luc_Thuat_ngu_va_Danh_sach_anh_Trang_51",
+        "start_page": 52,
+        "end_page": 53,
+        "printed_range": "Trang 51 - Bìa sau"
+      }
+    ]
   }
 }

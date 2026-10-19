@@ -101,6 +101,15 @@ Mọi mô phỏng hình học tương tác bắt buộc phải tổ chức phân
    - Bố trí nút `[ Tự động ... (GV) ]` ở vị trí phụ dưới thanh công cụ.
    - Giúp giáo viên chủ động bấm chạy mẫu chậm rãi ($2.0\text{ giây}$) khi giảng bài hoặc khi tổng kết bài học trên lớp.
 
+8. **Chế độ hiển thị lớp học (Thử nghiệm trên MP-01 — Khuyến nghị áp dụng sau khi kiểm thử từng bố cục):**
+   - Đang được thử nghiệm trên `MP-01`: Bổ sung thanh công cụ phóng to gồm các mức lựa chọn:
+     * `[ Chuẩn ]`: Cỡ chữ mặc định cho máy tính cá nhân.
+     * `[ 36px ]`: Cỡ chữ lớn cho lớp học tiêu chuẩn ($35 - 40$ học sinh).
+     * `[ 40px ]`: Cỡ chữ rất lớn cho phòng học rộng / học sinh ngồi bàn cuối.
+     * `[ 48px ]`: Cỡ chữ cực đại siêu rõ nét cho bảng tương tác thông minh kích thước lớn.
+   - Tích hợp nút `[ ⛶ Toàn màn hình ]` (Fullscreen API) tràn viền không gian hiển thị, loại bỏ thanh cuộn và tab trình duyệt.
+   - **Quy tắc sư phạm & kỹ thuật:** Đây là thay đổi giao diện lớn, khuyến nghị áp dụng cho các mô phỏng tiếp theo sau khi kiểm thử độc lập từng bố cục hình học SVG (đặc biệt ở mức `48px` và toàn màn hình) để chống vỡ khung, chống che khuất hình và chống tràn màn hình. Tuyệt đối không áp dụng tự động hàng loạt nếu chưa kiểm thử từng mô phỏng.
+
 ---
 
 ## V. QUY CHUẨN KỸ THUẬT & UI/UX CHO LOẠI 2 / NHÓM D — MÔ PHỎNG DỰNG HÌNH TỪNG BƯỚC

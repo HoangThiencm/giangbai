@@ -52,6 +52,9 @@ def latex_to_omml(latex_code):
         # 1. Tránh lỗi cặp ngoặc nhọn rỗng \{ \} trong equation bị sinh thẻ m:e rỗng:
         code = re.sub(r'\\\{\s*\\\}', r'\{ \\text{ } \}', code)
         
+        # Chuẩn hóa ký hiệu góc: \widehat -> \hat để MathML nhận diện accent="true", tránh lỗi m:limUpp dấu caret bay lơ lửng
+        code = re.sub(r'\\widehat\b', r'\\hat', code)
+        
         mathml = convert(code)
         tree = ET.fromstring(mathml)
         omml = _transform(tree)
@@ -79,6 +82,19 @@ def latex_to_omml(latex_code):
                 sibs = p_d.xpath('./m:e', namespaces=ns)
                 if len(sibs) > 1:
                     p_d.remove(empty_e)
+
+        # KHẮC PHỤC TRIỆT ĐỂ LỖI KÝ HIỆU GÓC (\widehat) BỊ BIẾN DẠNG THÀNH m:limUpp VỚI DẤU CARET ^ BAY LƠ LỬNG:
+        for lim_upp in omml.xpath('//m:limUpp', namespaces=ns):
+            lim_elm = lim_upp.xpath('./m:lim//m:t', namespaces=ns)
+            if lim_elm and lim_elm[0].text in ['^', '\u005E', '\u02C6', '\u0302']:
+                e_elm = lim_upp.xpath('./m:e', namespaces=ns)
+                if e_elm:
+                    acc = ET.Element('{http://schemas.openxmlformats.org/officeDocument/2006/math}acc')
+                    accPr = ET.SubElement(acc, '{http://schemas.openxmlformats.org/officeDocument/2006/math}accPr')
+                    chr_node = ET.SubElement(accPr, '{http://schemas.openxmlformats.org/officeDocument/2006/math}chr')
+                    chr_node.set('{http://schemas.openxmlformats.org/officeDocument/2006/math}val', '\u0302')
+                    acc.append(e_elm[0])
+                    lim_upp.getparent().replace(lim_upp, acc)
 
         # SỬA LỖI GẠCH TRÊN ĐẦU (\overline):
         # MML2OMML mặc định chuyển overline thành m:acc (dấu mũ accent) làm Word hiển thị thành ký tự dị dạng / chắp vá.

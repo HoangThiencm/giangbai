@@ -16,26 +16,22 @@ from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls, qn
 import pymupdf
 
-# Load Microsoft Office Math XSLT
-xslt_path = r'C:\Program Files\Microsoft Office\root\Office16\MML2OMML.XSL'
-xslt_doc = etree.parse(xslt_path)
-transform = etree.XSLT(xslt_doc)
-
-def latex_to_omml(latex_str):
-    mathml_str = latex2mathml_convert(latex_str)
-    tree = etree.fromstring(mathml_str.encode('utf-8'))
-    res = transform(tree)
-    return etree.tostring(res, encoding='utf-8')
+import sys
+_engine_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'engine'))
+if _engine_dir not in sys.path:
+    sys.path.insert(0, _engine_dir)
+from de_cuong_docx_helper import latex_to_omml
 
 def add_math_to_paragraph(p, latex_str):
     try:
-        omml_bytes = latex_to_omml(latex_str)
-        el = parse_xml(omml_bytes)
-        p._element.append(el)
+        el = latex_to_omml(latex_str)
+        if el is not None:
+            p._element.append(el)
+        else:
+            p.add_run(f'${latex_str}$')
     except Exception as e:
         print(f"Error converting latex '{latex_str}': {e}")
-        p.add_run(f"${latex_str}$")
-
+        p.add_run(f'${latex_str}$')
 def add_text_with_math(p, text, bold_prefix="", font_size=9.0, default_italic=False, line_spacing=1.05):
     p.paragraph_format.line_spacing = line_spacing
     if bold_prefix:
