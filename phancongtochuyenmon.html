@@ -1965,6 +1965,7 @@
                             <button type="button" class="btn-small" id="tt-clear-preview" style="display:none;" onclick="event.stopPropagation(); clearTimetablePreview()">Xóa ảnh</button>
                         </div>
                     </div>
+                    <div id="tt-ai-scan-badge" style="display:none; margin:0 0 8px; padding:6px 10px; border-radius:999px; background:#eef2ff; color:#312e81; font-size:0.78rem; font-weight:800; line-height:1.4;"></div>
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
                         <p style="margin:0; color:#64748b; font-size:0.78rem; line-height:1.4; max-width:460px;">Khung tiết của trường: Sáng thường 1–5; Chiều thường 6–10 (hoặc 1–4, 6–9, 7–9). Bấm Khung tiết để xem và sửa trước khi nhận diện ảnh.</p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap;">
@@ -7158,13 +7159,24 @@
             return new Promise(resolve => {
                 const img = new Image();
                 img.onload = () => {
-                    const scale = Math.min(1, 1600 / Math.max(img.width, 1));
+                    const width = img.width || 1;
+                    const height = img.height || 1;
+                    const mime = (String(dataUrl || '').match(/^data:(image\/[a-zA-Z0-9.+-]+);/i) || [])[1] || '';
+                    const payload = String(dataUrl || '').split(',')[1] || '';
+                    const bytes = payload ? Math.floor(payload.length * 3 / 4) : Number.POSITIVE_INFINITY;
+                    const fits = width <= 2048 && height <= 2048 && bytes < 2 * 1024 * 1024;
+                    if (fits && (mime === 'image/png' || mime === 'image/jpeg')) {
+                        resolve(dataUrl);
+                        return;
+                    }
+                    const scale = Math.min(1, 2048 / Math.max(width, height, 1));
                     const canvas = document.createElement('canvas');
-                    canvas.width = Math.max(1, Math.round(img.width * scale));
-                    canvas.height = Math.max(1, Math.round(img.height * scale));
+                    canvas.width = Math.max(1, Math.round(width * scale));
+                    canvas.height = Math.max(1, Math.round(height * scale));
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    resolve(canvas.toDataURL('image/jpeg', 0.85));
+                    const sharpPng = mime === 'image/png' || mime === 'image/webp' || !mime;
+                    resolve(sharpPng ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', 0.95));
                 };
                 img.onerror = () => resolve(dataUrl);
                 img.src = dataUrl;
@@ -7288,7 +7300,13 @@
                 if (!parts) throw new Error('Không đọc được dữ liệu ảnh.');
                 const mPeriods = getSessionPeriods('morning');
                 const aPeriods = getSessionPeriods('afternoon');
+                const teacher = (state.teachers || []).find(t => String(t.id) === String(selectedTimetableTeacherId));
+                const currentClasses = (state.classes || []).slice();
+                const currentSubjects = (state.subjects || []).map(s => s.name).filter(Boolean);
                 const prompt = `Bạn là trợ lý AI chuyên nhận diện bảng Thời khóa biểu giáo viên THCS tại Việt Nam.
+Giáo viên đang chọn: ${teacher?.name || ''}.
+Danh sách lớp hiện có của trường: ${JSON.stringify(currentClasses)}.
+Danh sách môn học: ${currentSubjects.join(', ')}.
 Hãy đọc ảnh Thời khóa biểu đính kèm và trích xuất thành định dạng JSON chuẩn.
 Cấu trúc JSON yêu cầu:
 {
@@ -7332,9 +7350,17 @@ Quy tắc:
       Hàng 3 -> Tiết ${aPeriods[2] || 8}
       Hàng 4 -> Tiết ${aPeriods[3] || 9}
       Hàng 5 -> Tiết ${aPeriods[4] || 10}
-  + ĐẶC BIỆT CHÚ Ý: Nếu buổi chiều có cấu hình bắt đầu từ tiết 6 (ví dụ: 6, 7, 8, 9, 10):
-    Hàng 1 là Tiết 6, Hàng 2 là Tiết 7, Hàng 3 là Tiết 8, Hàng 4 là Tiết 9, Hàng 5 là Tiết 10.
-    TUYỆT ĐỐI KHÔNG được tự ý gán buổi chiều bắt đầu từ tiết 7 (làm cho hàng 3 và hàng 4 bị sai thành tiết 9 và tiết 10). Nếu Thứ 3 có môn ở Hàng 3 và Hàng 4 thì BẮT BUỘC là Tiết 8 và Tiết 9!
+  + BẢNG THỜI KHÓA BIỂU KHÔNG IN CỘT SỐ TIẾT:
+    Buổi sáng có đúng 5 hàng kẻ ngang vật lý từ trên xuống dưới, tương ứng chính xác: Hàng 1 -> Tiết 1, Hàng 2 -> Tiết 2, Hàng 3 -> Tiết 3, Hàng 4 -> Tiết 4, Hàng 5 -> Tiết 5.
+    NGUYÊN TẮC BẢO TOÀN Ô TRỐNG (CỰC KỲ QUAN TRỌNG):
+    Đọc quét theo từng hàng ngang từ trái qua phải qua tất cả các cột Thứ (Thứ 2 đến Thứ 7).
+    TUYỆT ĐỐI KHÔNG được dồn môn ở hàng dưới lên hàng trên nếu hàng trên để trống.
+    Ví dụ thực tế: Ở cột Thứ 2, Hàng 1 để trống, Hàng 2 có môn "Toán - 93" -> Tiết 1 là rỗng "", Tiết 2 là "Toán - 93".
+    Ví dụ thực tế: Ở cột Thứ 6, Hàng 4 để trống, Hàng 5 có môn "Toán - 64" -> Tiết 4 là rỗng "", Tiết 5 là "Toán - 64".
+  + QUY ƯỚC TÊN LỚP VIẾT TẮT 2 CHỮ SỐ:
+    Trong ảnh, tên lớp thường viết tắt 2 chữ số: 93 (lớp 9/3 hoặc 9A3), 64 (lớp 6/4 hoặc 6A4), 63 (lớp 6/3 hoặc 6A3), 94 (lớp 9/4 hoặc 9A4).
+    Hãy đối chiếu với Danh sách lớp hiện có của trường được cung cấp ở trên để điền đúng tên lớp chuẩn.
+  + Nếu buổi chiều có cấu hình bắt đầu từ tiết 6 (ví dụ: 6, 7, 8, 9, 10): Hàng 1 là Tiết 6, Hàng 2 là Tiết 7, Hàng 3 là Tiết 8, Hàng 4 là Tiết 9, Hàng 5 là Tiết 10. Giữ nguyên ô trống ở đúng hàng, không dồn tiết.
   + Nếu ảnh CÓ cột in rõ số tiết (như "Tiết 1", "Tiết 2" hay "1", "2"): lấy đúng số tiết in trên cột đó.
 - Nếu ảnh có phân chia Sáng / Chiều rõ rệt: đưa các tiết sáng vào "morning", các tiết chiều vào "afternoon".
 - Nếu ảnh đánh số tiết liên tục cả ngày từ 1 đến 7 (hoặc 1 đến 10): đưa các tiết 1–5 (hoặc các tiết buổi sáng) vào "morning"; các tiết từ tiết 6 trở đi vào "afternoon".
@@ -7379,6 +7405,7 @@ Quy tắc:
             if (!configured.length || !srcSessionObj || typeof srcSessionObj !== 'object') return srcSessionObj || {};
             const sourcePeriods = [...new Set(Object.values(srcSessionObj).flatMap(day => Object.keys(day || {}).map(period => parseInt(period, 10)).filter(period => period > 0)))].sort((a, b) => a - b);
             if (!sourcePeriods.length) return srcSessionObj;
+            if (configured[0] === 1 && sourcePeriods.every(period => period >= 1 && period <= 5)) return srcSessionObj;
             const contiguous = sourcePeriods.every((period, index) => index === 0 || period === sourcePeriods[index - 1] + 1);
             const vnEduPlusOne = configured[0] === 6
                 && sourcePeriods.every(period => period >= 7)
@@ -7463,7 +7490,11 @@ Quy tắc:
                     const cells = alignedSrc[day] || alignedSrc[Number(day)] || {};
                     Object.keys(cells || {}).forEach(period => {
                         const parsed = parseTimetableCell(cells[period]);
-                        if (parsed) next[session][day][String(period)] = parsed;
+                        if (!parsed) return;
+                        if (parsed && typeof parsed === 'object' && parsed.class_name && typeof matchClassFromTimetable === 'function') {
+                            parsed.class_name = matchClassFromTimetable(parsed.class_name, state.classes || []);
+                        }
+                        next[session][day][String(period)] = parsed;
                     });
                 });
             });
@@ -7493,6 +7524,21 @@ Quy tắc:
                     showToast('Đã lưu Thời khoá biểu, nhưng chưa thể tự động đồng bộ phân công.', 'info');
                 }
             }
+            const countCells = session => Object.values(next[session] || {}).reduce((sum, day) => sum + Object.keys(day || {}).length, 0);
+            const seenClasses = [];
+            ['morning', 'afternoon'].forEach(session => {
+                Object.values(next[session] || {}).forEach(day => {
+                    Object.values(day || {}).forEach(cell => {
+                        const name = cell && typeof cell === 'object' ? cell.class_name : '';
+                        if (name && !seenClasses.includes(name)) seenClasses.push(name);
+                    });
+                });
+            });
+            const scanBadge = document.getElementById('tt-ai-scan-badge');
+            if (scanBadge) {
+                scanBadge.style.display = 'inline-flex';
+                scanBadge.textContent = `Sáng: ${countCells('morning')} tiết · Chiều: ${countCells('afternoon')} tiết · Lớp: ${seenClasses.join(', ') || '—'}`;
+            }
             renderTimetableWorkspace();
             renderTimetableTeacherList();
             if (autoApply) {
@@ -7516,7 +7562,40 @@ Quy tắc:
         }
 
         function normalizeClassNameFromTimetable(name) {
-            return String(name || '').replace(/\s+/g, '').replace(/\//g, '').trim();
+            return String(name || '').replace(/\s+/g, '').trim();
+        }
+
+        function matchClassFromTimetable(rawClass, existingClasses) {
+            const raw = String(rawClass || '').replace(/\s+/g, '').trim();
+            const list = Array.isArray(existingClasses) ? existingClasses.map(item => String(item)) : [];
+            if (!raw) return '';
+            const keyOf = value => String(value || '').replace(/\s+/g, '').toUpperCase();
+            const exact = list.find(item => keyOf(item) === keyOf(raw));
+            if (exact) return exact;
+            const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const candidates = [];
+            const two = raw.match(/^([6-9])(\d)$/);
+            const slash = raw.match(/^([6-9])[\/.-](\d)$/);
+            const letterForm = raw.match(/^([6-9])([A-Z])(\d)$/i);
+            const pushPair = (grade, section) => {
+                const index = Number(section) - 1;
+                const letter = letters[index] || '';
+                candidates.push(
+                    `${grade}/${section}`,
+                    `${grade}.${section}`,
+                    `${grade}-${section}`,
+                    `${grade}A${section}`,
+                    `${grade}${section}`
+                );
+                if (letter) candidates.push(`${grade}${letter}`);
+            };
+            if (two) pushPair(two[1], two[2]);
+            if (slash) pushPair(slash[1], slash[2]);
+            if (letterForm) pushPair(letterForm[1], letterForm[3]);
+            const wanted = new Set(candidates.map(keyOf));
+            const hit = list.find(item => wanted.has(keyOf(item)));
+            if (hit) return hit;
+            return raw;
         }
 
         function foldSubjectToken(s) {
@@ -7571,7 +7650,7 @@ Quy tắc:
                     Object.keys(cells).forEach(period => {
                         const parsed = parseTimetableCell(cells[period]);
                         if (!parsed || !parsed.class_name) return;
-                        const className = normalizeClassNameFromTimetable(parsed.class_name);
+                        const className = matchClassFromTimetable(normalizeClassNameFromTimetable(parsed.class_name), state.classes || []);
                         if (!className) return;
                         const sub = matchSubjectFromTimetableLabel(parsed.subject, parsed.class_name);
                         if (!sub) {

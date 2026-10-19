@@ -1,19 +1,18 @@
-# IMPLEMENT: Chặn sổ điểm dùng chung giữa hai giáo viên
+# IMPLEMENT: Nhận diện TKB chính xác hơn
 
 ## Đã làm
-1. `api/sodiem.php`: lưu sổ không còn `ON DUPLICATE KEY UPDATE`. Chỉ `UPDATE` đúng `teacher_id` đang đăng nhập. Chưa có dòng thì `INSERT`. Nếu khóa duy nhất cũ không gồm `teacher_id` chặn insert, hệ thống xóa khóa đó rồi insert lại. Không sửa dòng của giáo viên khác. Xóa khóa thất bại thì trả lỗi, không ghi đè.
-2. Khi mở hoặc lưu, sổ mới hơn mà phần lớn ô điểm trùng sổ của giáo viên khác (ít nhất 8 ô, khớp từ 85% ô cùng học sinh và cùng cột) bị xóa điểm và nhận xét. Sổ cũ hơn giữ nguyên.
-3. Danh sách lớp chỉ còn lớp trong sổ của đúng giáo viên và lớp được gán trên tài khoản. Giáo viên chưa có sổ và chưa được gán lớp thì không thấy mọi lớp của trường.
-4. Phản hồi sổ điểm có `Cache-Control: no-store` và `owner_id`. `sodiem.html`, `taobaitap.html` tải kèm mã giáo viên, không dùng cache trình duyệt, và bỏ sổ nếu `owner_id` không đúng tài khoản đang đăng nhập.
 
-## Chưa đụng
-- Không đổi Padlet. Không thêm cột mới vào bảng.
-- Hai sổ đã lệch nhiều hơn mức trên không bị xóa.
+- `compressTimetableImage()` giữ nguyên PNG/JPEG khi ảnh ≤ 2MB và mỗi cạnh ≤ 2048px. Ảnh lớn hơn được xuất PNG hoặc JPEG chất lượng 0.95, không còn JPEG 0.85.
+- `scanTimetableWithAI()` đưa tên giáo viên đang chọn, `state.classes` và `state.subjects` vào prompt. Prompt yêu cầu quét hàng ngang, giữ ô trống (Thứ 2 tiết 1 trống, Thứ 6 tiết 4 trống) và đổi mã 2 chữ số theo danh sách lớp. Đã bỏ câu gán cứng “Nếu Thứ 3 có môn ở Hàng 3 và Hàng 4…”. Giữ câu “tuyệt đối không bỏ sót bất kỳ tiết nào có phân công dạy”.
+- `matchClassFromTimetable()` khớp `93` ↔ `9/3`, `64` ↔ `6/4`, `63` ↔ `6A3`, và giữ `71` khi danh sách lớp đã dùng mã 2 số. `normalizeClassNameFromTimetable()` không xóa dấu `/`.
+- `applyAiTimetableResult()` và `extractAssignmentsFromTimetable()` dùng tên lớp đã khớp, nên không tạo lớp rác khi đã có lớp tương đương.
+- `alignSessionPeriods()` giữ nguyên tiết 1–5 khi khung buổi bắt đầu bằng tiết 1.
+- Sau khi AI đọc xong, badge `#tt-ai-scan-badge` hiện số tiết sáng, số tiết chiều và danh sách lớp.
 
-## Kiểm thử
-- `php -l api/sodiem.php`
-- `node tests/sodiem-smoke.js`
-- Chưa đăng nhập hai tài khoản trên trình duyệt.
+## Kiểm tra
 
-## Bước tiếp
-Hosting chỉ đổi sau khi commit và push `main`. Sau đó đăng xuất, mở lại sổ điểm bằng Ctrl+F5 trên từng tài khoản.
+- `node tests/timetable-render-smoke.js` → PASS (gồm `new vm.Script` cho mọi khối script trong `phancongtochuyenmon.html`).
+
+## Ngoài phạm vi
+
+Không sửa file ngoài `phancongtochuyenmon.html`, `tests/timetable-render-smoke.js` và handoff. Chưa commit, chưa push.

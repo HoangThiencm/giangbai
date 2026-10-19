@@ -383,4 +383,78 @@ assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail
     assert.match(timed, /- Tiết 1: Toán 63 \| Số tự nhiên/);
 }
 
+{
+    const scanStart = html.indexOf('async function scanTimetableWithAI');
+    const scanEnd = html.indexOf('function alignSessionPeriods', scanStart);
+    const scanBody = html.slice(scanStart, scanEnd);
+    assert.match(scanBody, /Danh sách lớp hiện có của trường/, 'AI scan prompt includes the school class list');
+    assert.match(scanBody, /NGUYÊN TẮC BẢO TOÀN Ô TRỐNG/, 'AI scan prompt preserves blank timetable cells');
+    assert.match(scanBody, /tuyệt đối không bỏ sót bất kỳ tiết nào có phân công dạy/, 'AI scan prompt still requires every assigned period');
+    assert.doesNotMatch(scanBody, /Nếu Thứ 3 có môn ở Hàng 3 và Hàng 4/, 'AI scan prompt no longer hardcodes Tuesday rows 3 and 4');
+    assert.match(html, /toDataURL\('image\/jpeg', 0\.95\)/, 'timetable images re-encode JPEG at quality 0.95');
+    assert.doesNotMatch(html.slice(html.indexOf('function compressTimetableImage'), html.indexOf('function extractGeminiText')), /0\.85/, 'timetable compression no longer uses JPEG 0.85');
+}
+
+{
+    const classes = ['6/3', '6/4', '6A3', '9/3', '71'];
+    const context = vm.createContext({ String, Number, Array, Set });
+    vm.runInContext(declaration('matchClassFromTimetable'), context);
+    assert.equal(vm.runInContext(`matchClassFromTimetable('93', ${JSON.stringify(classes)})`, context), '9/3', 'two-digit 93 matches class 9/3');
+    assert.equal(vm.runInContext(`matchClassFromTimetable('64', ${JSON.stringify(classes)})`, context), '6/4', 'two-digit 64 matches class 6/4');
+    assert.equal(vm.runInContext(`matchClassFromTimetable('63', ${JSON.stringify(['6A3', '6/4'])})`, context), '6A3', 'two-digit 63 matches class 6A3');
+    assert.equal(vm.runInContext(`matchClassFromTimetable('71', ${JSON.stringify(classes)})`, context), '71', 'two-digit 71 stays 71 when that code is already a class');
+}
+
+{
+    const days = ['2', '3', '4', '5', '6', '7'];
+    const badge = { style: { display: 'none' }, textContent: '' };
+    const context = vm.createContext({
+        state: {
+            info: {},
+            classes: ['6/3', '6/4', '9/3', '9/4'],
+            subjects: [{ name: 'Toán' }],
+            teachers: [{ id: 1, name: 'Giáo viên Danh' }]
+        },
+        selectedTimetableTeacherId: 1,
+        TT_DAYS: days,
+        emptyTimetable: () => ({
+            morning: Object.fromEntries(days.map(day => [day, {}])),
+            afternoon: Object.fromEntries(days.map(day => [day, {}]))
+        }),
+        getSessionPeriods: session => session === 'afternoon' ? [6, 7, 8, 9, 10] : [1, 2, 3, 4, 5],
+        document: { getElementById: id => id === 'tt-ai-scan-badge' ? badge : (id === 'tt-auto-apply-assign' ? { checked: false } : null) },
+        persistAndSaveTimetableLocal() {},
+        renderTimetableWorkspace() {},
+        renderTimetableTeacherList() {},
+        showToast() {},
+        Date, Object, Set, Map, String, Number, parseInt
+    });
+    vm.runInContext([
+        declaration('splitSubjectAndClass'),
+        declaration('parseTimetableCell'),
+        declaration('alignSessionPeriods'),
+        declaration('matchTeacherByName'),
+        declaration('matchClassFromTimetable'),
+        declaration('applyAiTimetableResult')
+    ].join('\n'), context);
+    context.foldText = value => String(value).toLowerCase();
+    vm.runInContext(`applyAiTimetableResult({
+        teacher_name: 'Giáo viên Danh',
+        morning: {
+            '2': { '2': 'Toán - 93', '3': 'Toán - 64', '4': 'Toán - 63', '5': 'Toán - 94' },
+            '6': { '1': 'Toán - 94', '2': 'Toán - 63', '3': 'Toán - 63', '5': 'Toán - 64' }
+        }
+    })`, context);
+    const monday = context.editingTimetable.morning['2'];
+    const friday = context.editingTimetable.morning['6'];
+    assert.equal(monday['1'], undefined, 'a blank first Monday row stays period 1 empty');
+    assert.equal(monday['2'].subject, 'Toán', 'Monday row 2 stays period 2');
+    assert.equal(monday['2'].class_name, '9/3', 'Monday period 2 maps 93 to 9/3');
+    assert.equal(monday['5'].class_name, '9/4', 'Monday row 5 stays period 5 and maps 94 to 9/4');
+    assert.equal(friday['4'], undefined, 'a blank Friday row 4 stays period 4 empty');
+    assert.equal(friday['5'].class_name, '6/4', 'Friday row 5 stays period 5 and maps 64 to 6/4');
+    assert.match(badge.textContent, /Sáng: 8 tiết/, 'the scan badge counts recognized morning lessons');
+    assert.match(badge.textContent, /9\/3/, 'the scan badge lists recognized classes');
+}
+
 console.log('PASS: timetable view loads numeric IDs and JSON data, uses a compact responsive layout, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');
