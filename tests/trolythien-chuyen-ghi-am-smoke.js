@@ -26,10 +26,10 @@ const option = '13. "13/ Chuyển ghi âm thành văn bản (iPhone / MP3)"';
 
 mustInclude(workflow, option, "workflow menu 13");
 mustInclude(rules, option, "rules menu 13");
-mustInclude(workflow, "Menu tương tác 13 tác vụ chính", "workflow");
+mustInclude(workflow, "Menu tương tác 14 tác vụ chính", "workflow");
 mustInclude(workflow, '#### Nhánh 13: Khi chọn "13/ Chuyển ghi âm thành văn bản (iPhone / MP3)"', "workflow");
-mustInclude(rules, "## 1. Menu Cấp 1 (Tác vụ chính - 13 lựa chọn)", "rules");
-mustInclude(rules, "## 9. Quy chuẩn kỹ thuật cho Nhánh 13", "rules");
+mustInclude(rules, "## 1. Menu Cấp 1 (Tác vụ chính - 14 lựa chọn)", "rules");
+mustInclude(rules, "## 10. Quy chuẩn kỹ thuật cho Nhánh 13", "rules");
 
 // 2. Kiểm tra các đường dẫn và từ khóa cốt lõi
 const paths = [

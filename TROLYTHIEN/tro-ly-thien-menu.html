@@ -74,7 +74,8 @@
     ['Tạo bài giảng HTML (từ PDF)','Hãy tạo bài giảng HTML từ PDF. Trước hết hãy hỏi tôi đủ môn, lớp và số tiết; sau đó đọc PDF trong TROLYTHIEN/10_BAI_GIANG_HTML/Dau_vao/ và tạo HTML tại Ket_qua/.'],
     ['Vẽ hình học cực kỳ chính xác','Hãy vẽ hình học chính xác từ đề bài/ảnh tôi cung cấp hoặc dữ liệu trong TROLYTHIEN/11_VE_HINH/Dau_vao/. Dựng bằng tọa độ giải tích; tạo PNG, SVG, lệnh GeoGebra và HTML xem trước trong Ket_qua/.'],
     ['Chuẩn hoá văn bản (Hành chính / Đảng)','Hãy chuẩn hóa các tệp Word trong TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Dau_vao/. Giữ nguyên số liệu, đọc hướng dẫn và xuất [Ten_File]_Chuan_Hoa.docx vào Ket_qua/.'],
-    ['Chuyển ghi âm thành văn bản (iPhone / MP3)','Hãy chuyển ghi âm trong TROLYTHIEN/13_CHUYEN_GHI_AM/Dau_vao/ thành văn bản trung thực. Đọc hướng dẫn và xuất cả .docx cùng .txt UTF-8 vào Ket_qua/.']
+    ['Chuyển ghi âm thành văn bản (iPhone / MP3)','Hãy chuyển ghi âm trong TROLYTHIEN/13_CHUYEN_GHI_AM/Dau_vao/ thành văn bản trung thực. Đọc hướng dẫn và xuất cả .docx cùng .txt UTF-8 vào Ket_qua/.'],
+    ['Nhận diện văn bản (OCR Thông minh)','Hãy nhận diện PDF hoặc ảnh trong TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/Dau_vao/. Giữ chữ gốc, đánh dấu đỏ mã NDxx khi mờ hoặc lỗi, và xuất Word 14pt cùng JSON đối soát vào Ket_qua/.']
   ];
   const exercises = [
     'Dạng Công văn 7991 (17 câu)','Dạng Công văn 7991 (tùy chỉnh mức độ/số câu)','100% trắc nghiệm 4 lựa chọn (tùy chỉnh số câu)','Xuất game giáo dục','Chuẩn hóa import OLM / Azota','Đề 15 phút tinh gọn (8 TN + 2 TL ngắn)','Tùy chỉnh linh hoạt số câu','Bài tập tự luận','Xuất bài dạy HTML (dạy thêm, phụ đạo, bồi dưỡng — phân dạng và giải từng bước)','Tự động cắt PDF SGK thành từng bài học','Xây dựng mô phỏng hình học tương tác'
@@ -97,10 +98,19 @@
       let msg = `Hãy tạo bài tập theo dạng: ${name}. Đọc đúng hướng dẫn và tài liệu trong TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/, không bịa dữ liệu, rồi xuất kết quả vào TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/.`;
       let customTools = null;
       if (index === 10) {
-        msg = `Hãy khảo sát và xây dựng mô phỏng hình học tương tác từ tài liệu trong TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/. Tuân thủ nghiêm ngặt quy chuẩn kiến trúc 2 tầng và các nguyên tắc sư phạm trong QUY_CHUAN_XAY_DUNG_MO_PHONG.md (v1.5.0). Sử dụng mẫu chuẩn đã nghiệm thu: MP-04 (Tâm đối xứng quay 180°). Lưu kết quả và sản phẩm vào TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/.`;
+        msg = `Hãy khảo sát và xây dựng mô phỏng hình học tương tác từ tài liệu trong TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/. Tuân thủ nghiêm ngặt quy chuẩn kiến trúc 2 tầng và các nguyên tắc sư phạm trong QUY_CHUAN_XAY_DUNG_MO_PHONG.md (v1.6.0). Lưu kết quả và sản phẩm vào TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/.`;
         customTools = [
-          ['✨ Mở MP-04: Tâm đối xứng (Đã nghiệm thu v1.5.0)', '2_TAO_BAI_TAP/Ket_qua/MP04_Tam_Doi_Xung.html'],
-          ['📘 Xem Quy chuẩn xây dựng mô phỏng (v1.5.0)', '2_TAO_BAI_TAP/QUY_CHUAN_XAY_DUNG_MO_PHONG.md']
+          ['✨ MP-04: Tâm đối xứng (quay 180°)', '2_TAO_BAI_TAP/Ket_qua/MP04_Tam_Doi_Xung.html'],
+          ['✨ MP-01: Diện tích hình bình hành (cắt ghép)', '2_TAO_BAI_TAP/Ket_qua/MP01_Dien_Tich_Hinh_Binh_Hanh.html'],
+          ['✨ MP-02: Diện tích hình thoi (cắt ghép)', '2_TAO_BAI_TAP/Ket_qua/MP02_Dien_Tich_Hinh_Thoi.html'],
+          ['✨ MP-03: Trục đối xứng (nếp gập 0-180°)', '2_TAO_BAI_TAP/Ket_qua/MP03_Truc_Doi_Xung.html'],
+          ['✨ MP-05: Thước đo góc & Các loại góc', '2_TAO_BAI_TAP/Ket_qua/MP05_Thuoc_Do_Goc_Va_Cac_Loai_Goc.html'],
+          ['📐 MP-D01: Dựng hình vuông (thước & ê-ke)', '2_TAO_BAI_TAP/Ket_qua/MP_D01_Ve_Hinh_Vuong.html'],
+          ['📐 MP-D02: Dựng tam giác đều (compa & thước)', '2_TAO_BAI_TAP/Ket_qua/MP_D02_Ve_Tam_Giac_Deu.html'],
+          ['📐 MP-D03: Dựng hình chữ nhật (thước & ê-ke)', '2_TAO_BAI_TAP/Ket_qua/MP_D03_Ve_Hinh_Chu_Nhat.html'],
+          ['📐 MP-D04: Dựng hình thoi (compa & thước)', '2_TAO_BAI_TAP/Ket_qua/MP_D04_Ve_Hinh_Thoi.html'],
+          ['📐 MP-D05: Dựng hình bình hành (thước & ê-ke)', '2_TAO_BAI_TAP/Ket_qua/MP_D05_Ve_Hinh_Binh_Hanh.html'],
+          ['📘 Quy chuẩn xây dựng mô phỏng (v1.6.0)', '2_TAO_BAI_TAP/QUY_CHUAN_XAY_DUNG_MO_PHONG.md']
         ];
       }
       showPrompt(3, `Tạo bài tập — ${name}`, msg, customTools);

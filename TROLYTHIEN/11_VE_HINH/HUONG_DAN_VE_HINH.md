@@ -38,7 +38,7 @@ Ghi vào `TROLYTHIEN/11_VE_HINH/Ket_qua/`.
 Tên file BẮT BUỘC đặt theo tên bài tập / câu hỏi trong đề của giáo viên, không dấu, nối bằng gạch dưới `_` để dễ quan sát và quản lý (ví dụ: `Bai_1_Hinh_Binh_Hanh_ABCD.png`, `Bai_2_Tam_Giac_ABC_Vuong_Tai_A.png`, `Cau_3_Hinh_Chop_S_ABCD.png`...).
 
 - **Chỉ xuất ĐÚNG 1 file ảnh PNG duy nhất:** `Bai_X_[Ten_Hinh].png` — ảnh PNG độ phân giải cao 300 DPI, nền trắng sắc nét, chèn trực tiếp ngay vào Word, PowerPoint, đề kiểm tra mà không vỡ hạt.
-- Tuyệt đối KHÔNG tự ý sinh các file phụ (`.svg`, `.html`, `_geogebra.txt`) để tránh làm chậm tiến trình và không làm rác thư mục, trừ khi giáo viên có yêu cầu riêng.
+- Tuyệt đối KHÔNG tự ý sinh các file phụ `[Ten_Hinh].svg`, `[Ten_Hinh]_geogebra.txt`, `[Ten_Hinh].html` để tránh làm chậm tiến trình và không làm rác thư mục, trừ khi giáo viên có yêu cầu riêng. Khi được yêu cầu, SVG phải có viewBox, lệnh GeoGebra ghi Segment cho cạnh hữu hạn, và tính trực tâm, trọng tâm bằng tọa độ.
 
 ## Dọn dẹp file rác
 Bất cứ khi nào giáo viên muốn làm sạch các file cache, file tách PDF tạm thời:

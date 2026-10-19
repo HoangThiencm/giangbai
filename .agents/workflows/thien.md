@@ -1,11 +1,11 @@
 ---
-description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 13 tác vụ chính
+description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 14 tác vụ chính
 ---
 
 Khi người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
 ### BƯỚC 1: Hiển thị bảng chọn Menu chính (Menu cấp 1)
-Gọi tool `ask_question` với danh sách 13 lựa chọn:
+Gọi tool `ask_question` với danh sách 14 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -21,6 +21,7 @@ Gọi tool `ask_question` với danh sách 13 lựa chọn:
   11. "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"
   12. "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"
   13. "13/ Chuyển ghi âm thành văn bản (iPhone / MP3)"
+  14. "14/ Nhận diện văn bản (OCR Thông minh)"
 
 ---
 
@@ -159,6 +160,16 @@ Bóc tách tệp ghi âm giọng nói thành văn bản trung thực (Verbatim t
   2. `[Ten_File].txt`: tệp văn bản thuần UTF-8 gọn nhẹ để sao chép nhanh.
 - **Chat:** phản hồi ngắn 2–3 dòng: đã bóc tách xong, đường dẫn tệp Word và Text, trích dẫn 1 câu mở đầu để nhận diện nội dung.
 
+#### Nhánh 14: Khi chọn "14/ Nhận diện văn bản (OCR Thông minh)"
+Chuyển PDF, ảnh scan hoặc chữ viết tay thành Word, không bịa phần không đọc được. Đọc `TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/HUONG_DAN_NHAN_DIEN_VAN_BAN.md` và áp dụng nguyên văn Master Prompt tại `TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/PROMPT_NHAN_DIEN_VAN_BAN.md`.
+- **File đầu vào:** `.pdf`, `.png`, `.jpg`, `.jpeg` trong `TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/Dau_vao/`.
+- **Engine:** `python -m TROLYTHIEN.engine.nhan_dien_engine --input "<đường dẫn>"`.
+- **Quy tắc:** Times New Roman 14pt; giữ bảng, ô gộp và viền; chữ gạch xóa và ghi chú lề giữ nguyên. Vùng PDF có text lấy bằng PyMuPDF. Vùng scan, ảnh và công thức đi qua Vision (`gemini-2.5-flash`, fallback cùng dòng model khi lỗi). Công thức rõ xuất `m:oMath` 14pt. Công thức mờ hoặc lỗi OMML thì chèn ảnh cắt từ bản gốc kèm nhãn đỏ `[Công thức chưa đọc rõ / Lỗi chuyển đổi — Mã NDxx]`.
+- **Năm tình huống đỏ:** chữ mờ nhiều cách đọc; đọc được một phần; không đọc được (kèm ảnh cắt); nội dung lẹm mép; nghi bản gốc sai thì giữ chữ đen và thêm đề nghị kiểm tra màu đỏ. Mã `ND01`, `ND02`...
+- **Hình:** mặc định giữ ảnh cắt gốc. Chỉ tái tạo khi đủ tọa độ hoặc nhãn đỉnh, và luôn để song song hình tái tạo, ảnh gốc và nhãn đỏ.
+- **File kết quả** trong `TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/Ket_qua/`: `[Ten_File].docx` (trang cuối là bảng đối soát) và `[Ten_File].json` (mã, trang, bbox, loại, chữ gốc, đề nghị).
+- **Kết luận:** Đã có quy tắc kiểm soát; hiệu quả cần được xác minh qua bộ mẫu thử nghiệm. Trạng thái mặc định là đã chuyển đổi, còn vị trí cần đối chiếu, chưa phải đã được người dùng xác nhận.
+
 ---
 
 ### BƯỚC 3: KIẾN TRÚC THỰC THI (SINGLE UNIVERSAL ENGINE)
@@ -169,6 +180,7 @@ Mọi tác vụ kỹ thuật nghiệp vụ của Trợ lý Sư phạm Hoàng Thi
 - **Bài giảng 16:9 (`10_BAI_GIANG_HTML`):** `python -m TROLYTHIEN.engine.builder_bai_giang_html`
 - **Duyệt giáo án (`3_DUYET_GIAO_AN`):** `python -m TROLYTHIEN.engine.duyet_giao_an_engine`
 - **Vẽ hình học (`11_VE_HINH`):** `python -m TROLYTHIEN.engine.ve_hinh_engine`
+- **Nhận diện văn bản (`14_NHAN_DIEN_VAN_BAN`):** `python -m TROLYTHIEN.engine.nhan_dien_engine`
 - **Cắt PDF SGK (`cat_pdf_sgk.py`):** `python -m TROLYTHIEN.engine.cat_pdf_sgk`
 
 Tuyệt đối không viết thêm các file script riêng rẽ theo bài (`build_bai_X.py`, `inspect_GV.py`...). Dữ liệu truyền bằng JSON hoặc tham số CLI.

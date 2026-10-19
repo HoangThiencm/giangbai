@@ -1,28 +1,36 @@
 # VERIFY
 
 ## Kết luận
-PASS
+FAIL
 
 ## Đối chiếu scope
-- Sửa `compressTimetableImage()`: Giữ nguyên chất lượng ảnh khi kích thước ≤ 2MB, không còn nén JPEG 0.85 gây mờ số.
-- Cập nhật `scanTimetableWithAI()`: Prompt đưa tên giáo viên, danh sách lớp (`state.classes`) và danh sách môn (`state.subjects`); hướng dẫn quét 2D theo hàng ngang, bảo toàn ô trống (Thứ 2 tiết 1 trống, Thứ 6 tiết 4 trống); bỏ câu hardcode gán cứng Thứ 3; giữ câu kiểm tra phân công.
-- Bổ sung `matchClassFromTimetable()`: Khớp mã lớp 2 chữ số (`93` ↔ `9/3`, `64` ↔ `6/4`, `63` ↔ `6A3`, `71` ↔ `71`); không xóa dấu `/` trong `normalizeClassNameFromTimetable()`.
-- Cập nhật `applyAiTimetableResult()` và `extractAssignmentsFromTimetable()` để dùng tên lớp đã chuẩn hóa qua `matchClassFromTimetable()`.
-- Tinh chỉnh `alignSessionPeriods()` giữ nguyên tiết 1–5 cho buổi sáng.
-- Bổ sung badge hiển thị kết quả AI `#tt-ai-scan-badge`.
-- Không đụng file ngoài phạm vi. Không xóa `.lock`.
+- Đã tạo `TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/` (`Dau_vao/`, `Ket_qua/`, `HUONG_DAN_NHAN_DIEN_VAN_BAN.md`, `PROMPT_NHAN_DIEN_VAN_BAN.md`).
+- Đã tạo `TROLYTHIEN/engine/nhan_dien_engine.py` với cấu trúc Hybrid Pipeline, kiểm soát kép công thức, tag đỏ `NDxx`, Bảng Audit Log và xuất file JSON metadata.
+- Đã cập nhật mục 14 vào `.agents/workflows/thien.md` và `TROLYTHIEN/tro-ly-thien-menu.html`.
+- Đã tạo `tests/nhan-dien-van-ban-smoke.py` với 5 ca khó.
 
 ## Test đã chạy
-- `node tests/timetable-render-smoke.js`
-- `node tests/daythay-suggest-smoke.js`
-- `node tests/baogiang-weekday-segment-smoke.js`
+- `python tests/nhan-dien-van-ban-smoke.py` → PASS.
+- `python -m TROLYTHIEN.engine.nhan_dien_engine --input "TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/Dau_vao/ca2_cong_thuc.json"` → FAIL (UnicodeEncodeError).
+- `node tests/trolythien-bai-giang-html-smoke.js` → FAIL (AssertionError: 14 !== 13).
+- `node tests/trolythien-chuan-hoa-van-ban-smoke.js` → FAIL (AssertionError: 14 !== 13).
+- `node tests/trolythien-chuyen-ghi-am-smoke.js` → FAIL (AssertionError: Menu tương tác 13 tác vụ chính).
+- `node tests/trolythien-vehinh-smoke.js` → FAIL (AssertionError: 14 !== 13).
 
 ## Pass / Fail từng tiêu chí
-- Pass: Giữ nguyên độ sắc nét ảnh TKB khi gửi vào AI.
-- Pass: Prompt quét hàng ngang ma trận 2D bảo toàn ô trống (không dồn môn từ tiết 2 lên tiết 1, tiết 5 lên tiết 4).
-- Pass: Khớp lớp 2 số thông minh (`93` -> `9/3`, `64` -> `6/4`, `63` -> `6A3`).
-- Pass: Không sinh thêm lớp rác trong `state.classes`.
-- Pass: Mọi bài kiểm thử trong `timetable-render-smoke.js` đạt kết quả PASS mà không có regression.
+- Pass: Cấu trúc thư mục Mục 14 đầy đủ, tài liệu hướng dẫn và master prompt đúng 7 quy chuẩn.
+- Pass: Engine nhận diện và xuất Word đạt Times New Roman 14pt, render công thức `m:oMath`, có bảng Audit Log.
+- Pass: Bộ test 5 ca khó `tests/nhan-dien-van-ban-smoke.py` đạt PASS.
+- Fail: Lỗi chạy CLI trực tiếp trên Windows do `print(CONCLUSION)` gặp `UnicodeEncodeError` (ký tự `\u0110` không mã hóa được trong `cp1252`).
+- Fail: Phá vỡ regression của 4 test suite hiện có (`trolythien-bai-giang-html-smoke.js`, `trolythien-chuan-hoa-van-ban-smoke.js`, `trolythien-chuyen-ghi-am-smoke.js`, `trolythien-vehinh-smoke.js`) do các test này kiểm tra số lượng tác vụ menu và tiêu đề 13 tác vụ trong workflow/rules.
 
 ## Bug
-Không phát hiện bug.
+- Lỗi 1: `UnicodeEncodeError: 'charmap' codec can't encode character '\u0110'` khi chạy `nhan_dien_engine.py` qua CLI trên Windows.
+  - Tái hiện: Chạy `python -m TROLYTHIEN.engine.nhan_dien_engine --input "TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/Dau_vao/ca2_cong_thuc.json"`.
+  - File liên quan: `TROLYTHIEN/engine/nhan_dien_engine.py`.
+  - Khắc phục: Cần thêm `if sys.stdout: sys.stdout.reconfigure(encoding='utf-8')` hoặc xuất chuỗi an toàn mã hóa console.
+
+- Lỗi 2: Lệch số lượng tác vụ Menu chính giữa `.agents/workflows/thien.md`, `.agents/rules/tro-ly-thien.md` và các bài smoke test cũ.
+  - Tái hiện: Chạy `node tests/trolythien-bai-giang-html-smoke.js`, `node tests/trolythien-chuan-hoa-van-ban-smoke.js`, `node tests/trolythien-chuyen-ghi-am-smoke.js`, `node tests/trolythien-vehinh-smoke.js`.
+  - File liên quan: `.agents/rules/tro-ly-thien.md`, `.agents/workflows/thien.md`, các file smoke test tương ứng.
+  - Khắc phục: Đồng bộ danh mục 14 tác vụ sang `.agents/rules/tro-ly-thien.md` và cập nhật kỳ vọng (expect) trong các bài test smoke từ 13 lên 14 tác vụ.

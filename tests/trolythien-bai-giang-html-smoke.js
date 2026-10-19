@@ -37,20 +37,20 @@ const menuOptions = [
   '12. "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"'
 ];
 
-mustInclude(workflow, "description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 13 tác vụ chính", "workflow");
-mustInclude(workflow, "Gọi tool `ask_question` với danh sách 13 lựa chọn:", "workflow");
+mustInclude(workflow, "description: Trợ lý Sư phạm Hoàng Thiên — Menu tương tác 14 tác vụ chính", "workflow");
+mustInclude(workflow, "Gọi tool `ask_question` với danh sách 14 lựa chọn:", "workflow");
 assert.ok(!workflow.includes("danh sách 9 lựa chọn"), "workflow con dong menu 9 lua chon");
-mustInclude(rules, "## 1. Menu Cấp 1 (Tác vụ chính - 13 lựa chọn)", "rules");
-mustInclude(rules, "Gọi tool `ask_question` với 13 lựa chọn:", "rules");
+mustInclude(rules, "## 1. Menu Cấp 1 (Tác vụ chính - 14 lựa chọn)", "rules");
+mustInclude(rules, "Gọi tool `ask_question` với 14 lựa chọn:", "rules");
 assert.ok(!rules.includes("Tác vụ chính - 9 lựa chọn"), "rules con tieu de menu 9 lua chon");
 
 const workflowMenu = workflow.split("### BƯỚC 2")[0];
 const workflowMenuCount = (workflowMenu.match(/^\s+\d+\. "/gm) || []).length;
-assert.strictEqual(workflowMenuCount, 13, "workflow menu cap 1 phai dung 13 lua chon");
+assert.strictEqual(workflowMenuCount, 14, "workflow menu cap 1 phai dung 14 lua chon");
 
 const rulesMenu = rules.split("## 2.")[0];
 const rulesMenuCount = (rulesMenu.match(/^\s+\d+\. "/gm) || []).length;
-assert.strictEqual(rulesMenuCount, 13, "rules menu cap 1 phai dung 13 lua chon");
+assert.strictEqual(rulesMenuCount, 14, "rules menu cap 1 phai dung 14 lua chon");
 
 for (const option of menuOptions) {
   mustInclude(workflowMenu, option, "workflow menu");
@@ -58,9 +58,9 @@ for (const option of menuOptions) {
 }
 
 const preservedBranches = [
-  '#### Nhánh 1: Khi chọn "1/ Duyệt giáo án"\nHướng dẫn nạp file giáo án cần thẩm định vào `TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/`, xuất kết quả biên bản ra `TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/`.',
+  '#### Nhánh 1: Khi chọn "1/ Duyệt giáo án"\nTự động kích hoạt quy trình thẩm định Kế hoạch bài dạy theo chuẩn CV 5512 & Quy định chuyên môn nghiêm ngặt trường THCS Trần Phú:',
   '#### Nhánh 2: Khi chọn "2/ Soạn Giáo án (KHBD)"\nTự động kích hoạt quy trình soạn KHBD chuẩn V2.0:\n- File đầu vào (SGK, PPCT): đọc từ `TROLYTHIEN/1_SOAN_KHBD/Dau_vao/`\n- File kết quả: tự động xuất Word ra `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/`',
-  '#### Nhánh 3: Khi chọn "3/ Tạo bài tập"\nGọi tiếp tool `ask_question` với đúng 9 định dạng chuẩn (file đầu vào tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`, kết quả tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`):',
+  '#### Nhánh 3: Khi chọn "3/ Tạo bài tập"\nGọi tiếp tool `ask_question` với đúng 12 định dạng chuẩn (file đầu vào tại `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`, kết quả tại `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/`):',
   '1. "1. ⭐ Dạng Công văn 7991 (17 câu)"',
   '8. "8. ⭐ Bài tập tự luận"',
   '#### Nhánh 4: Khi chọn "4/ Duyệt đề"\nHướng dẫn nạp file đề thi và ma trận vào `TROLYTHIEN/4_DUYET_DE/Dau_vao/`, xuất kết quả thẩm định ra `TROLYTHIEN/4_DUYET_DE/Ket_qua/`.',
@@ -109,7 +109,7 @@ for (const needle of branch10) {
 const preservedRules = [
   "## 2. Xử lý đường dẫn web trực tiếp:",
   "https://www.hoangthiencm.id.vn/trochoi.html",
-  "## 3. Menu Cấp 2 khi chọn \"3/ Tạo bài tập\" (9 định dạng đánh số)",
+  "## 3. Menu Cấp 2 khi chọn \"3/ Tạo bài tập\" (12 lựa chọn đánh số)",
   "1. \"1. ⭐ Dạng Công văn 7991 (17 câu)\"",
   "8. \"8. ⭐ Bài tập tự luận\"",
   "## 4. Quy ước thư mục đầu vào và kết quả (Bắt buộc không lưu lung tung)",
@@ -117,7 +117,7 @@ const preservedRules = [
   "TROLYTHIEN/1_SOAN_KHBD/Dau_vao/",
   "**2/ Tạo bài tập:**",
   "TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/",
-  "**3/ Duyệt giáo án:**",
+  "**1/ Duyệt giáo án (Thẩm định KHBD):**",
   "TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao/",
   "**4/ Duyệt đề:**",
   "TROLYTHIEN/4_DUYET_DE/Ket_qua/",

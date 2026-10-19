@@ -1,18 +1,17 @@
-# IMPLEMENT: Nhận diện TKB chính xác hơn
+# IMPLEMENT: Sửa FAIL nhận diện văn bản
 
-## Đã làm
+## Đã sửa theo VERIFY
 
-- `compressTimetableImage()` giữ nguyên PNG/JPEG khi ảnh ≤ 2MB và mỗi cạnh ≤ 2048px. Ảnh lớn hơn được xuất PNG hoặc JPEG chất lượng 0.95, không còn JPEG 0.85.
-- `scanTimetableWithAI()` đưa tên giáo viên đang chọn, `state.classes` và `state.subjects` vào prompt. Prompt yêu cầu quét hàng ngang, giữ ô trống (Thứ 2 tiết 1 trống, Thứ 6 tiết 4 trống) và đổi mã 2 chữ số theo danh sách lớp. Đã bỏ câu gán cứng “Nếu Thứ 3 có môn ở Hàng 3 và Hàng 4…”. Giữ câu “tuyệt đối không bỏ sót bất kỳ tiết nào có phân công dạy”.
-- `matchClassFromTimetable()` khớp `93` ↔ `9/3`, `64` ↔ `6/4`, `63` ↔ `6A3`, và giữ `71` khi danh sách lớp đã dùng mã 2 số. `normalizeClassNameFromTimetable()` không xóa dấu `/`.
-- `applyAiTimetableResult()` và `extractAssignmentsFromTimetable()` dùng tên lớp đã khớp, nên không tạo lớp rác khi đã có lớp tương đương.
-- `alignSessionPeriods()` giữ nguyên tiết 1–5 khi khung buổi bắt đầu bằng tiết 1.
-- Sau khi AI đọc xong, badge `#tt-ai-scan-badge` hiện số tiết sáng, số tiết chiều và danh sách lớp.
+- `TROLYTHIEN/engine/nhan_dien_engine.py`: `sys.stdout.reconfigure(encoding="utf-8")` trước khi in. CLI in được câu kết luận có chữ Đ trên console Windows.
+- Menu 14 được ghi trong `.agents/rules/tro-ly-thien.md`, cùng workflow và menu HTML.
+- Các smoke đếm menu cập nhật từ 13 lên 14: `trolythien-bai-giang-html-smoke.js`, `trolythien-chuan-hoa-van-ban-smoke.js`, `trolythien-chuyen-ghi-am-smoke.js`, `trolythien-vehinh-smoke.js`.
 
 ## Kiểm tra
 
-- `node tests/timetable-render-smoke.js` → PASS (gồm `new vm.Script` cho mọi khối script trong `phancongtochuyenmon.html`).
+- `python -m TROLYTHIEN.engine.nhan_dien_engine --input "TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/Dau_vao/ca2_cong_thuc.json"` in đủ Word, JSON và câu kết luận. Không còn UnicodeEncodeError.
+- `node tests/trolythien-chuan-hoa-van-ban-smoke.js` PASS.
+- `node tests/trolythien-vehinh-smoke.js` PASS.
+- `node tests/trolythien-chuyen-ghi-am-smoke.js` PASS.
+- `node tests/trolythien-bai-giang-html-smoke.js` qua được mục đếm 14 lựa chọn, rồi dừng vì thiếu sẵn file `TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/export_hoaimy_audio.py`. File này không nằm trong hai lỗi VERIFY.
 
-## Ngoài phạm vi
-
-Không sửa file ngoài `phancongtochuyenmon.html`, `tests/timetable-render-smoke.js` và handoff. Chưa commit, chưa push.
+Chưa commit, chưa push.

@@ -15,6 +15,9 @@ docs/handoff/.lock
 GIAO AN/**/*.pdf
 
 # Trợ lý Thiên: Bỏ qua các file PDF đầu vào nặng (kể cả trong thư mục con giáo viên), giữ lại script build, templates và hướng dẫn
+TROLYTHIEN/**/Dau_vao/*
+!TROLYTHIEN/**/Dau_vao/.gitkeep
+!TROLYTHIEN/**/Dau_vao/*.md
 TROLYTHIEN/**/Dau_vao/*.pdf
 TROLYTHIEN/**/Dau_vao/*.PDF
 TROLYTHIEN/**/Dau_vao/**/*.pdf
@@ -27,6 +30,7 @@ TROLYTHIEN/**/Ket_qua/*
 !TROLYTHIEN/*.md
 !TROLYTHIEN/*/*.md
 !TROLYTHIEN/**/*.js
+!TROLYTHIEN/**/*.md
 !TROLYTHIEN/**/templates/**
 !TROLYTHIEN/10_BAI_GIANG_HTML/templates/**
 !TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_1_*.html

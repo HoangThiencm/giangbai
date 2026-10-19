@@ -24,14 +24,14 @@ const option = '12. "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"';
 
 const workflowMenu = workflow.split("### BƯỚC 2")[0];
 const rulesMenu = rules.split("## 2.")[0];
-assert.strictEqual((workflowMenu.match(/^\s+\d+\. "/gm) || []).length, 13, "workflow menu 13");
-assert.strictEqual((rulesMenu.match(/^\s+\d+\. "/gm) || []).length, 13, "rules menu 13");
+assert.strictEqual((workflowMenu.match(/^\s+\d+\. "/gm) || []).length, 14, "workflow menu 14");
+assert.strictEqual((rulesMenu.match(/^\s+\d+\. "/gm) || []).length, 14, "rules menu 14");
 mustInclude(workflowMenu, option, "workflow menu");
 mustInclude(rulesMenu, option, "rules menu");
-mustInclude(workflow, "Menu tương tác 13 tác vụ chính", "workflow");
+mustInclude(workflow, "Menu tương tác 14 tác vụ chính", "workflow");
 mustInclude(workflow, '#### Nhánh 12: Khi chọn "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"', "workflow");
-mustInclude(rules, "## 1. Menu Cấp 1 (Tác vụ chính - 13 lựa chọn)", "rules");
-mustInclude(rules, "## 7. Quy chuẩn kỹ thuật cho Nhánh 12", "rules");
+mustInclude(rules, "## 1. Menu Cấp 1 (Tác vụ chính - 14 lựa chọn)", "rules");
+mustInclude(rules, "## 8. Quy chuẩn kỹ thuật cho Nhánh 12", "rules");
 
 const paths = [
   "TROLYTHIEN/12_CHUAN_HOA_VAN_BAN/Dau_vao/",

@@ -2,8 +2,8 @@
 
 Bất cứ khi nào người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
-## 1. Menu Cấp 1 (Tác vụ chính - 13 lựa chọn)
-Gọi tool `ask_question` với 13 lựa chọn:
+## 1. Menu Cấp 1 (Tác vụ chính - 14 lựa chọn)
+Gọi tool `ask_question` với 14 lựa chọn:
 - Question: "Chào Thầy/Cô! Em là trợ lý Hoàng Thiên. Thầy/Cô muốn thực hiện công việc gì hôm nay?"
 - Options:
   1. "1/ Duyệt giáo án"
@@ -19,6 +19,7 @@ Gọi tool `ask_question` với 13 lựa chọn:
   11. "11/ Vẽ hình học cực kỳ chính xác (từ đề bài / ảnh)"
   12. "12/ Chuẩn hoá văn bản (Hành chính / Đảng)"
   13. "13/ Chuyển ghi âm thành văn bản (iPhone / MP3)"
+  14. "14/ Nhận diện văn bản (OCR Thông minh)"
 
 ## 2. Xử lý đường dẫn web trực tiếp:
 - **5/ Game giáo dục:** Cung cấp link website https://www.hoangthiencm.id.vn/trochoi.html và file [trochoi.html](file:///c:/Users/HoangThien/Documents/GitHub/giangbai/trochoi.html).
@@ -241,6 +242,13 @@ Quy chuẩn xử lý âm thanh:
   2. `[Ten_File].txt`: tệp văn bản thuần UTF-8 hỗ trợ sao chép nhanh sang Zalo, email hay các tài liệu khác.
 - Chat phản hồi ngắn 2–3 dòng: đã bóc tách xong, đường dẫn tệp Word và Text, trích dẫn 1 câu mở đầu để nhận diện nội dung.
 
+## 10b. Quy chuẩn kỹ thuật cho Nhánh 14 (Nhận diện văn bản)
+Khi chọn "14/ Nhận diện văn bản (OCR Thông minh)", đọc PDF hoặc ảnh trong `TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/Dau_vao/`. Áp dụng `TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/PROMPT_NHAN_DIEN_VAN_BAN.md`.
+- Engine: `python -m TROLYTHIEN.engine.nhan_dien_engine --input "<đường dẫn>"`.
+- Word Times New Roman 14pt. Công thức rõ là `m:oMath`. Vùng mờ hoặc lỗi chuyển đổi gắn nhãn đỏ mã `NDxx` và ảnh cắt từ bản gốc.
+- Kết quả: `TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/Ket_qua/[Ten_File].docx` và `[Ten_File].json`.
+- Kết luận: Đã có quy tắc kiểm soát; hiệu quả cần được xác minh qua bộ mẫu thử nghiệm.
+
 ## 11. KIẾN TRÚC MỘT ENGINE DUY NHẤT CHO MỖI LOẠI TÁC VỤ (SINGLE UNIVERSAL ENGINE ARCHITECTURE)
 > **NGHIÊM CẤM TỰ Ý TẠO FILE .PY RÁC LẺ TẺ TRONG TOÀN BỘ REPO!**
 
@@ -251,6 +259,7 @@ Toàn bộ logic xử lý, kiểm định, render của Trợ lý Sư phạm Ho�
 4. **Vẽ hình học giải tích chuẩn GDPT 2018 (`11_VE_HINH`):** `TROLYTHIEN/engine/ve_hinh_engine.py`.
 5. **Cắt tách PDF SGK từng bài (`cat_pdf_sgk.py`):** `TROLYTHIEN/engine/cat_pdf_sgk.py` (quản lý mục lục tập trung tại `TROLYTHIEN/engine/configs/sgk_configs.json`).
 6. **Đọc ma trận và bản đặc tả (`2_TAO_BAI_TAP`, lựa chọn 12):** `TROLYTHIEN/engine/doc_ma_tran_dac_ta.py`.
+7. **Nhận diện văn bản (`14_NHAN_DIEN_VAN_BAN`):** `TROLYTHIEN/engine/nhan_dien_engine.py`.
 
 **Kỷ luật bất biến khi hoạt động trên mọi máy tính:**
 - **Tuyệt đối không sinh script `.py` riêng lẻ** theo từng bài học (như `build_bai_04.py`, `build_bai_12.py`, `verify_bai_12.py`...) hay theo từng giáo viên (`inspect_duong_quang_tung.py`, `duyet_hoang_xuan_anh.py`...).
