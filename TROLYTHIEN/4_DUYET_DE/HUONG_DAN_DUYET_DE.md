@@ -128,13 +128,21 @@ flowchart TD
 
 ---
 
-## III. TÙY CHỌN BỔ SUNG: TẠO ĐỀ KIỂM TRA THEO MA TRẬN ĐÃ CHỐT
+## III. TÙY CHỌN BỔ SUNG: TẠO ĐỀ KIỂM TRA THEO MA TRẬN ĐÃ CHỐT & BỘ ĐỀ SONG SINH
 > **Lưu ý quan trọng:** Đây là **chức năng tùy chọn riêng biệt (On-demand)**, KHÔNG nằm trong quy trình duyệt đề mặc định. Chỉ thực hiện khi Thầy yêu cầu riêng và sau khi Khung Ma trận / Bản đặc tả đã được thẩm định đạt chuẩn hoặc đã chốt phương án sửa.
 
-Khi có lệnh yêu cầu tạo đề, Trợ lý Thiên sẽ sinh trọn bộ gồm 3 phần:
+Khi có lệnh yêu cầu tạo đề / tạo bộ đề song sinh, Trợ lý Thiên sẽ sinh trọn bộ gồm 3 phần và BẮT BUỘC TUÂN THỦ:
 1. **Đề kiểm tra A4 hoàn chỉnh** theo mẫu chuẩn trường THCS Trần Phú.
 2. **Ma trận đối chiếu và Bảng đáp án nhanh**.
 3. **Hướng dẫn chấm chi tiết & Thang điểm (Rubric)** từng bước đến 0,25 điểm.
+
+> [!IMPORTANT]
+> **BẢN VÁ HỆ THỐNG — TIÊU CHUẨN CÔNG THỨC EQUATION TRONG FILE WORD (.DOCX):**
+> - Mọi đề kiểm tra và bộ đề song sinh xuất ra file `.docx` BẮT BUỘC dùng **100% Native Word Equation (OMML `m:oMath`)** thông qua `TROLYTHIEN.engine.word_math_helper` hoặc `de_cuong_docx_helper`.
+> - **TUYỆT ĐỐI CẤM** dùng chuỗi Unicode/text thô như `(x+y)/4`, `x⁴y²`, `góc M = 100°`.
+> - **Bảng nối cột (Bài 2.1):** Bắt buộc dùng `Table Grid` 2 cột có tiêu đề **Cột A** và **Cột B** in đậm, căn giữa, nền ô `#F2F2F2`, từng ô chứa công thức Equation độc lập.
+> - **Ký hiệu góc:** Ký hiệu góc luôn dùng dấu mũ góc $\widehat{...}$ (`\widehat{A}`, `\widehat{ABC}`), cấm viết "góc A", "góc M".
+> - **Hình vẽ hình học:** Phải được vẽ chính xác 100% bằng giải tích toạ độ vector, xếp song song 2 cột có nhãn `Hình a`, `Hình b`.
 
 ---
 

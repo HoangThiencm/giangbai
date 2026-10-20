@@ -1,5 +1,38 @@
 # QUY TẮC TRỢ LÝ SƯ PHẠM HOÀNG THIÊN (/thien, "Thiên ơi")
 
+## 0. BẢN VÁ HỆ THỐNG BẮT BUỘC: TIÊU CHUẨN CÔNG THỨC WORD EQUATION (OMML) & THỂ THỨC TOÁN HỌC
+> [!CAUTION]
+> **ĐIỀU CẤM KỴ TUYỆT ĐỐI TRÊN TOÀN BỘ 14 PHÂN MỤC CỦA TRỢ LÝ THIÊN:**
+> TUYỆT ĐỐI KHÔNG BAO GIỜ XUẤT CÔNG THỨC TOÁN DẠNG TEXT THÔ UNICODE TRONG FILE WORD (`.docx`)!
+> Nghiêm cấm hoàn toàn các chuỗi ký tự chắp vá như: `(x + y)/4`, `-2/3 x⁴y²`, `x/y²`, `P = 2x³y² + xy - x² + 3x³ + 1`, `(x + A)³`, `x = -2`, `góc M = 100°`, `góc A = D = E = 90°`!
+
+### 1. Quy tắc 100% Native Word Equation (OMML `m:oMath`):
+- Mọi tài liệu Word (`.docx`) chứa công thức Toán học, Vật lí, Hóa học do Trợ lý Thiên tạo ra (ở bất kỳ phân mục nào: Soạn KHBD, Tạo bài tập, Duyệt đề, Tạo đề song sinh, Viết sáng kiến...) **BẮT BUỘC 100% PHẢI ĐƯỢC CHUYỂN ĐỔI SANG MICROSOFT WORD EQUATION (OMML `<m:oMath>`)**.
+- **Engine trung tâm bắt buộc sử dụng:**
+  `from TROLYTHIEN.engine.word_math_helper import add_math_paragraph, add_multiline_math, latex_to_omml, set_cell_shading`
+  (Hoặc `from TROLYTHIEN.engine.de_cuong_docx_helper import add_text_with_math, latex_to_omml`).
+  Engine đã tích hợp sẵn XSLT Microsoft `MML2OMML.XSL` + `latex2mathml`, tự động sửa các lỗi MML2OMML (lỗi dấu trừ sau ngoặc, lỗi gạch đầu `\overline`, lỗi dấu mũ góc `\widehat` ôm sát đỉnh chữ cái).
+- **Cách viết chuẩn:** Toàn bộ công thức toán trong code/dữ liệu phải được bọc trong cặp dấu `$...$`:
+  + Phân số: `$\frac{x + y}{4}$`, `$-\frac{2}{3}x^4y^2$`
+  + Đa thức & Lũy thừa: `$P = 2x^3y^2 + xy - x^2 + 3x^3 + 1$`
+  + Hằng đẳng thức: `$(x + A)^3 = x^3 + 6x^2y + 12xy^2 + B$`
+  + Phương trình & Nghiệm: `$(x - 3)^2 - (x - 4)(x + 4) = 37 \Leftrightarrow x = -2$`
+  + Tỉ số hình học: `$\frac{CE}{ED} = \frac{CB}{BA}$`
+  + Hình học: `$\Delta ABC$`, `$AM \perp DE$`, `$DH \parallel EK$`, `$H \in BC$`
+- Khi thêm vào đoạn văn bản Word: Gọi `add_math_paragraph(container, text)` hoặc duyệt các đoạn `$formula$` chuyển qua `latex_to_omml(formula)` rồi `paragraph._p.append(omml)`.
+
+### 2. Quy tắc Bảng nối cột (Bài tập Nối ý Cột A - Cột B):
+- Bắt buộc tạo **Bảng Word thực thụ** (`doc.add_table(rows, cols)` với `style = 'Table Grid'`).
+- Tiêu đề bảng: **Cột A** và **Cột B** in đậm, căn giữa, nền ô đổ màu xám nhạt (`#F2F2F2`).
+- Từng ô trong Cột A và Cột B **phải chứa công thức Word Equation riêng biệt**, không được viết text dính liền bằng khoảng trắng.
+
+### 3. Quy tắc Ký hiệu Góc trong Toán THCS (GDPT 2018):
+- Đề bài quan sát hình vẽ: Đưa dữ liệu số đo trực tiếp lên hình vẽ (`Hình a`, `Hình b`), đề bài chỉ dẫn: `"a) Tính số đo x trong hình vẽ sau:"` và `"b) Tính độ dài y trong hình vẽ sau:"`. Tuyệt đối không viết lời văn thô sơ `"có góc M = 100°"`.
+- Trong Lời giải / Đáp án: Bắt buộc dùng ký hiệu góc có dấu mũ toán học:
+  `$\widehat{A} + \widehat{B} + \widehat{C} + \widehat{D} = 360^\circ$`, `$\widehat{M} + \widehat{N} + \widehat{P} + \widehat{Q} = 360^\circ$`, `$\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$`, `$\widehat{MAC} = \widehat{MCA}$`, `$\widehat{OEA} = \widehat{OAE}$`.
+  Tuyệt đối không dùng chữ "góc M", "góc A" cộc lốc trong phép tính đại số/hình học.
+
+
 Bất cứ khi nào người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
 ## 1. Menu Cấp 1 (Tác vụ chính - 14 lựa chọn)

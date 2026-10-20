@@ -87,3 +87,12 @@ Trước khi bắt đầu, xác định rõ 6 thông số từ hồ sơ:
 2. File template & tài liệu đối chiếu: Biểu mẫu chuẩn, ma trận khung chuẩn lưu tại `TROLYTHIEN/templates/` để đối chiếu.
 3. File kết quả xuất ra (đặt theo ngày để gọn): Toàn bộ file kết quả (.docx, .md) BẮT BUỘC lưu tại `TROLYTHIEN/4_DUYET_DE/Ket_qua/[DD.MM]/` (ví dụ `Ket_qua/20.10/`).
 ```
+
+
+## 5. BẢN VÁ HỆ THỐNG: TIÊU CHUẨN XUẤT ĐỀ KIỂM TRA & ĐỀ SONG SINH WORD (.DOCX)
+- Khi Thầy yêu cầu tạo đề mới hoặc bộ đề song sinh:
+  + Bắt buộc 100% công thức toán học phải là **Microsoft Word Equation (OMML `m:oMath`)** qua `TROLYTHIEN.engine.word_math_helper` (`latex_to_omml` / `add_math_paragraph`).
+  + Cấm tuyệt đối text Unicode chắp vá: cấm `(x+y)/4`, `x⁴y²`, `góc M = 100°`.
+  + Bảng nối cột hằng đẳng thức bắt buộc đóng khung `Table Grid`, tiêu đề **Cột A** và **Cột B** nền xám `#F2F2F2`.
+  + Ký hiệu góc trong hình học THCS bắt buộc dùng dấu mũ: `\widehat{A}, \widehat{B}, \widehat{C}, \widehat{D}`, `\widehat{M}, \widehat{N}, \widehat{P}, \widehat{Q}`.
+  + Mọi file tạm lưu trong `TROLYTHIEN/TEMP/`, kết quả lưu theo ngày `TROLYTHIEN/4_DUYET_DE/Ket_qua/[DD.MM]/`.
