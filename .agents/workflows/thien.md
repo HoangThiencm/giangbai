@@ -25,6 +25,13 @@ Gọi tool `ask_question` với danh sách 14 lựa chọn:
 
 ---
 
+### QUY TẮC QUẢN TRỊ FILE TRONG TRỢ LÝ THIÊN (ÁP DỤNG CHO MỌI NHÁNH):
+1. 🔴 **File tạm (`TROLYTHIEN/TEMP/` - Không đẩy lên Git):** Toàn bộ file tạm trung gian (ảnh crop, text thô, cache tính toán, bản nháp...) **BẮT BUỘC lưu tại `TROLYTHIEN/TEMP/`** (hoặc `TROLYTHIEN/TEMP/[DD.MM]/`). Tuyệt đối không xả file tạm ra gốc `TROLYTHIEN/` hay `Dau_vao/`.
+2. 🟡 **File template & hệ thống đối chiếu (`TROLYTHIEN/templates/`):** Biểu mẫu chuẩn (Word NĐ 30, đề thi mẫu THCS Trần Phú, khung ma trận/đặc tả chuẩn, master slide HTML, mẫu KHBD 5512...) đặt tại `TROLYTHIEN/templates/` để làm nguồn đối chiếu chuẩn mực lâu dài.
+3. 🟢 **File kết quả đầu ra (`Ket_qua/[DD.MM]/` - Theo ngày để gọn):** Mọi file kết quả cuối cùng trên tất cả các nhánh **BẮT BUỘC lưu vào thư mục con theo ngày hiện tại** `TROLYTHIEN/[PHAN_MUC]/Ket_qua/[DD.MM]/` (ví dụ: `Ket_qua/20.10/`).
+
+---
+
 ### BƯỚC 2: Xử lý theo từng nhánh đã chọn
 
 #### Nhánh 1: Khi chọn "1/ Duyệt giáo án"
@@ -77,7 +84,20 @@ Gọi tiếp tool `ask_question` với đúng 12 định dạng chuẩn (file đ
 
 
 #### Nhánh 4: Khi chọn "4/ Duyệt đề"
-Hướng dẫn nạp file đề thi và ma trận vào `TROLYTHIEN/4_DUYET_DE/Dau_vao/`, xuất kết quả thẩm định ra `TROLYTHIEN/4_DUYET_DE/Ket_qua/`.
+Tự động kích hoạt quy trình thẩm định đề kiểm tra theo **4 BƯỚC CHUYÊN MÔN DỰA TRÊN BẰNG CHỨNG TRUY VẾT**:
+- **Xác định bối cảnh đầu vào:** Môn, lớp, học kỳ, loại kiểm tra (thường xuyên/giữa kỳ/cuối kỳ), thời lượng, hình thức bài thi và quy định tỉ lệ điểm áp dụng.
+- **Xử lý tệp mờ/thiếu:** Nếu PDF mờ hoặc thiếu tệp đối chứng (đáp án, ma trận, đặc tả) $\rightarrow$ kết luận ngay **"CHƯA ĐỦ DỮ LIỆU ĐỂ KẾT LUẬN"**, không tự giả định.
+- **File đầu vào:** Đặt tệp Đề thi, Ma trận, Bản đặc tả, Đáp án (Word `.docx`, `.pdf`) tại `TROLYTHIEN/4_DUYET_DE/Dau_vao/`.
+- **Thực thi quy trình 4 bước bắt buộc (dừng ở biên bản phản biện):**
+  1. **Thẩm định Khung Ma trận & Bản đặc tả:** Kiểm tra tổng điểm = đúng 10,0 điểm (hoặc thang quy định), tổng % = 100%; kiểm tra phép cộng dồn số học hàng ngang (chủ đề) và hàng dọc (mức độ); đối soát 1-1 giữa Khung ma trận và Bản đặc tả (số câu, mức độ, điểm số).
+  2. **Đối chiếu Đề thi vs Ma trận/Đặc tả:** Gán từng câu vào tọa độ chỉ mục (`spec_id`/ô ma trận); phát hiện các câu lệch mức độ nhận thức (quá dễ hoặc quá khó so với quy định); kiểm tra dạng câu và thang điểm.
+  3. **Kiểm toán Tính đúng đắn Khoa học & Sư phạm:** Tự giải đề độc lập kiểm tra đáp án; kiểm toán khoa học theo chuẩn môn/lớp (nghiệm xác định, hình học tồn tại thực tế, chuẩn GDPT 2018 không vượt cấp, logic thực tế, trật tự câu hỏi từ dễ đến khó).
+  4. **Lập Biên bản phản biện & Kết luận thẩm duyệt:**
+     + Bắt buộc áp dụng quy tắc bằng chứng 4 thành tố: `Vị trí nguồn (trang/câu/ô) → Dữ liệu quan sát → Phân tích chuyên môn → Kiến nghị`.
+     + 3 mức kết luận chính thức: **CÓ THỂ SỬ DỤNG / CẦN CHỈNH SỬA / KHÔNG SỬ DỤNG**.
+     + Phân biệt 2 định dạng: Biên bản hành chính (chuẩn NĐ 30, có khung ký duyệt 3 bên) hoặc Phiếu nhận xét góp ý (cô đọng, không cần khung ký 3 bên cồng kềnh).
+- **Tùy chọn tạo đề mới:** CHỈ thực hiện khi Thầy yêu cầu riêng và sau khi Khung ma trận đã được chốt phương án.
+- **Tuân thủ quy chuẩn:** `TROLYTHIEN/4_DUYET_DE/HUONG_DAN_DUYET_DE.md` và Master Prompt `TROLYTHIEN/4_DUYET_DE/PROMPT_DUYET_DE.md`.
 
 #### Nhánh 5: Khi chọn "5/ Game giáo dục"
 Mở và cung cấp đường dẫn truy cập trực tiếp:

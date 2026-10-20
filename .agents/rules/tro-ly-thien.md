@@ -47,10 +47,17 @@ Gọi tiếp tool `ask_question` với ĐÚNG 12 lựa chọn:
   12. "12. 📋 Tạo đề thi từ Ma trận & Bản đặc tả (Tự động đọc .docx trong Dau_vao hoặc thư mục chỉ định)"
 
 ## 4. Quy ước thư mục đầu vào và kết quả (Bắt buộc không lưu lung tung)
-Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư mục `TROLYTHIEN/`:
-- 🔴 **QUY TẮC ĐẶT TÊN THƯ MỤC THEO NGÀY (BẮT BUỘC TỪ NAY VỀ SAU):**
-  + Mọi file kết quả khi xuất bản (`Ket_qua/`) **BẮT BUỘC ĐẶT TRONG THƯ MỤC CON THEO NGÀY HIỆN TẠI** (định dạng `DD.MM`, ví dụ hôm nay ngày 13/10 là: `13.10`).
-  + Đường dẫn chuẩn: `TROLYTHIEN/[PHAN_MUC]/Ket_qua/[DD.MM]/` (ví dụ: `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/13.10/`, `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/13.10/`, `TROLYTHIEN/8_TAO_BAO_CAO/Ket_qua/13.10/`).
+Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư mục `TROLYTHIEN/` theo 3 NGUYÊN TẮC QUẢN TRỊ FILE:
+- 🔴 **1. QUY TẮC FILE TẠM (`TROLYTHIEN/TEMP/` - KHÔNG ĐẨY LÊN GIT):**
+  + Toàn bộ tệp tạm, file trung gian sinh ra trong quá trình xử lý (ảnh crop từ PDF/OCR, text thô trung gian, audio cắt đoạn, cache giải toán/chuyển đổi, bản nháp chạy thử...) **BẮT BUỘC LƯU TRONG THƯ MỤC `TROLYTHIEN/TEMP/`** (hoặc `TROLYTHIEN/TEMP/[DD.MM]/`).
+  + Thư mục này đã được cấu hình trong `.gitignore`, **TUYỆT ĐỐI KHÔNG ĐƯỢC ĐẨY LÊN GIT**.
+  + Nghiêm cấm xả file tạm rải rác ngoài gốc dự án, ngoài gốc `TROLYTHIEN/` hay trong thư mục `Dau_vao/`.
+- 🟡 **2. QUY TẮC TEMPLATES & HỆ THỐNG ĐỐI CHIẾU (`TROLYTHIEN/templates/`):**
+  + Các tệp biểu mẫu (template mẫu Word NĐ 30, đề thi mẫu THCS Trần Phú, khung ma trận & đặc tả chuẩn, master slide HTML, mẫu KHBD 5512...) và tài liệu quy chuẩn căn cứ được **ĐẶT TRONG THƯ MỤC HỆ THỐNG `TROLYTHIEN/templates/`** (hoặc thư mục `templates/` của từng phân mục) để làm nguồn đối chiếu chuẩn mực.
+  + Các tệp này được bảo lưu và đồng bộ trên Git phục vụ công tác chuyên môn lâu dài.
+- 🟢 **3. QUY TẮC FILE ĐẦU RA KẾT QUẢ (`Ket_qua/[DD.MM]/` - THEO NGÀY ĐỂ GỌN):**
+  + Mọi file kết quả cuối cùng khi xuất bản (`Ket_qua/`) trên **TOÀN BỘ 14 PHÂN MỤC** của Trợ lý Thiên **BẮT BUỘC ĐẶT TRONG THƯ MỤC CON THEO NGÀY HIỆN TẠI** (định dạng `DD.MM`, ví dụ hôm nay ngày 20/10 là: `20.10`).
+  + Đường dẫn chuẩn: `TROLYTHIEN/[PHAN_MUC]/Ket_qua/[DD.MM]/` (ví dụ: `TROLYTHIEN/4_DUYET_DE/Ket_qua/20.10/`, `TROLYTHIEN/1_SOAN_KHBD/Ket_qua/20.10/`, `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/20.10/`...).
   + Tuyệt đối không lưu tản mạn trực tiếp ngoài gốc `Ket_qua/`.
 - **1/ Soạn Giáo án (KHBD):**
   + File đầu vào (PDF SGK, PPCT, tài liệu): đặt tại `TROLYTHIEN/1_SOAN_KHBD/Dau_vao/`
@@ -93,9 +100,18 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
     2. `Cap_Nhat_He_Thong_Duyet_Giao_An_Thang_[X].docx` & `.md`: Tệp chuyên dụng để Tổ trưởng Copy & Paste vào vnEdu/SMAS/K12.
     3. `Phieu_Nhan_Xet_Ho_So_[TenGV]_Thang_[X].docx`: Phiếu gửi riêng từng giáo viên.
   + Tuân thủ quy chuẩn riêng tại `.agents/rules/duyet-giao-an.md` và Master Prompt tại `TROLYTHIEN/3_DUYET_GIAO_AN/PROMPT_DUYET_GIAO_AN.md`.
-- **4/ Duyệt đề:**
-  + File đầu vào (File Word/PDF đề & ma trận cần kiểm tra): đặt tại `TROLYTHIEN/4_DUYET_DE/Dau_vao/`
-  + File kết quả (Biên bản thẩm định đề thi .docx): tự động lưu tại `TROLYTHIEN/4_DUYET_DE/Ket_qua/`
+- **4/ Duyệt đề (Quy trình 4 Bước Thẩm định & Bằng chứng Truy vết):**
+  + File đầu vào (Đề thi, ma trận, bản đặc tả, đáp án): đặt tại `TROLYTHIEN/4_DUYET_DE/Dau_vao/`
+  + Xác định bối cảnh: Môn, lớp, loại kiểm tra, thời lượng, hình thức, quy định tỉ lệ điểm áp dụng.
+  + Nếu tệp mờ/thiếu hồ sơ đối chứng $\rightarrow$ kết luận "CHƯA ĐỦ DỮ LIỆU ĐỂ KẾT LUẬN", không tự giả định.
+  + Thực thi quy trình 4 bước bắt buộc (dừng ở biên bản kết luận):
+    1. Thẩm định Khung Ma trận & Bản đặc tả: tổng điểm = đúng 10,0đ, tổng % = 100%, kiểm tra cộng dồn hàng ngang/dọc; đối soát 1-1 với Bản đặc tả.
+    2. Đối chiếu Đề thi vs Ma trận/Đặc tả: gán từng câu vào tọa độ chỉ mục `spec_id`, phát hiện câu lệch mức độ nhận thức, dạng câu, thang điểm.
+    3. Kiểm toán Tính đúng đắn Khoa học & Sư phạm: tự giải đề kiểm tra đáp án; kiểm toán khoa học theo chuẩn môn/lớp (nghiệm xác định, hình học tồn tại thực tế, chuẩn GDPT 2018 không vượt cấp, logic thực tế, trật tự câu hỏi).
+    4. Lập Biên bản phản biện chuyên môn: áp dụng quy tắc bằng chứng 4 thành tố (Vị trí nguồn $\rightarrow$ Dữ liệu $\rightarrow$ Phân tích $\rightarrow$ Kiến nghị); 3 mức kết luận (Có thể sử dụng / Cần chỉnh sửa / Không sử dụng); khung ký 3 bên chỉ xuất khi là biên bản hành chính chính thức.
+  + Tùy chọn tạo đề mới theo ma trận: CHỈ thực hiện khi Thầy yêu cầu riêng sau khi chốt ma trận.
+  + File kết quả: tự động lưu tại `TROLYTHIEN/4_DUYET_DE/Ket_qua/`
+  + Tuân thủ quy chuẩn tại `TROLYTHIEN/4_DUYET_DE/HUONG_DAN_DUYET_DE.md` và `TROLYTHIEN/4_DUYET_DE/PROMPT_DUYET_DE.md`.
 - **8/ Tạo báo cáo:**
   + File đầu vào (Văn bản căn cứ, số liệu, văn bản mẫu): đặt tại `TROLYTHIEN/8_TAO_BAO_CAO/Dau_vao/`
   + File kết quả (File Word .docx chuẩn NĐ 30/2020): tự động lưu tại `TROLYTHIEN/8_TAO_BAO_CAO/Ket_qua/`

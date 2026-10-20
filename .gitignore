@@ -32,6 +32,13 @@ TROLYTHIEN/**/Ket_qua/*
 !TROLYTHIEN/**/*.js
 !TROLYTHIEN/**/*.md
 !TROLYTHIEN/**/templates/**
+!TROLYTHIEN/templates/**
+
+# Trợ lý Thiên: Thư mục chứa toàn bộ file tạm phát sinh khi xử lý (không đẩy lên Git)
+TROLYTHIEN/TEMP/*
+!TROLYTHIEN/TEMP/.gitkeep
+TROLYTHIEN/**/TEMP/*
+!TROLYTHIEN/**/TEMP/.gitkeep
 !TROLYTHIEN/10_BAI_GIANG_HTML/templates/**
 !TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_1_*.html
 !TROLYTHIEN/10_BAI_GIANG_HTML/Ket_qua/Bai_2_*.html
