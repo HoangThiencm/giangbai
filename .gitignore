@@ -24,9 +24,15 @@ TROLYTHIEN/**/Dau_vao/**/*.pdf
 TROLYTHIEN/**/Dau_vao/**/*.PDF
 TROLYTHIEN/**/Dau_vao/**/**/*.pdf
 TROLYTHIEN/**/Dau_vao/**/**/*.PDF
+# Tệp khóa tạm Microsoft Office
+~$*
+
 TROLYTHIEN/**/Ket_qua/*
 !TROLYTHIEN/**/Ket_qua/.gitkeep
 !TROLYTHIEN/**/Ket_qua/*.md
+!TROLYTHIEN/**/Ket_qua/*/*.md
+!TROLYTHIEN/**/Ket_qua/*/
+!TROLYTHIEN/**/Ket_qua/*/**
 !TROLYTHIEN/*.md
 !TROLYTHIEN/*/*.md
 !TROLYTHIEN/**/*.js
