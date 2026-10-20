@@ -58,12 +58,12 @@ b) $2x + 4y - 1$ (0,75đ).
   + 3a: Xét tứ giác $ABCD$, ta có: $\widehat{A} + \widehat{B} + \widehat{C} + \widehat{D} = 360^\circ$ (định lí tổng các góc trong một tứ giác) $\Rightarrow \widehat{D} = 360^\circ - (\widehat{A} + \widehat{B} + \widehat{C}) = 360^\circ - (90^\circ + 120^\circ + 75^\circ) = 360^\circ - 285^\circ = 75^\circ$. Vậy $x = 75^\circ$ (0,5đ).
   + 3b: Theo định lí Thalès: $\frac{CE}{ED} = \frac{CB}{BA}$ hay $\frac{5}{y} = \frac{4}{2} \Rightarrow y = \frac{5 \cdot 2}{4} = 2{,}5$ (0,75đ).
 - **Bài 4:**
-a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật (1,0đ).
-b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành (0,75đ).
+a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật.
+b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành.
 c) $\Delta ABC$ vuông tại $A$ có $AM$ là trung tuyến ứng với cạnh huyền $BC \Rightarrow AM = MC = \frac{BC}{2} \Rightarrow \Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$ (1).
 Tứ giác $ADHE$ là hình chữ nhật có $AH$ và $DE$ cắt nhau tại $O \Rightarrow OA = OE \Rightarrow \Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$ (2).
 Mặt khác $\Delta AHC$ vuông tại $H$ nên $\widehat{OAE} + \widehat{MCA} = 90^\circ$ (3).
-Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$ (0,5đ). (Hình vẽ đúng: 0,25đ).
+Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$.
 - **Bài 5:**
 Diện tích sân vườn: $S = (3x + 5)(2x + 1) - 2x(3x - 2) = 17x + 5\text{ (m}^2\text{)}$ (0,25đ).
 Khi $x = 8\text{ m}$: $S = 17 \cdot 8 + 5 = 141\text{ m}^2$ (0,25đ).
@@ -123,9 +123,12 @@ b) $2x - 3y + 1$.
   + 3a: Xét tứ giác $MNPQ$, ta có: $\widehat{M} + \widehat{N} + \widehat{P} + \widehat{Q} = 360^\circ \Rightarrow \widehat{Q} = 360^\circ - (100^\circ + 80^\circ + 110^\circ) = 360^\circ - 290^\circ = 70^\circ$. Vậy $x = 70^\circ$.
   + 3b: Theo định lí Thalès: $\frac{MI}{IN} = \frac{MK}{KP}$ hay $\frac{6}{3} = \frac{8}{y} \Rightarrow y = \frac{8 \cdot 3}{6} = 4$.
 - **Bài 4:**
-a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ nên là hình chữ nhật.
-b) $DH \parallel EK$ và $DH = EK \Rightarrow DHKE$ là hình bình hành.
-c) $\Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$; $\Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$. Mà $\widehat{OAE} + \widehat{MCA} = 90^\circ \Rightarrow AM \perp DE$.
+a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật.
+b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành.
+c) $\Delta ABC$ vuông tại $A$ có $AM$ là trung tuyến ứng với cạnh huyền $BC \Rightarrow AM = MC = \frac{BC}{2} \Rightarrow \Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$ (1).
+Tứ giác $ADHE$ là hình chữ nhật có $AH$ và $DE$ cắt nhau tại $O \Rightarrow OA = OE \Rightarrow \Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$ (2).
+Mặt khác $\Delta AHC$ vuông tại $H$ nên $\widehat{OAE} + \widehat{MCA} = 90^\circ$ (3).
+Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$.
 - **Bài 5:**
 Diện tích cỏ: $S = (4x + 3)(2x + 1) - 2x(4x - 1) = 12x + 3\text{ (m}^2\text{)}$.
 Khi $x = 6\text{ m}$: $S = 12 \cdot 6 + 3 = 75\text{ m}^2$.
@@ -185,9 +188,12 @@ b) $2x^2 - 3y + 1$.
   + 3a: Xét tứ giác $EFGH$, ta có: $\widehat{E} + \widehat{F} + \widehat{G} + \widehat{H} = 360^\circ \Rightarrow \widehat{H} = 360^\circ - (85^\circ + 115^\circ + 60^\circ) = 360^\circ - 260^\circ = 100^\circ$. Vậy $x = 100^\circ$.
   + 3b: Theo định lí Thalès: $\frac{4}{2} = \frac{6}{y} \Rightarrow y = \frac{6 \cdot 2}{4} = 3$.
 - **Bài 4:**
-a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ nên là hình chữ nhật.
-b) $DH \parallel EK$ và $DH = EK \Rightarrow DHKE$ là hình bình hành.
-c) $\Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$; $\Delta OAE$ cân $\Rightarrow \widehat{OEA} = \widehat{OAE} \Rightarrow AM \perp DE$.
+a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật.
+b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành.
+c) $\Delta ABC$ vuông tại $A$ có $AM$ là trung tuyến ứng với cạnh huyền $BC \Rightarrow AM = MC = \frac{BC}{2} \Rightarrow \Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$ (1).
+Tứ giác $ADHE$ là hình chữ nhật có $AH$ và $DE$ cắt nhau tại $O \Rightarrow OA = OE \Rightarrow \Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$ (2).
+Mặt khác $\Delta AHC$ vuông tại $H$ nên $\widehat{OAE} + \widehat{MCA} = 90^\circ$ (3).
+Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$.
 - **Bài 5:**
 Diện tích hoa: $S = (3x + 4)(2x + 3) - 2x(3x - 1) = 19x + 12\text{ (m}^2\text{)}$.
 Khi $x = 5\text{ m}$: $S = 19 \cdot 5 + 12 = 107\text{ m}^2$.
@@ -247,9 +253,12 @@ b) $4xy + 3y - 1$.
   + 3a: Xét tứ giác $ABCD$, ta có: $\widehat{A} + \widehat{B} + \widehat{C} + \widehat{D} = 360^\circ \Rightarrow \widehat{D} = 360^\circ - (110^\circ + 70^\circ + 105^\circ) = 360^\circ - 285^\circ = 75^\circ$. Vậy $x = 75^\circ$.
   + 3b: Theo định lí Thalès: $\frac{9}{3} = \frac{12}{y} \Rightarrow y = \frac{12 \cdot 3}{9} = 4$.
 - **Bài 4:**
-a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ nên là hình chữ nhật.
-b) $DH \parallel EK$ và $DH = EK \Rightarrow DHKE$ là hình bình hành.
-c) $\Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$; $\Delta OAE$ cân $\Rightarrow \widehat{OEA} = \widehat{OAE} \Rightarrow AM \perp DE$.
+a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật.
+b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành.
+c) $\Delta ABC$ vuông tại $A$ có $AM$ là trung tuyến ứng với cạnh huyền $BC \Rightarrow AM = MC = \frac{BC}{2} \Rightarrow \Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$ (1).
+Tứ giác $ADHE$ là hình chữ nhật có $AH$ và $DE$ cắt nhau tại $O \Rightarrow OA = OE \Rightarrow \Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$ (2).
+Mặt khác $\Delta AHC$ vuông tại $H$ nên $\widehat{OAE} + \widehat{MCA} = 90^\circ$ (3).
+Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$.
 - **Bài 5:**
 Diện tích sàn: $S = (5x + 2)(2x + 1) - 2x(5x - 3) = 15x + 2\text{ (m}^2\text{)}$.
 Khi $x = 4\text{ m}$: $S = 15 \cdot 4 + 2 = 62\text{ m}^2$.
@@ -309,9 +318,12 @@ b) $4x^2y - 2x + 1$.
   + 3a: Xét tứ giác $ABCD$, ta có: $\widehat{A} + \widehat{B} + \widehat{C} + \widehat{D} = 360^\circ \Rightarrow \widehat{D} = 360^\circ - (95^\circ + 85^\circ + 110^\circ) = 360^\circ - 290^\circ = 70^\circ$. Vậy $x = 70^\circ$.
   + 3b: Theo định lí Thalès: $\frac{8}{4} = \frac{10}{y} \Rightarrow y = \frac{10 \cdot 4}{8} = 5$.
 - **Bài 4:**
-a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ nên là hình chữ nhật.
-b) $DH \parallel EK$ và $DH = EK \Rightarrow DHKE$ là hình bình hành.
-c) $\Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$; $\Delta OAE$ cân $\Rightarrow \widehat{OEA} = \widehat{OAE} \Rightarrow AM \perp DE$.
+a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật.
+b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành.
+c) $\Delta ABC$ vuông tại $A$ có $AM$ là trung tuyến ứng với cạnh huyền $BC \Rightarrow AM = MC = \frac{BC}{2} \Rightarrow \Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$ (1).
+Tứ giác $ADHE$ là hình chữ nhật có $AH$ và $DE$ cắt nhau tại $O \Rightarrow OA = OE \Rightarrow \Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$ (2).
+Mặt khác $\Delta AHC$ vuông tại $H$ nên $\widehat{OAE} + \widehat{MCA} = 90^\circ$ (3).
+Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$.
 - **Bài 5:**
 Diện tích sân: $S = (4x + 5)(3x + 1) - 3x(4x - 2) = 25x + 5\text{ (m}^2\text{)}$.
 Khi $x = 6\text{ m}$: $S = 25 \cdot 6 + 5 = 155\text{ m}^2$.
@@ -371,9 +383,12 @@ b) $3x - 2y + 1$.
   + 3a: Xét tứ giác $ABCD$, ta có: $\widehat{A} + \widehat{B} + \widehat{C} + \widehat{D} = 360^\circ \Rightarrow \widehat{D} = 360^\circ - (65^\circ + 115^\circ + 100^\circ) = 360^\circ - 280^\circ = 80^\circ$. Vậy $x = 80^\circ$.
   + 3b: Theo định lí Thalès: $\frac{7}{3{,}5} = \frac{8}{y} \Rightarrow y = \frac{8 \cdot 3{,}5}{7} = 4$.
 - **Bài 4:**
-a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ nên là hình chữ nhật.
-b) $DH \parallel EK$ và $DH = EK \Rightarrow DHKE$ là hình bình hành.
-c) $\Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$; $\Delta OAE$ cân $\Rightarrow \widehat{OEA} = \widehat{OAE} \Rightarrow AM \perp DE$.
+a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật.
+b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành.
+c) $\Delta ABC$ vuông tại $A$ có $AM$ là trung tuyến ứng với cạnh huyền $BC \Rightarrow AM = MC = \frac{BC}{2} \Rightarrow \Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$ (1).
+Tứ giác $ADHE$ là hình chữ nhật có $AH$ và $DE$ cắt nhau tại $O \Rightarrow OA = OE \Rightarrow \Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$ (2).
+Mặt khác $\Delta AHC$ vuông tại $H$ nên $\widehat{OAE} + \widehat{MCA} = 90^\circ$ (3).
+Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$.
 - **Bài 5:**
 Diện tích vườn: $S = (3x + 2)(2x + 5) - 2x(3x - 4) = 27x + 10\text{ (m}^2\text{)}$.
 Khi $x = 7\text{ m}$: $S = 27 \cdot 7 + 10 = 199\text{ m}^2$.
@@ -433,9 +448,12 @@ b) $3x^2y + 2x - 1$.
   + 3a: Xét tứ giác $ABCD$, ta có: $\widehat{A} + \widehat{B} + \widehat{C} + \widehat{D} = 360^\circ \Rightarrow \widehat{D} = 360^\circ - (120^\circ + 80^\circ + 90^\circ) = 360^\circ - 290^\circ = 70^\circ$. Vậy $x = 70^\circ$.
   + 3b: Theo định lí Thalès: $\frac{6}{2} = \frac{9}{y} \Rightarrow y = \frac{9 \cdot 2}{6} = 3$.
 - **Bài 4:**
-a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ nên là hình chữ nhật.
-b) $DH \parallel EK$ và $DH = EK \Rightarrow DHKE$ là hình bình hành.
-c) $\Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$; $\Delta OAE$ cân $\Rightarrow \widehat{OEA} = \widehat{OAE} \Rightarrow AM \perp DE$.
+a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật.
+b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành.
+c) $\Delta ABC$ vuông tại $A$ có $AM$ là trung tuyến ứng với cạnh huyền $BC \Rightarrow AM = MC = \frac{BC}{2} \Rightarrow \Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$ (1).
+Tứ giác $ADHE$ là hình chữ nhật có $AH$ và $DE$ cắt nhau tại $O \Rightarrow OA = OE \Rightarrow \Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$ (2).
+Mặt khác $\Delta AHC$ vuông tại $H$ nên $\widehat{OAE} + \widehat{MCA} = 90^\circ$ (3).
+Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$.
 - **Bài 5:**
 Diện tích sân: $S = (5x + 3)(2x + 1) - 2x(5x - 2) = 15x + 3\text{ (m}^2\text{)}$.
 Khi $x = 6\text{ m}$: $S = 15 \cdot 6 + 3 = 93\text{ m}^2$.
@@ -495,9 +513,12 @@ b) $2x + 3y - 1$.
   + 3a: Xét tứ giác $ABCD$, ta có: $\widehat{A} + \widehat{B} + \widehat{C} + \widehat{D} = 360^\circ \Rightarrow \widehat{D} = 360^\circ - (105^\circ + 75^\circ + 95^\circ) = 360^\circ - 275^\circ = 85^\circ$. Vậy $x = 85^\circ$.
   + 3b: Theo định lí Thalès: $\frac{5}{2{,}5} = \frac{7}{y} \Rightarrow y = \frac{7 \cdot 2{,}5}{5} = 3{,}5$.
 - **Bài 4:**
-a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ nên là hình chữ nhật.
-b) $DH \parallel EK$ và $DH = EK \Rightarrow DHKE$ là hình bình hành.
-c) $\Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$; $\Delta OAE$ cân $\Rightarrow \widehat{OEA} = \widehat{OAE} \Rightarrow AM \perp DE$.
+a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật.
+b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành.
+c) $\Delta ABC$ vuông tại $A$ có $AM$ là trung tuyến ứng với cạnh huyền $BC \Rightarrow AM = MC = \frac{BC}{2} \Rightarrow \Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$ (1).
+Tứ giác $ADHE$ là hình chữ nhật có $AH$ và $DE$ cắt nhau tại $O \Rightarrow OA = OE \Rightarrow \Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$ (2).
+Mặt khác $\Delta AHC$ vuông tại $H$ nên $\widehat{OAE} + \widehat{MCA} = 90^\circ$ (3).
+Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$.
 - **Bài 5:**
 Diện tích cây xanh: $S = (4x + 1)(3x + 2) - 3x(4x - 3) = 20x + 2\text{ (m}^2\text{)}$.
 Khi $x = 5\text{ m}$: $S = 20 \cdot 5 + 2 = 102\text{ m}^2$.
@@ -557,9 +578,12 @@ b) $3xy^2 - 2y + 1$.
   + 3a: Xét tứ giác $ABCD$, ta có: $\widehat{A} + \widehat{B} + \widehat{C} + \widehat{D} = 360^\circ \Rightarrow \widehat{D} = 360^\circ - (70^\circ + 110^\circ + 120^\circ) = 360^\circ - 300^\circ = 60^\circ$. Vậy $x = 60^\circ$.
   + 3b: Theo định lí Thalès: $\frac{10}{5} = \frac{8}{y} \Rightarrow y = \frac{8 \cdot 5}{10} = 4$.
 - **Bài 4:**
-a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ nên là hình chữ nhật.
-b) $DH \parallel EK$ và $DH = EK \Rightarrow DHKE$ là hình bình hành.
-c) $\Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$; $\Delta OAE$ cân $\Rightarrow \widehat{OEA} = \widehat{OAE} \Rightarrow AM \perp DE$.
+a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật.
+b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành.
+c) $\Delta ABC$ vuông tại $A$ có $AM$ là trung tuyến ứng với cạnh huyền $BC \Rightarrow AM = MC = \frac{BC}{2} \Rightarrow \Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$ (1).
+Tứ giác $ADHE$ là hình chữ nhật có $AH$ và $DE$ cắt nhau tại $O \Rightarrow OA = OE \Rightarrow \Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$ (2).
+Mặt khác $\Delta AHC$ vuông tại $H$ nên $\widehat{OAE} + \widehat{MCA} = 90^\circ$ (3).
+Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$.
 - **Bài 5:**
 Diện tích sân phơi: $S = (3x + 5)(2x + 3) - 2x(3x - 1) = 21x + 15\text{ (m}^2\text{)}$.
 Khi $x = 8\text{ m}$: $S = 21 \cdot 8 + 15 = 183\text{ m}^2$.
@@ -619,9 +643,12 @@ b) $2x^2y - 3x + 1$.
   + 3a: Xét tứ giác $ABCD$, ta có: $\widehat{A} + \widehat{B} + \widehat{C} + \widehat{D} = 360^\circ \Rightarrow \widehat{D} = 360^\circ - (80^\circ + 100^\circ + 115^\circ) = 360^\circ - 295^\circ = 65^\circ$. Vậy $x = 65^\circ$.
   + 3b: Theo định lí Thalès: $\frac{8}{2} = \frac{12}{y} \Rightarrow y = \frac{12 \cdot 2}{8} = 3$.
 - **Bài 4:**
-a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ nên là hình chữ nhật.
-b) $DH \parallel EK$ và $DH = EK \Rightarrow DHKE$ là hình bình hành.
-c) $\Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$; $\Delta OAE$ cân $\Rightarrow \widehat{OEA} = \widehat{OAE} \Rightarrow AM \perp DE$.
+a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật.
+b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành.
+c) $\Delta ABC$ vuông tại $A$ có $AM$ là trung tuyến ứng với cạnh huyền $BC \Rightarrow AM = MC = \frac{BC}{2} \Rightarrow \Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$ (1).
+Tứ giác $ADHE$ là hình chữ nhật có $AH$ và $DE$ cắt nhau tại $O \Rightarrow OA = OE \Rightarrow \Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$ (2).
+Mặt khác $\Delta AHC$ vuông tại $H$ nên $\widehat{OAE} + \widehat{MCA} = 90^\circ$ (3).
+Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$.
 - **Bài 5:**
 Diện tích rau: $S = (4x + 3)(2x + 3) - 2x(4x - 1) = 20x + 9\text{ (m}^2\text{)}$.
 Khi $x = 6\text{ m}$: $S = 20 \cdot 6 + 9 = 129\text{ m}^2$.
@@ -681,9 +708,12 @@ b) $3x + 2y - 1$.
   + 3a: Xét tứ giác $ABCD$, ta có: $\widehat{A} + \widehat{B} + \widehat{C} + \widehat{D} = 360^\circ \Rightarrow \widehat{D} = 360^\circ - (90^\circ + 105^\circ + 85^\circ) = 360^\circ - 280^\circ = 80^\circ$. Vậy $x = 80^\circ$.
   + 3b: Theo định lí Thalès: $\frac{7}{3} = \frac{14}{y} \Rightarrow y = \frac{14 \cdot 3}{7} = 6$.
 - **Bài 4:**
-a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ nên là hình chữ nhật.
-b) $DH \parallel EK$ và $DH = EK \Rightarrow DHKE$ là hình bình hành.
-c) $\Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$; $\Delta OAE$ cân $\Rightarrow \widehat{OEA} = \widehat{OAE} \Rightarrow AM \perp DE$.
+a) Tứ giác $ADHE$ có $\widehat{A} = \widehat{D} = \widehat{E} = 90^\circ$ (hay $\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$) nên là hình chữ nhật.
+b) $DH = AE$ ($ADHE$ là hình chữ nhật) mà $AE = EK \Rightarrow DH = EK$; lại có $DH \parallel EK$ (do $DH \parallel AC$) $\Rightarrow DHKE$ là hình bình hành.
+c) $\Delta ABC$ vuông tại $A$ có $AM$ là trung tuyến ứng với cạnh huyền $BC \Rightarrow AM = MC = \frac{BC}{2} \Rightarrow \Delta AMC$ cân tại $M \Rightarrow \widehat{MAC} = \widehat{MCA}$ (1).
+Tứ giác $ADHE$ là hình chữ nhật có $AH$ và $DE$ cắt nhau tại $O \Rightarrow OA = OE \Rightarrow \Delta OAE$ cân tại $O \Rightarrow \widehat{OEA} = \widehat{OAE}$ (2).
+Mặt khác $\Delta AHC$ vuông tại $H$ nên $\widehat{OAE} + \widehat{MCA} = 90^\circ$ (3).
+Từ (1), (2), (3) $\Rightarrow \widehat{OEA} + \widehat{MAC} = 90^\circ$ hay $\widehat{AEG} + \widehat{GAE} = 90^\circ \Rightarrow AM \perp DE$.
 - **Bài 5:**
 Diện tích trồng hoa: $S = (4x + 3)(3x + 2) - 3x(4x - 1) = 20x + 6\text{ (m}^2\text{)}$.
 Khi $x = 6\text{ m}$: $S = 20 \cdot 6 + 6 = 126\text{ m}^2$.
