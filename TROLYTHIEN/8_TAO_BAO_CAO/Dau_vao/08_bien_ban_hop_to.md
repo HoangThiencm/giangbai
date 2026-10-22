@@ -21,44 +21,55 @@
 - **Tên văn bản:**
   ```text
   BIÊN BẢN HỌP TỔ CHUYÊN MÔN LẦN ...
-  NỘI DUNG SINH HOẠT CHUYÊN MÔN TỔ TOÁN – TIN THÁNG .../...
+  SINH HOẠT CHUYÊN MÔN TỔ TOÁN – TIN THÁNG .../...
   Năm học: 2026 - 2027
   ```
 - **Thời gian, địa điểm, thành phần:**
   - Thời gian: ... giờ ... phút, ngày ... tháng ... năm ...
-  - Địa điểm: Phòng sinh hoạt chuyên môn (hoặc Văn phòng) Trường THCS Trần Phú.
+  - Địa điểm: Phòng sinh hoạt chuyên môn Trường THCS Trần Phú.
   - Chủ trì cuộc họp: Thầy **Hoàng Tấn Thiên** – Tổ trưởng chuyên môn.
-  - Thư ký ghi biên bản: Cô **Lê Thị Bình** (hoặc giáo viên được phân công).
-  - Thành viên tham dự: Toàn thể giáo viên giảng dạy môn Toán và Tin học (ghi rõ Có mặt: .../...; Vắng: ...).
+  - Thư ký ghi biên bản: Cô **Lê Thị Bình** – Giáo viên môn Toán.
+  - Thành viên tham dự: Toàn thể giáo viên trong tổ (ghi rõ Có mặt: .../...; Vắng: ...).
 
 ---
 
-## 2. BỐ CỤC 3 PHẦN BẮT BUỘC
+## 2. BỐ CỤC 5 PHẦN BẮT BUỘC
 
-### I. TRIỂN KHAI VĂN BẢN
-1. Đọc và phân tích toàn diện tất cả các văn bản chỉ đạo đầu vào do Thầy Tổ trưởng cung cấp (công văn của Sở GD&ĐT, chỉ đạo nhà trường, kế hoạch, thông tư, quyết định...).
-2. Trích yếu rõ ràng: Số hiệu, ngày tháng ban hành, cơ quan ban hành, trích yếu nội dung.
-3. Tóm tắt ngắn gọn, súc tích, chỉ giữ lại trọng tâm cốt lõi gắn liền với hoạt động giảng dạy và quản lý của tổ Toán – Tin.
-4. **Phân công giáo viên thực hiện:** Nếu văn bản có yêu cầu thực hiện cụ thể (ví dụ: tham gia cuộc thi, tập huấn, triển khai chuyên đề, bồi dưỡng HSG, rà soát pháp luật...), AI phải cân nhắc đề xuất phân công cụ thể giáo viên/nhóm giáo viên đảm trách.
+### I. TRIỂN KHAI VĂN BẢN CHỈ ĐẠO
+1. **Nêu vài ý chính cốt lõi:** Không sao chép nguyên văn dài dòng; trích yếu rõ Số hiệu, ngày ban hành, cơ quan ban hành và nội dung chính.
+2. **Tóm tắt vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:**
+   - Đối với Công văn 5512/BGDĐT-GDTrH: Xây dựng Kế hoạch dạy học của tổ (Phụ lục 1), Kế hoạch tổ chức các hoạt động giáo dục/STEM (Phụ lục 2), Khung kế hoạch giáo dục của giáo viên trong năm học (Phụ lục 3), Kế hoạch bài dạy (Phụ lục 4).
+   - Đối với các kế hoạch thi đua, phong trào (Hội thi phòng chống ma túy, an toàn giao thông, STEM...): Ghi rõ phân công giáo viên/nhóm giáo viên đảm trách, thời hạn hoàn thành và sản phẩm bàn giao.
 
-### II. ĐÁNH GIÁ CÔNG TÁC GIAI ĐOẠN (HOẶC CÔNG TÁC QUA)
-Đánh giá khách quan tình hình thực hiện nhiệm vụ trong giai đoạn vừa qua theo các mặt:
-1. **Hồ sơ sổ sách & Kế hoạch bài dạy (KHBD):** Tiến độ soạn bài, cấu trúc 4 hoạt động (Công văn 5512), việc tích hợp Khung Năng lực số (NLS 20%) và Khung AI (12 tiết), việc đưa KHBD lên CSDL ngành và ký số. Nêu rõ ưu điểm và tồn tại/lưu ý cần chấn chỉnh.
-2. **Nề nếp giảng dạy và thực hiện quy chế chuyên môn:** Đảm bảo ngày giờ công, không vô muộn ra sớm, quản lý học sinh trên lớp, ghi sổ đầu bài khớp tiến độ, kiểm tra đánh giá thường xuyên.
-3. **Công tác dạy thay (nếu có):** Ghi rõ giáo viên đi tập huấn/công tác (theo Quyết định số mấy), danh sách và lịch phân công dạy thay chi tiết theo ngày, tiết, người dạy thay.
-4. **Phòng bộ môn / Thiết bị dạy học:** Nề nếp phòng thực hành Tin học, bảo quản máy tính, đường truyền, đồ dùng dạy học.
-5. **Bảng đánh giá/xếp loại hồ sơ chuyên môn (nếu có dữ liệu).**
+### II. ĐÁNH GIÁ CÔNG TÁC GIAI ĐOẠN QUA
+1. **Công tác chủ nhiệm:** Nề nếp lớp, sinh hoạt 15 phút, duy trì sĩ số, rà soát học sinh có hoàn cảnh khó khăn.
+2. **Nề nếp giảng dạy và ngày giờ công:** Chấp hành giờ giấc, thực hiện thời khóa biểu, nề nếp sổ đầu bài, công tác dạy thay/dạy bù.
+3. **Công tác chuyên môn:** Tiến độ chương trình môn Toán và môn Tin học; việc soạn bài theo CV 5512, tích hợp Khung Năng lực số (20%) và 12 tiết Khung AI, đưa lên CSDL ngành và hoàn thành phê duyệt ký số tuần; việc kiểm tra đánh giá thường xuyên theo Thông tư 22/2021/TT-BGDĐT.
+4. **Phòng bộ môn & Thiết bị:** Tình hình sử dụng 02 phòng máy vi tính, máy chiếu, đồ dùng dạy học trực quan.
+5. **Xét thi đua trong tháng:** Đánh giá và xếp loại A, B cụ thể.
 
-### III. CÔNG TÁC TỚI (CÔNG VIỆC TRỌNG TÂM THỜI GIAN TỚI)
-Bám sát định hướng của Thầy Tổ trưởng để cụ thể hóa thành các đầu việc rõ ràng:
-1. Soạn bài và giảng dạy theo phân phối chương trình, chuẩn bị tuần tiếp theo.
-2. Công tác kiểm tra đánh giá định kỳ (Giữa kỳ / Cuối kỳ): Phân công người ra ma trận, bản đặc tả, đề cương và đề kiểm tra theo khối 6, 7, 8, 9.
-3. Sinh hoạt chuyên môn theo nghiên cứu bài học (NCBH), chuyên đề ngoại khóa, hội giảng chào mừng các ngày lễ lớn.
-4. Bồi dưỡng học sinh giỏi, đấu trường toán học VioEdu, phong trào IOE: Phân công giáo viên phụ trách từng khối lớp.
-5. Cân nhắc và phân công trách nhiệm cụ thể cho từng giáo viên/nhóm giáo viên trong tổ, ghi rõ hạn chót hoàn thành (deadline) và sản phẩm đầu ra.
+### III. KẾ HOẠCH TRỌNG TÂM THỜI GIAN TỚI
+1. Ổn định nề nếp dạy học theo phân phối chương trình 35 tuần.
+2. Kế hoạch kiểm tra đánh giá định kỳ (Giữa kỳ / Cuối kỳ): Ma trận, bản đặc tả và đề kiểm tra bám sát chuẩn GDPT 2018.
+3. Sinh hoạt chuyên môn theo Nghiên cứu bài học (NCBH), tổ chức chuyên đề cấp trường/cụm trường.
+4. Phong trào thi đua và các cuộc thi trực tuyến (Đấu trường VioEdu môn Toán, IOE Tiếng Anh).
+
+### IV. THẢO LUẬN CHUYÊN MÔN VÀ Ý KIẾN CỦA CÁC THÀNH VIÊN TRONG TỔ
+- **Nguyên tắc cốt lõi:** Tuyệt đối **KHÔNG VIẾT CHUNG CHUNG, SÁO RỖNG, KHẨU HIỆU HAY "DIỄN KỊCH"**.
+- Phải phản ánh đúng các trăn trở, khó khăn và giải pháp kỹ thuật đứng lớp thực tế của các thầy cô:
+  - **Cách tích hợp Khung Năng lực số (20%) và 12 tiết Khung AI vào KHBD 5512:** Lồng ghép cụ thể vào hoạt động nào (Luyện tập/Vận dụng), sử dụng công cụ nào (GeoGebra, phần mềm mô phỏng, bảng tính số, công cụ AI kiểm chứng), in đậm in nghiêng rõ nét để nhận diện khi ký số duyệt giáo án.
+  - **Khó khăn về SGK và chương trình mới (đặc biệt Toán 8, Toán 9):** Phân tích các bài học khó (tứ giác lồi, tỉ số lượng giác, hệ thức lượng, toán thực tế) và thống nhất phương pháp khắc phục (mẹo nhớ, câu vè, mô hình hóa thực tế).
+  - **Cơ sở vật chất phòng máy vi tính:** Rà soát chuột, bàn phím, nguồn điện, đường truyền mạng internet phục vụ dạy học lập trình Scratch/Python.
+  - **Triển khai Học bạ số và chữ ký số giáo viên (Thông tư 70):** Hướng dẫn cài app SmartCA, xác thực và bảo mật tài khoản ký số.
+  - **Phụ đạo học sinh yếu kém và nề nếp đầu cấp:** Phương pháp rèn học sinh lớp 6 mới chuyển cấp và hỗ trợ học sinh có nguy cơ mất gốc kiến thức.
+
+### V. KẾT LUẬN VÀ BIỂU QUYẾT
+- Tổng hợp kết luận của Tổ trưởng chuyên môn.
+- Biểu quyết thông qua: 10/10 thành viên có mặt nhất trí 100%.
+- Khung chữ ký 2 bên: Thư ký cuộc họp (Cô Lê Thị Bình) và Chủ trì / Tổ trưởng chuyên môn (Thầy Hoàng Tấn Thiên), kèm danh sách thành viên ký xác nhận.
 
 ---
 
 ## 3. QUY TẮC ĐẶC BIỆT: IN CHỮ ĐỎ NỘI DUNG CHƯA CHẮC CHẮN
-- 🔴 **BẮT BUỘC:** Bất kỳ nội dung nào chưa có số liệu chính xác trong đầu vào, các phân công nhân sự mang tính dự kiến/đề xuất, mốc thời gian chưa chốt, hoặc các nhận xét cần Thầy Tổ trưởng duyệt lại thì **PHẢI ĐƯỢC IN CHỮ MÀU ĐỎ** trong văn bản Word (`<w:color w:val="FF0000"/>` hoặc `RGBColor(255, 0, 0)`).
+- 🔴 **BẮT BUỘC:** Bất kỳ nội dung nào chưa có số liệu chính xác trong đầu vào, các phân công nhân sự mang tính dự kiến/đề xuất, mốc thời gian chưa chốt, hoặc các nhận xét cần Thầy Tổ trưởng duyệt lại thì **PHẢI ĐƯỢC IN CHỮ MÀU ĐỎ** trong văn bản Word (`<w:color w:val="FF0000"/>` hoặc `RGBColor(220, 20, 20)`).
 - Trong bản nháp text/markdown, đánh dấu rõ ràng bằng thẻ: `[CHỮ ĐỎ: nội dung]` hoặc `<span style="color:red">nội dung</span>`.
