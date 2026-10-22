@@ -96,3 +96,23 @@
   - Toán 8 (Bài 12: Hình thang cân): Khắc phục ngụy biện học sinh cho rằng 2 cạnh bên bằng nhau là hình thang cân (bỏ qua hình bình hành). Khai thác phần Tranh luận tr.59, Luyện tập chung tr.56, chuẩn hóa quy trình kẻ đường phụ song song.
   - Toán 6 (Bài 18 & 19: Các hình phẳng): Khắc phục kỹ năng vẽ compa, êke (lục giác đều, hình thoi) và nhầm lẫn thuộc tính đường chéo. Xây dựng Phiếu hướng dẫn vẽ hình từng bước và Bảng so sánh Cạnh - Góc - Đường chéo của 7 hình phẳng.
   - Phòng máy Tin học: Mở cửa ngoài giờ (16h30 - 17h15 thứ 3, thứ 5) hỗ trợ học sinh nghèo thi VioEdu; thiết lập bộ lọc mạng an toàn; quy tắc sử dụng AI có trách nhiệm.
+
+---
+
+## 5. CHI TIẾT NGHIỆP VỤ BIÊN BẢN HỌP TỔ LẦN 1 THÁNG 10/2026
+- **Thời gian & Số hiệu:** Ngày 03/10/2026, Số `04/BB-TCM`, 10/10 thành viên có mặt.
+- **Văn bản chỉ đạo triển khai:**
+  1. **Công văn số 5529/SGDĐT-GDPT&GDTX ngày 28/9/2026 của Sở GDĐT Đồng Nai:** Hướng dẫn kiểm tra đánh giá định kỳ và thường xuyên; chuẩn hóa ma trận, bản đặc tả 4 mức độ nhận thức (40% NB, 30% TH, 20% VD, 10% VDC); phân công ra đề cương và đề kiểm tra Giữa HKI.
+  2. **Công văn số 3939/SGDĐT-NV1 ngày 26/9/2023 của Sở GDĐT:** Đề án tăng cường Tiếng Anh; lồng ghép thuật ngữ Tiếng Anh Toán học vào bài giảng, ngoại khóa Rung chuông vàng và Đấu trường VioEdu; quản lý lớp Tiếng Anh giao tiếp giáo viên nước ngoài (2 tiết/tuần).
+  3. **Chỉ đạo quản lý dạy thêm, học thêm (QĐ 25, QĐ 59, VBHN 01 và CV 5473/SGDĐT):** Tuyệt đối không dạy thêm trái quy định, không ép buộc học sinh, không cắt giảm chương trình chính khóa; 100% giáo viên ký cam kết.
+  4. **Kế hoạch số 4706/KH-SGDĐT:** Kỳ thi chọn HSG cấp thành phố Toán 9 & Tin 9.
+- **Đánh giá công tác cuối tháng 9/2026:**
+  - Bảng xếp loại hồ sơ chuyên môn tháng 9: 4 Tốt (Thiên, Danh, Sáng, Tùng), 6 Khá (Hải, Thảo, Bình, Ánh, Tính, Đông).
+  - Kết quả VioEdu vòng 1: 107 HS tham gia (K6: 30, K7: 24, K8: 31, K9: 22).
+  - Tồn tại KHBD cần khắc phục ngay: lỗi công thức toán, biến dạng ký hiệu góc, thiếu in đậm nghiêng chỉ báo NLS/AI, chưa đồng bộ Header/Footer.
+- **Kế hoạch hoạt động tháng 10/2026:**
+  - Kiểm tra nội bộ toàn diện Thầy Trần Sáng (chuẩn bị KHBD 5512, sổ theo dõi, lịch dạy).
+  - Chuyên đề Ngoại khóa “Rung chuông vàng môn Toán khối 6” (BTC, ngân hàng 35 câu hỏi, tổ chức tuần 2 tháng 11/2026).
+  - Chuẩn xác 03 mốc thời gian kiểm tra Giữa HKI: **15/10** (nộp ma trận/đề cương), **24/10** (nộp đề/phản biện chéo), **28/10** (TTCM nộp BGH in sao).
+  - Chuyển trọng tâm NCBH tháng 11/2026 sang khối 8 (Bài "Định lí Thalès trong tam giác" - Cô Bình dạy minh họa) và Chuyên đề Toán 9 ôn thi vào 10 (Thầy Thiên, Danh, Sáng).
+  - Góp ý SGK Toán 9: Đại số 9 giải toán lập hệ được bấm máy tính cho nghiệm; Hình học 9 các hệ thức lượng tam giác vuông cũ bắt buộc phải chứng minh lại bằng tam giác đồng dạng nếu sử dụng trong bài thi.
