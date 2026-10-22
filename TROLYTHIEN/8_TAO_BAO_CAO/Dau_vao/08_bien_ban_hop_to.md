@@ -73,3 +73,26 @@
 ## 3. QUY TẮC ĐẶC BIỆT: IN CHỮ ĐỎ NỘI DUNG CHƯA CHẮC CHẮN
 - 🔴 **BẮT BUỘC:** Bất kỳ nội dung nào chưa có số liệu chính xác trong đầu vào, các phân công nhân sự mang tính dự kiến/đề xuất, mốc thời gian chưa chốt, hoặc các nhận xét cần Thầy Tổ trưởng duyệt lại thì **PHẢI ĐƯỢC IN CHỮ MÀU ĐỎ** trong văn bản Word (`<w:color w:val="FF0000"/>` hoặc `RGBColor(220, 20, 20)`).
 - Trong bản nháp text/markdown, đánh dấu rõ ràng bằng thẻ: `[CHỮ ĐỎ: nội dung]` hoặc `<span style="color:red">nội dung</span>`.
+
+---
+
+## 4. CHI TIẾT NGHIỆP VỤ BIÊN BẢN HỌP TỔ LẦN 2 THÁNG 9/2026
+- **Văn bản chỉ đạo mới triển khai:**
+  1. **Hướng dẫn số 5351/HD-SGDĐT ngày 15/9/2026 của Sở GDĐT thành phố Đồng Nai:**
+     - Giải pháp hạn chế học sinh lạm dụng điện thoại di động, thiết bị thông minh, mạng xã hội trong trường học (Thông tư 15/2026/TT-BGDĐT và CV 3147/BGDĐT-HSSV).
+     - Bốn tiêu chuẩn “Tự”: Tự giác, Tự quản, Tự rèn, Tự chủ.
+     - Ba mô hình vận dụng: *“Hộp lưu trữ niềm tin”* (đầu giờ cất điện thoại tắt chuông vào hộp/túi lớp, cuối buổi nhận lại), *“Giờ ra chơi không màn hình”* (cờ vua, trò chơi dân gian, góc đọc sách xanh), *“Tích hợp giáo dục kỹ năng số”* (lọc thông tin, ứng xử văn minh mạng).
+     - Trách nhiệm GV Toán - Tin: Gương mẫu không dùng điện thoại việc riêng trong giờ dạy; trong tiết lý thuyết không cho học sinh dùng điện thoại; chỉ mở thiết bị khi bài học yêu cầu nghiệp vụ rõ ràng (GeoGebra, làm bài OLM/VioEdu tại phòng máy).
+  2. **Kế hoạch số 5264/KH-SGDĐT ngày 22/9/2026 của Sở GDĐT thành phố Đồng Nai:**
+     - Nhiệm vụ ứng dụng CNTT, chuyển đổi số và thống kê giáo dục năm học 2026 - 2027 (Nghị quyết 57-NQ/TW, Luật CĐS 148/2025/QH15, Luật Dữ liệu 60/2024/QH15, Luật Trí tuệ nhân tạo 134/2025/QH15).
+     - Nguyên tắc chỉ đạo xuyên suốt: **“6 rõ”** (*rõ người, rõ việc, rõ thời gian, rõ trách nhiệm, rõ sản phẩm, rõ thẩm quyền*).
+     - Dữ liệu giáo dục: *“Đúng, đủ, sạch, sống, thống nhất, dùng chung”*, nguyên tắc *“dữ liệu cập nhật một lần, sử dụng nhiều lần”*, không báo cáo trùng lặp.
+     - Ứng dụng AI an toàn, có kiểm soát và trách nhiệm: Khuyến khích dùng AI hỗ trợ soạn bài, gợi ý học liệu; nhưng *mọi sản phẩm AI tạo ra phải được giáo viên kiểm chứng tính chính xác sư phạm; AI không thay thế trách nhiệm của nhà giáo*.
+     - Phong trào *“Bình dân học vụ số”* và chuẩn bị Ngày Chuyển đổi số Quốc gia (10/10).
+  3. **Kế hoạch số 01/KH-TCM ngày 15/9/2026 về Đấu trường VioEdu:**
+     - Lộ trình: 15-20/9 cấp tài khoản -> 28/9-13/12 vòng sơ loại (8 vòng sơ loại + 2 định kỳ) -> 11-15/01/2027 vòng Trường -> 23-24/02 vòng Xã -> 30-31/03 vòng Tỉnh.
+     - Phân công phụ trách khối: Khối 6 (Cô Thảo), Khối 7 (Thầy Ánh), Khối 8 (Cô Bình), Khối 9 (Thầy Sáng), Phòng máy (Thầy Tùng).
+- **Thảo luận chuyên môn & Góp ý SGK GDPT 2018:**
+  - Toán 8 (Bài 12: Hình thang cân): Khắc phục ngụy biện học sinh cho rằng 2 cạnh bên bằng nhau là hình thang cân (bỏ qua hình bình hành). Khai thác phần Tranh luận tr.59, Luyện tập chung tr.56, chuẩn hóa quy trình kẻ đường phụ song song.
+  - Toán 6 (Bài 18 & 19: Các hình phẳng): Khắc phục kỹ năng vẽ compa, êke (lục giác đều, hình thoi) và nhầm lẫn thuộc tính đường chéo. Xây dựng Phiếu hướng dẫn vẽ hình từng bước và Bảng so sánh Cạnh - Góc - Đường chéo của 7 hình phẳng.
+  - Phòng máy Tin học: Mở cửa ngoài giờ (16h30 - 17h15 thứ 3, thứ 5) hỗ trợ học sinh nghèo thi VioEdu; thiết lập bộ lọc mạng an toàn; quy tắc sử dụng AI có trách nhiệm.
