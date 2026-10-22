@@ -1,6 +1,6 @@
 # TRƯỜNG THCS TRẦN PHÚ
 ## TỔ TOÁN – TIN HỌC
-**Số: 03/BB-TCM**
+**Số: 06/BB-TCM**
 
 ---
 
@@ -126,7 +126,7 @@ Thực hiện Kế hoạch số 02/KH-TT ngày 15/10/2026 của Tổ Toán – T
   + Ban Giám khảo, cứu trợ và hỗ trợ sân bãi: Thầy Hồ Đăng Danh, Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Thầy Nguyễn Văn Tính, Thầy Dương Quang Tùng chịu trách nhiệm chuẩn bị bảng con, bút viết, chuông, âm thanh, nước uống và điều phối cứu trợ thí sinh.
 
 #### 3. Sinh hoạt chuyên môn theo Nghiên cứu bài học (NCBH)
-- Môn học và khối lớp: Môn **Toán khối 8**.
+- Môn học và khối lớp: Môn **Toán khối 8** (Bài “Định lí Thalès trong tam giác”).
 - Người thực hiện dạy minh họa: Cô **Lê Thị Bình** chịu trách nhiệm thiết kế bài dạy nghiên cứu và tổ chức dạy thể nghiệm trên lớp.
 - Tiến trình thực hiện: Cả tổ tham gia đóng góp ý kiến thiết kế bài dạy, dự giờ tập trung quan sát hoạt động học của học sinh, tổ chức họp phân tích bài học và rút kinh nghiệm nhằm nâng cao phương pháp giảng dạy hình học/đại số 8.
 
@@ -138,39 +138,83 @@ Thực hiện Kế hoạch số 02/KH-TT ngày 15/10/2026 của Tổ Toán – T
 #### 5. Công tác bồi dưỡng học sinh giỏi và các phong trào học tập trực tuyến
 - Tiếp tục duy trì công tác bồi dưỡng đội tuyển học sinh giỏi Toán, Tin học theo kế hoạch của nhà trường.
 - Tiếp tục đẩy mạnh phong trào Đấu trường Toán học VioEdu và Olympic tiếng Anh (IOE) ở tất cả các khối lớp 6, 7, 8, 9, động viên học sinh tích cực tham gia các vòng tự luyện và vòng thi các cấp.
-- *<span style="color:red">Danh sách phân công giáo viên phụ trách bồi dưỡng HSG và các phong trào thi (chờ rà soát và cập nhật):</span>*
-  + <span style="color:red">Khối 6: Giáo viên phụ trách: ........................................, Danh sách học sinh: ........................................</span>
-  + <span style="color:red">Khối 7: Giáo viên phụ trách: ........................................, Danh sách học sinh: ........................................</span>
-  + <span style="color:red">Khối 8: Giáo viên phụ trách: ........................................, Danh sách học sinh: ........................................</span>
-  + <span style="color:red">Khối 9: Giáo viên phụ trách: ........................................, Danh sách học sinh: ........................................</span>
-  + <span style="color:red">Phụ trách Đấu trường Toán học VioEdu: ........................................</span>
-  + <span style="color:red">Phụ trách Olympic tiếng Anh (IOE): ........................................</span>
+- **Tổng hợp số lượng học sinh đã tham gia thi Đấu trường VioEdu Toán tổng hợp:**
+  + Vòng loại 2: Khối 6: 32 học sinh; Khối 7: 25 học sinh; Khối 8: 28 học sinh; Khối 9: 29 học sinh.
+  + Vòng loại 3: Khối 6: 31 học sinh; Khối 7: 24 học sinh; Khối 8: 28 học sinh; Khối 9: 30 học sinh.
 
 #### 6. Các công tác khác: Nâng cao văn hóa đọc và nề nếp chủ nhiệm
 - Giáo viên bộ môn (Toán, Tin học): Chủ động phối hợp với Thư viện nhà trường bố trí và tiến hành các tiết đọc sách chuyên môn, hướng dẫn học sinh đọc sách tham khảo, tài liệu toán vui, lịch sử toán học và kiến thức khoa học công nghệ.
 - Giáo viên chủ nhiệm (Cô Thảo - 62, Cô Bình - 71, Thầy Hải - 83, Thầy Sáng - 97): Tích cực triển khai phong trào đọc sách tại lớp trong các tiết sinh hoạt lớp, duy trì nề nếp bảo quản tủ sách lớp học; tiếp tục bám sát nề nếp học tập, chuyên cần và đôn đốc các khoản thu theo quy định.
 
 #### 7. Đánh giá, xếp loại thi đua Tổ chuyên môn tháng 10/2026
-Căn cứ kết quả thực hiện nhiệm vụ, ngày giờ công và tinh thần trách nhiệm trong công tác của các thành viên, Tổ Toán – Tin học thống nhất bảng xếp loại thi đua tháng 10/2026 như sau (các nội dung dự kiến in chữ màu đỏ để Thầy Tổ trưởng rà soát trước khi phê duyệt chính thức):
+Căn cứ kết quả thực hiện nhiệm vụ, ngày giờ công và tinh thần trách nhiệm trong công tác của các thành viên, Tổ Toán – Tin học thống nhất bảng xếp loại thi đua tháng 10/2026 như sau (100% thành viên đạt Loại A):
 
 | STT | HỌ VÀ TÊN | CHỨC VỤ | TỰ XẾP LOẠI | TỰ NHẬN XÉT | TỔ XẾP LOẠI | GHI CHÚ |
 |:---:|:---|:---:|:---:|:---|:---:|:---|
 | 1 | **Hoàng Tấn Thiên** | Tổ trưởng | **A** | Lên kế hoạch kịp thời, đúng tiến độ. Hoàn thành tốt công tác soạn giảng, thực hiện tốt quy chế chuyên môn, nhà trường. Ngày giờ công đảm bảo, thông tin 2 chiều kịp thời và chính xác. | **A** | Lên kế hoạch kịp thời, đúng tiến độ. Hoàn thành tốt công tác soạn giảng, thực hiện tốt quy chế chuyên môn, nhà trường. Ngày giờ công đảm bảo, thông tin 2 chiều kịp thời và chính xác. |
-| 2 | Trần Sáng | Tổ phó | <span style="color:red">A</span> | <span style="color:red">Thực hiện tốt giảng dạy môn Toán 6, 9; chủ nhiệm lớp 97 nghiêm túc; tích cực tham gia dạy thay 03 tiết Toán và chuẩn bị tốt kịch bản MC Rung chuông vàng.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, tích cực dạy thay.</span> |
-| 3 | Đinh Văn Đông | Phó Hiệu trưởng | <span style="color:red">A</span> | <span style="color:red">Tham gia giảng dạy HĐTN 86 đầy đủ, đúng quy chế; tích cực chỉ đạo chuyên môn tổ và tham gia dạy thay 02 tiết Toán cho giáo viên trong tổ.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ giảng dạy và chỉ đạo chuyên môn.</span> |
-| 4 | Hồ Đăng Danh | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Thực hiện nghiêm túc tiến độ giảng dạy Toán 6, 9; hồ sơ sổ sách đầy đủ; tích cực tham gia dạy thay 02 tiết Toán 9 cho đồng nghiệp.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời.</span> |
-| 5 | Hoàng Xuân Ánh | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Toán 7, HĐTN khối 6 đúng phân phối chương trình; nề nếp ngày giờ công đảm bảo, hồ sơ giáo án đầy đủ.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ được giao.</span> |
-| 6 | Trần Long Hải | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Toán khối 8 đúng tiến độ; chủ nhiệm lớp 83 trách nhiệm, sâu sát nề nếp học sinh; chuẩn bị tốt đề kiểm tra Toán 8.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ chuyên môn và chủ nhiệm.</span> |
-| 7 | Lê Thị Bình | Giáo viên (Thư ký) | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Toán 7, 8; chủ nhiệm lớp 71 tốt; ghi chép biên bản tổ chu đáo; tham gia dạy thay 03 tiết Toán; chuẩn bị chu đáo NCBH Toán 8 và ngân hàng câu hỏi RCV.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, nhiệt tình dạy thay.</span> |
-| 8 | Nguyễn Thị Thảo | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Toán 6, 7; chủ nhiệm lớp 62 tận tụy, quản lý học sinh tốt; tích cực xây dựng ngân hàng câu hỏi Rung chuông vàng và đề kiểm tra Toán 6.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ chuyên môn và phong trào.</span> |
-| 9 | Nguyễn Văn Tính | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy Toán 65, HĐTN khối 6, 7 đúng tiến độ; chấp hành tốt ngày giờ công; tích cực tham gia dạy thay 02 tiết HĐTN 86.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời.</span> |
-| 10 | Dương Quang Tùng | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Tin học các khối 6, 7, 8, 9 nghiêm túc; quản lý phòng máy vi tính chu đáo, bảo đảm kỹ thuật đường truyền phục vụ kiểm tra giữa kỳ trên OLM.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ chuyên môn và quản lý thiết bị.</span> |
+| 2 | Trần Sáng | Tổ phó | A | Thực hiện tốt giảng dạy môn Toán 6, 9; chủ nhiệm lớp 97 nghiêm túc; tích cực tham gia dạy thay 03 tiết Toán và chuẩn bị tốt kịch bản MC Rung chuông vàng. | A | Hoàn thành tốt nhiệm vụ, tích cực dạy thay. |
+| 3 | Hồ Đăng Danh | Giáo viên | A | Thực hiện nghiêm túc tiến độ giảng dạy Toán 6, 9; hồ sơ sổ sách đầy đủ; tích cực tham gia dạy thay 02 tiết Toán 9 cho đồng nghiệp. | A | Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời. |
+| 4 | Hoàng Xuân Ánh | Giáo viên | A | Giảng dạy môn Toán 7, HĐTN khối 6 đúng phân phối chương trình; nề nếp ngày giờ công đảm bảo, hồ sơ giáo án đầy đủ. | A | Hoàn thành tốt nhiệm vụ được giao. |
+| 5 | Trần Long Hải | Giáo viên | A | Giảng dạy môn Toán khối 8 đúng tiến độ; chủ nhiệm lớp 83 trách nhiệm, sâu sát nề nếp học sinh; chuẩn bị tốt đề kiểm tra Toán 8. | A | Hoàn thành tốt nhiệm vụ chuyên môn và chủ nhiệm. |
+| 6 | Lê Thị Bình | Giáo viên (Thư ký) | A | Giảng dạy môn Toán 7, 8; chủ nhiệm lớp 71 tốt; ghi chép biên bản tổ chu đáo; tham gia dạy thay 03 tiết Toán; chuẩn bị chu đáo NCBH Toán 8 và ngân hàng câu hỏi RCV. | A | Hoàn thành tốt nhiệm vụ, nhiệt tình dạy thay. |
+| 7 | Nguyễn Thị Thảo | Giáo viên | A | Giảng dạy môn Toán 6, 7; chủ nhiệm lớp 62 tận tụy, quản lý học sinh tốt; tích cực xây dựng ngân hàng câu hỏi Rung chuông vàng và đề kiểm tra Toán 6. | A | Hoàn thành tốt nhiệm vụ chuyên môn và phong trào. |
+| 8 | Nguyễn Văn Tính | Giáo viên | A | Giảng dạy Toán 65, HĐTN khối 6, 7 đúng tiến độ; chấp hành tốt ngày giờ công; tích cực tham gia dạy thay 02 tiết HĐTN 86. | A | Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời. |
+| 9 | Dương Quang Tùng | Giáo viên | A | Giảng dạy môn Tin học các khối 6, 7, 8, 9 nghiêm túc; quản lý phòng máy vi tính chu đáo, bảo đảm kỹ thuật đường truyền phục vụ kiểm tra giữa kỳ trên OLM. | A | Hoàn thành tốt nhiệm vụ chuyên môn và quản lý thiết bị. |
 
-Cuộc họp kết thúc vào lúc 16 giờ 30 phút cùng ngày. Biên bản đã được thông qua trước toàn thể thành viên trong tổ và 100% các thành viên đều nhất trí với các nội dung trên, không có ý kiến bổ sung hay thắc mắc nào khác.
+*(Ghi chú: Thầy Đinh Văn Đông – Phó Hiệu trưởng thuộc diện cán bộ quản lý do Ban Giám hiệu và cấp trên đánh giá xếp loại riêng; tham gia sinh hoạt tổ và ký xác nhận biên bản đầy đủ).*
+
+#### 8. Thảo luận vướng mắc chuyên môn (Góp ý SGK GDPT 2018)
+Toàn thể tổ chuyên môn tiến hành thảo luận, ghi nhận các khó khăn, vướng mắc trong quá trình giảng dạy chương trình SGK Toán, Tin học theo Chương trình GDPT 2018 và đề xuất hướng khắc phục cụ thể như sau:
+- **Sách giáo khoa Toán lớp 7: Bài “Bài 3: Lũy thừa với số mũ tự nhiên của một số hữu tỉ”:**
+  + Khó khăn: Phần khởi động đề bài cho một số rất lớn, học sinh khó hình dung được nội dung và bản chất của bài học.
+  + Hướng khắc phục: Đề nghị nên lấy một bài toán thực tế khác với số liệu nhỏ hơn, gần gũi hơn để học sinh dễ hình dung nội dung và yêu cầu của bài toán.
+- **Sách giáo khoa Toán lớp 7: “Bài 13. Hai tam giác bằng nhau. Trường hợp bằng nhau thứ nhất của tam giác”:**
+  + Khó khăn: Nhiều học sinh lúng túng khi viết kí hiệu hai tam giác bằng nhau, chưa xác định đúng thứ tự các đỉnh tương ứng.
+  + Hướng khắc phục: Cần bổ sung thêm lưu ý rõ ràng trong SGK: *“Khi kí hiệu sự bằng nhau của hai tam giác, các đỉnh tương ứng phải được viết đúng thứ tự”*.
+- **Sách giáo khoa Toán lớp 6:** Đối với các bài toán đố có liên quan đến BCNN, ƯCLN, thống nhất cho phép học sinh được sử dụng máy tính cầm tay để tính kết quả, không bắt buộc phải trình bày dài dòng toàn bộ các bước phân tích ra thừa số nguyên tố để tìm BCNN hay ƯCLN.
 
 ---
 
-| **THƯ KÝ** | **CHỦ TRÌ CUỘC HỌP (TỔ TRƯỞNG)** |
+### IV. Ý KIẾN THẢO LUẬN
+- **Thầy Hoàng Tấn Thiên – Tổ trưởng chuyên môn trao đổi, quán triệt sâu sắc về công tác tích hợp Khung Năng lực số và Khung AI:**
+
+#### A. KHUNG NĂNG LỰC SỐ TRONG KẾ HOẠCH BÀI DẠY
+*Căn cứ: Thông tư số 02/2025/TT-BGDĐT ngày 24/01/2025 và Công văn số 3456/BGDĐT-GDPT ngày 27/6/2025 của Bộ Giáo dục và Đào tạo.*
+1. **Nguyên tắc tích hợp:** Đối chiếu yêu cầu cần đạt của môn học với Khung năng lực số để lựa chọn nội dung phù hợp; không làm thay đổi hoặc gây quá tải Chương trình GDPT 2018. Môn Tin học giữ vai trò chủ đạo; các môn khác tạo môi trường để học sinh vận dụng và phát triển kỹ năng số.
+2. **Thể hiện trong phần mục tiêu:** Có thể ghi một mục “Năng lực số” trong phần “Mục tiêu – Về năng lực” để làm rõ năng lực thành phần hoặc chỉ báo dự kiến phát triển. Việc ghi như vậy không đồng nghĩa với thay đổi yêu cầu cần đạt của chương trình môn học. Công văn 3456 không bắt buộc tách mục năng lực số riêng trong mọi bài; thực hiện thêm hướng dẫn cụ thể của cơ quan quản lý, nếu có.
+3. **Số lượng chỉ báo:** Một bài học có thể lựa chọn một năng lực thành phần hoặc một chỉ báo phù hợp; không cần đưa nhiều chỉ báo cho đủ. Chỉ ghi những nội dung có thể tổ chức thực hiện, phù hợp mức độ năng lực của học sinh và điều kiện thiết bị.
+4. **Cụ thể hóa trong hoạt động:** Nêu rõ địa chỉ tích hợp, nhiệm vụ học sinh thực hiện, công cụ hoặc học liệu số được sử dụng, sản phẩm và cách đánh giá. Mục tiêu, nhiệm vụ, sản phẩm và đánh giá cần thống nhất. Không chỉ ghi mã chỉ báo hoặc lời nhắc chung mà thiếu hoạt động tương ứng.
+5. **Lưu ý về minh chứng:** Giáo viên trình chiếu PowerPoint không tự nó chứng minh học sinh được phát triển năng lực số. Cần xác định học sinh đã thực hiện nhiệm vụ gì. Nếu chỉ hướng dẫn hoặc nhắc nhở, không ghi mục tiêu ở mức học sinh đã thành thạo hay thực hiện độc lập.
+
+#### B. TRIỂN KHAI GIÁO DỤC AI TRONG NĂM HỌC 2026 - 2027
+*Căn cứ: Quyết định số 2422/QĐ-BGDĐT ngày 18/8/2026 và Công văn số 5588/BGDĐT-GDPT ngày 19/8/2026 của Bộ Giáo dục và Đào tạo.*
+1. **Thời lượng và nội dung:** Mỗi lớp thực hiện 12 tiết chuyên đề AI cốt lõi trong một năm học, bám sát yêu cầu cần đạt của từng lớp trong Khung 2422. Đây không phải định mức 12 tiết cho mỗi giáo viên hoặc mỗi môn học. Sách AI có thể dùng làm học liệu; hai văn bản không bắt buộc sử dụng riêng sách của Nhà xuất bản Giáo dục.
+2. **Hình thức và thời gian:** Tổ chức nội dung cốt lõi thành các chuyên đề, bố trí trong kế hoạch giáo dục và kế hoạch dạy học 2 buổi/ngày của nhà trường; phân bố phù hợp trong năm, không gây quá tải cho học sinh.
+3. **Phân công giáo viên:** Nhà trường xây dựng, tổ chức dạy học chuyên đề. Có thể phân công một hoặc nhiều giáo viên theo năng lực; không bắt buộc giao riêng cho giáo viên Tin học, cũng không bắt buộc chia đều cho toàn thể giáo viên của khối.
+4. **Quan hệ với chương trình môn học:** Thực hiện đầy đủ chương trình các môn học. Lồng ghép AI trong Ngữ văn, Toán, Tiếng Anh và các môn khác nhằm củng cố, vận dụng kiến thức đã được trang bị qua chuyên đề; không cộng thay cho 12 tiết cốt lõi. Tuyệt đối không tự cắt phân phối chương trình môn Tin học để lấy thời lượng.
+5. **Đánh giá kết quả:** Chú trọng đánh giá quá trình, ghi nhận bằng nhận xét hoặc mức độ đáp ứng yêu cầu cần đạt, có minh chứng học tập rõ ràng. Khung không quy định bài thi hoặc đầu điểm kiểm tra AI riêng. Minh chứng có thể thu thập từ chuyên đề và các hoạt động vận dụng trong môn học.
+6. **Cách tổ chức trong năm học:** Nhà trường lập kế hoạch cho từng khối, ghi rõ tên chuyên đề, yêu cầu cần đạt, số tiết, lớp, thời gian, giáo viên phụ trách và minh chứng đánh giá. Theo dõi việc hoàn thành của từng lớp, bảo đảm đủ thời lượng và nội dung cốt lõi. *(Ví dụ tổ chức: Mỗi lớp học 6 buổi × 2 tiết = 12 tiết/năm. Nếu một khối có 6 lớp và dạy riêng từng lớp, tổng số tiết cần tổ chức là 72 tiết).*
+
+- **Thầy Hoàng Xuân Ánh:** Cần phối hợp với GVCN nhắc nhở những học sinh thường xuyên không mang sách vở môn Toán (lý do mang nhầm môn khác, để quên ở nhà,…).
+- **Thầy Trần Sáng:** Đồng ý với đánh giá và kế hoạch tới của tổ chuyên môn.
+
+---
+
+### V. KẾT LUẬN VÀ BIỂU QUYẾT
+- **Biểu quyết:** 10/10 (100%) giáo viên trong tổ thống nhất với nội dung cuộc họp.
+- Cuộc họp kết thúc vào lúc 16 giờ 30 phút cùng ngày. Biên bản đã được thông qua trước toàn thể thành viên trong tổ và lưu hồ sơ chuyên môn theo quy định.
+
+---
+
+| **THƯ KÝ** | **TỔ TRƯỞNG CHUYÊN MÔN** |
 |:---:|:---:|
 | *(Ký và ghi rõ họ tên)* | *(Ký và ghi rõ họ tên)* |
 | <br><br><br>**Lê Thị Bình** | <br><br><br>**Hoàng Tấn Thiên** |
+
+**Các thành viên khác của tổ:**
+
+| | | |
+|:---:|:---:|:---:|
+| <br><br>**Đinh Văn Đông** | <br><br>**Hồ Đăng Danh** | <br><br>**Nguyễn Văn Tính** |
+| <br><br>**Hoàng Xuân Ánh** | <br><br>**Trần Long Hải** | <br><br>**Dương Quang Tùng** |
+| <br><br>**Trần Sáng** | <br><br>**Nguyễn Thị Thảo** | |
