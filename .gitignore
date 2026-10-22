@@ -28,11 +28,12 @@ TROLYTHIEN/**/Dau_vao/**/**/*.PDF
 ~$*
 
 TROLYTHIEN/**/Ket_qua/*
+TROLYTHIEN/**/Ket_qua/**/*
 !TROLYTHIEN/**/Ket_qua/.gitkeep
+!TROLYTHIEN/**/Ket_qua/**/.gitkeep
 !TROLYTHIEN/**/Ket_qua/*.md
 !TROLYTHIEN/**/Ket_qua/*/*.md
-!TROLYTHIEN/**/Ket_qua/*/
-!TROLYTHIEN/**/Ket_qua/*/**
+!TROLYTHIEN/**/Ket_qua/*/*/*.md
 !TROLYTHIEN/*.md
 !TROLYTHIEN/*/*.md
 !TROLYTHIEN/**/*.js
@@ -116,5 +117,7 @@ TROLYTHIEN/4_DUYET_DE/Ket_qua/Phan_Bien_De_Cuong_Toan_6.md
 TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/De_Kiem_Tra_Toan_8_Giua_HK1_CV7991_Tong_Hop.md
 
 # Cac anh crop tam khong can commit
-TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/Ket_qua/_crops_ca3_hinh_vector/
-TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/hinh_ve/
+**/_crops_*/
+TROLYTHIEN/**/Ket_qua/_crops_*/
+TROLYTHIEN/**/Ket_qua/**/hinh_ve/
+TROLYTHIEN/**/Ket_qua/hinh_ve/
