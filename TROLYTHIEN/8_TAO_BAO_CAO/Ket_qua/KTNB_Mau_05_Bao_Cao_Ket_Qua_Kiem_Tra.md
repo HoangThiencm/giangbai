@@ -25,7 +25,7 @@ Sau đây là kết quả kiểm tra:
 - **Về phẩm chất chính trị và nề nếp:** Giáo viên có lập trường tư tưởng vững vàng, luôn chấp hành nghiêm túc đường lối, chủ trương của Đảng, chính sách pháp luật của Nhà nước và các quy chế chuyên môn của ngành, của nhà trường. Có tinh thần trách nhiệm rất cao, nề nếp ngày giờ công gương mẫu, chan hòa và uy tín đối với đồng nghiệp, phụ huynh và học sinh.
 
 ## II. KẾT QUẢ KIỂM TRA, XÁC MINH
-### 1. Trình độ nghiệp vụ sư phạm:
+### **1. Trình độ nghiệp vụ sư phạm:**
 **1.1. Nắm vững mục đích, yêu cầu, chương trình và nội dung giảng dạy:** Nắm vững chương trình môn Toán (Toán 6, 9 Chương trình GDPT 2018), xác định chuẩn xác yêu cầu cần đạt và trọng tâm bài dạy; kế hoạch bài dạy hợp lý, thể hiện rõ năng lực chuyên môn khi đứng lớp. => **Xếp loại:** **Tốt**.  
 **1.2. Vận dụng phương pháp dạy học:** Lựa chọn phương pháp dạy học tích cực phù hợp đặc trưng bộ môn Toán; tổ chức tốt các hoạt động học tập; ứng dụng CNTT và mô phỏng trực quan hiệu quả; tác phong sư phạm chuẩn mực, nhiệt tình, hòa nhã, làm chủ lớp học. => **Xếp loại:** **Tốt**.  
 **1.3. Hiệu quả tiết dạy (Dự giờ thao giảng):** Học sinh tích cực học tập, vận dụng linh hoạt kiến thức giải bài tập. Kết quả dự giờ 02 tiết của giáo viên:  
@@ -33,7 +33,7 @@ Sau đây là kết quả kiểm tra:
 - **Tiết dạy 2:** Tiết 21 – *Bài 11: Ước chung, ước chung lớn nhất* (Môn Toán 6, Lớp 6/5, Ngày dạy: 22/10/2026). Người dự: Thầy Hoàng Tấn Thiên, Cô Lê Thị Bình. Xếp loại: **Giỏi**.  
 => **Xếp loại chung nghiệp vụ sư phạm:** **Tốt**.
 
-### 2. Thực hiện quy chế, quy định về chuyên môn:
+### **2. Thực hiện quy chế, quy định về chuyên môn:**
 **2.1. Tiến độ chương trình và ngày giờ công:** Thực hiện đúng phân phối chương trình môn Toán, dạy đủ số tiết theo kế hoạch, không cắt xén, không dạy dồn ghép; chấp hành nghiêm túc quy định dạy thêm, học thêm. => **Xếp loại:** **Tốt**.  
 **2.2. Chuẩn bị Kế hoạch bài dạy (KHBD):** Soạn bài đầy đủ theo CV 5512 cấu trúc 4 hoạt động; tích hợp Khung Năng lực số (20%) và 12 tiết Khung AI in đậm nghiêng đúng chuẩn; đồng bộ và ký số CSDL ngành đạt 100% đúng hạn. Soạn đủ các tiết thực hành trải nghiệm. => **Xếp loại:** **Tốt**.  
 **2.3. Kiểm tra, đánh giá học sinh:** Đảm bảo cơ số điểm kiểm tra thường xuyên theo Thông tư 22/2021/TT-BGDĐT; chấm chữa bài cẩn thận, nhận xét rõ ràng, vào điểm và ghi sổ đầu bài khớp tiến độ; chú trọng đưa toán thực tế vào đánh giá. => **Xếp loại:** **Tốt**.  
@@ -41,12 +41,12 @@ Sau đây là kết quả kiểm tra:
 **2.5. Bồi dưỡng và sinh hoạt chuyên môn:** Tham gia đầy đủ các lớp tập huấn; dự giờ đồng nghiệp đúng quy định; nòng cốt tham gia chỉ đạo chuyên môn tổ và tích cực chuẩn bị bài dạy minh họa chuyên đề AI cấp cụm vào tháng 12/2026. => **Xếp loại:** **Tốt**.  
 => **Xếp loại chung thực hiện quy chế chuyên môn:** **Tốt**.
 
-### 3. Hoạt động chủ nhiệm lớp (Lớp 9/7):
+### **3. Hoạt động chủ nhiệm lớp (Lớp 9/7):**
 - Kế hoạch chủ nhiệm lớp 9/7 được xây dựng đầy đủ, bám sát phương hướng năm học của nhà trường và tình hình học sinh cuối cấp.  
 - Quản lý nề nếp lớp 9/7 chặt chẽ, duy trì sĩ số tốt; kịp thời uốn nắn học sinh có biểu hiện sa sút, xây dựng tập thể lớp tự quản tốt.  
 - Sổ sách chủ nhiệm ghi chép cẩn thận, khoa học; duy trì mối liên hệ thường xuyên, hiệu quả giữa gia đình và nhà trường; định hướng phân luồng và ôn thi tuyển sinh lớp 10 tích cực. => **Xếp loại:** **Tốt**.
 
-### 4. Thực hiện các nhiệm vụ khác và phong trào thi đua:
+### **4. Thực hiện các nhiệm vụ khác và phong trào thi đua:**
 Hoàn thành mọi phong trào thi đua của nhà trường; tích cực tham gia các cuộc vận động, đóng góp; gương mẫu hoàn thành các nhiệm vụ đột xuất được phân công. => **Xếp loại:** **Tốt**.
 
 ## III. KẾT LUẬN VỀ NHỮNG NỘI DUNG ĐÃ TIẾN HÀNH KIỂM TRA

@@ -32,7 +32,7 @@ Sau đây là kết quả kiểm tra:
    - Ông: **Hoàng Xuân Ánh** – chức vụ: Giáo viên môn Toán.
 
 ## II. NỘI DUNG KIỂM TRA
-### 1. Trình độ nghiệp vụ sư phạm:
+### **1. Trình độ nghiệp vụ sư phạm:**
 **1.1. Nắm vững mục đích, yêu cầu, chương trình và nội dung giảng dạy:**  
 - Giáo viên nắm vững chương trình môn Toán (Toán 6 và Toán 9 theo Chương trình GDPT 2018); xác định đúng chuẩn kiến thức, kỹ năng và yêu cầu cần đạt (YCCĐ) của từng bài học; xác định chuẩn xác trọng tâm bài dạy.  
 - Xây dựng kế hoạch dạy học bộ môn khoa học, cấu trúc bài dạy hợp lý, thể hiện rõ năng lực chuyên môn và nghiệp vụ sư phạm vững vàng khi đứng lớp. Tích cực liên hệ kiến thức toán học với đời sống thực tế tạo ham thích, hưng phấn, giáo dục toàn diện học sinh.  
@@ -55,7 +55,7 @@ Sau đây là kết quả kiểm tra:
     * Nhận xét: Phương pháp đúng đặc trưng bộ môn, tổ chức hoạt động hình thành kiến thức sôi nổi; ứng dụng tốt CNTT và mô phỏng trực quan giúp học sinh nắm vững cách tìm ƯCLN. Xếp loại: **Giỏi**.  
 => **Đánh giá chung về trình độ nghiệp vụ sư phạm:** **Tốt**.
 
-### 2. Thực hiện quy chế, quy định về chuyên môn:
+### **2. Thực hiện quy chế, quy định về chuyên môn:**
 **2.1. Thực hiện tiến độ chương trình và nề nếp chuyên môn:** Giảng dạy đúng chương trình theo quy định, dạy đủ các tiết theo kế hoạch môn Toán 6 và Toán 9, không cắt xén, không dạy dồn ghép; chấp hành nghiêm túc quy định về ngày giờ công và thực hiện nghiêm túc quy định dạy thêm, học thêm. => **Xếp loại:** **Tốt**.  
 **2.2. Chuẩn bị Kế hoạch bài dạy (KHBD):** Soạn giảng kế hoạch dạy học đầy đủ theo kế hoạch dạy học, đúng với PPCT; đảm bảo đủ kiến thức, kỹ năng, có liên hệ thực tế; đầy đủ các bước lên lớp theo Công văn số 5512/BGDĐT-GDTrH, thể hiện rõ các hoạt động thầy và trò; chủ động tích hợp hiệu quả Khung Năng lực số (20%) và 12 tiết Khung AI (được in đậm, in nghiêng rõ nét theo đúng quy chuẩn); đồng bộ lên CSDL ngành và hoàn thành phê duyệt ký số tuần 100%. Soạn đủ các tiết thực hành trải nghiệm theo KHBD. => **Xếp loại:** **Tốt**.  
 **2.3. Thực hiện kiểm tra, đánh giá học sinh:** Hoàn thành cơ số điểm theo quy định tới thời điểm kiểm tra; nội dung và hình thức kiểm tra thống nhất chung theo kế hoạch kiểm tra đánh giá đã phê duyệt đầu năm học; có chấm, chữa bài cẩn thận cho học sinh và có nhận xét rõ ràng; cập nhật điểm trên hệ thống và ghi sổ đầu bài khớp tiến độ; chú trọng ra đề kiểm tra bám sát các dạng toán thực tế. => **Xếp loại:** **Tốt**.  
@@ -63,13 +63,13 @@ Sau đây là kết quả kiểm tra:
 **2.5. Bồi dưỡng, tự bồi dưỡng và sinh hoạt tổ chuyên môn:** Tham gia đầy đủ các buổi tập huấn theo quy định; tham gia họp tổ, chuyên môn đầy đủ; tham gia sinh hoạt chuyên đề của tổ; tích cực dự giờ khi được phân công; giữ vai trò nòng cốt Phó Tổ trưởng chuyên môn và chuẩn bị bài dạy minh họa Chuyên đề AI cấp cụm trường vào tháng 12/2026. => **Xếp loại:** **Tốt**.  
 => **Đánh giá chung về thực hiện quy chế chuyên môn:** **Tốt**.
 
-### 3. Hoạt động chủ nhiệm lớp (Lớp 9/7):
+### **3. Hoạt động chủ nhiệm lớp (Lớp 9/7):**
 - Xây dựng Kế hoạch chủ nhiệm năm học 2026 – 2027 đầy đủ, khoa học, bám sát phương hướng năm học của nhà trường và tình hình thực tế của học sinh khối 9 cuối cấp.  
 - Quản lý nề nếp lớp 9/7 rất tốt; duy trì sĩ số chuyên cần cao; sâu sát nắm bắt hoàn cảnh từng học sinh; kịp thời uốn nắn, động viên các em học sinh có biểu hiện chểnh mảng; xây dựng tập thể lớp 9/7 đoàn kết, có ý thức tự quản và thi đua học tập tốt.  
 - Thực hiện sổ sách chủ nhiệm sạch đẹp, cập nhật thông tin kịp thời; duy trì kênh phối hợp thường xuyên, hiệu quả giữa GVCN, Ban Giám hiệu, giáo viên bộ môn và Ban đại diện cha mẹ học sinh lớp 9/7; định hướng tốt cho học sinh về phân luồng và ôn thi tuyển sinh lớp 10.  
 => **Đánh giá chung về công tác chủ nhiệm:** **Tốt**.
 
-### 4. Thực hiện các nhiệm vụ khác và phong trào thi đua:
+### **4. Thực hiện các nhiệm vụ khác và phong trào thi đua:**
 Hoàn thành mọi phong trào của nhà trường, tham gia tích cực trong các cuộc vận động, đóng góp; gương mẫu hoàn thành các nhiệm vụ đột xuất do Ban Giám hiệu phân công. => **Xếp loại:** **Tốt**.
 
 ## III. ĐÁNH GIÁ CHUNG

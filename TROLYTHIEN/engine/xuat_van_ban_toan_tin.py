@@ -222,6 +222,11 @@ def add_run_parsed(paragraph, text, default_size=14, default_bold=False, default
 
 def add_paragraph_styled(doc, text, bold_prefix="", indent=True, align=WD_ALIGN_PARAGRAPH.JUSTIFY, space_before=2, space_after=2, line_spacing=1.2, force_red=False, size=14):
     """Thêm một đoạn văn bản chuẩn thể thức Nghị định 30 (cỡ 14, thụt đầu dòng 1.27cm)."""
+    text_clean = text.strip()
+    # Tự động chuẩn hóa: nếu văn bản bắt đầu bằng số thứ tự rồi mới đến bold (ví dụ: "1. **Tiêu đề**" hoặc "1.1. **Tiêu đề**"),
+    # gộp số thứ tự vào bên trong cặp dấu ** để số thứ tự cũng được in đậm đồng nhất theo NĐ 30, không bị số in thường / chữ in đậm.
+    text_clean = re.sub(r'^([0-9IVXLCDM]+(?:\.[0-9]+)*\.)\s*\*\*([^*]+)\*\*', r'**\1 \2**', text_clean)
+
     p = doc.add_paragraph()
     p.paragraph_format.alignment = align
     p.paragraph_format.line_spacing = line_spacing
@@ -238,7 +243,7 @@ def add_paragraph_styled(doc, text, bold_prefix="", indent=True, align=WD_ALIGN_
         r_pre.italic = False  # Đề mục in đậm không in nghiêng
         r_pre.font.color.rgb = COLOR_RED if force_red else COLOR_BLACK
         
-    add_run_parsed(p, text, default_size=size, default_bold=False, default_italic=False, force_red=force_red)
+    add_run_parsed(p, text_clean, default_size=size, default_bold=False, default_italic=False, force_red=force_red)
     return p
 
 
@@ -1740,15 +1745,15 @@ def tao_bien_ban_kiem_tra_noi_bo(out_docx_path, out_md_path=None, **kwargs):
     
     # 4. Phần I: Thành phần làm việc
     add_section_h1(doc, "I. THÀNH PHẦN LÀM VIỆC")
-    add_paragraph_styled(doc, "1. Đại diện Tổ kiểm tra:", indent=True)
+    add_paragraph_styled(doc, "**1. Đại diện Tổ kiểm tra:**", indent=True)
     add_paragraph_styled(doc, "- Ông: **Hoàng Tấn Thiên** – chức vụ: Tổ trưởng chuyên môn (Tổ trưởng tổ kiểm tra).", indent=True)
     add_paragraph_styled(doc, "- Ông: **Hồ Đăng Danh** – chức vụ: Giáo viên môn Tin học (Thành viên).", indent=True)
     add_paragraph_styled(doc, "- Bà: **Lê Thị Bình** – chức vụ: Giáo viên môn Toán (Người ghi biên bản).", indent=True)
     
-    add_paragraph_styled(doc, f"2. Đã tiến hành kiểm tra đối với: Thầy **{nguoi_duoc_kt_ten}**, gồm:", indent=True)
+    add_paragraph_styled(doc, f"**2. Đã tiến hành kiểm tra đối với:** Thầy **{nguoi_duoc_kt_ten}**, gồm:", indent=True)
     add_paragraph_styled(doc, f"- Thầy: **{nguoi_duoc_kt_ten}** – chức vụ: {nguoi_duoc_kt_chuc_vu}; phụ trách giảng dạy {lop_phu_trach}.", indent=True)
     
-    add_paragraph_styled(doc, "3. Người chứng kiến:", indent=True)
+    add_paragraph_styled(doc, "**3. Người chứng kiến:**", indent=True)
     add_paragraph_styled(doc, "- Ông: **Đinh Văn Đông** – chức vụ: Hiệu trưởng Trường THCS Trần Phú.", indent=True)
     add_paragraph_styled(doc, "- Ông: **Hoàng Xuân Ánh** – chức vụ: Giáo viên môn Toán.", indent=True)
     
@@ -1756,7 +1761,7 @@ def tao_bien_ban_kiem_tra_noi_bo(out_docx_path, out_md_path=None, **kwargs):
     add_section_h1(doc, "II. NỘI DUNG KIỂM TRA")
     
     # 1. Trình độ nghiệp vụ sư phạm
-    add_paragraph_styled(doc, "1. **Trình độ nghiệp vụ sư phạm:**", indent=True)
+    add_paragraph_styled(doc, "**1. Trình độ nghiệp vụ sư phạm:**", indent=True)
     add_paragraph_styled(doc, "**1.1. Nắm vững mục đích, yêu cầu, chương trình và nội dung giảng dạy:**", indent=True)
     add_paragraph_styled(doc, "- Giáo viên nắm vững chương trình môn Toán (Toán 6 và Toán 9 theo Chương trình GDPT 2018); xác định đúng chuẩn kiến thức, kỹ năng và yêu cầu cần đạt (YCCĐ) của từng bài học; xác định chuẩn xác trọng tâm bài dạy.", indent=True)
     add_paragraph_styled(doc, "- Xây dựng kế hoạch dạy học bộ môn khoa học, cấu trúc bài dạy hợp lý, thể hiện rõ năng lực chuyên môn và nghiệp vụ sư phạm vững vàng khi đứng lớp. Tích cực liên hệ kiến thức toán học với đời sống thực tế tạo ham thích, hưng phấn, giáo dục toàn diện học sinh.", indent=True)
@@ -1780,7 +1785,7 @@ def tao_bien_ban_kiem_tra_noi_bo(out_docx_path, out_md_path=None, **kwargs):
     add_paragraph_styled(doc, "=> **Đánh giá chung về trình độ nghiệp vụ sư phạm:** **Tốt**.", indent=True)
     
     # 2. Thực hiện quy chế, quy định về chuyên môn
-    add_paragraph_styled(doc, "2. **Thực hiện quy chế, quy định về chuyên môn:**", indent=True)
+    add_paragraph_styled(doc, "**2. Thực hiện quy chế, quy định về chuyên môn:**", indent=True)
     add_paragraph_styled(doc, "**2.1. Thực hiện tiến độ chương trình và nề nếp chuyên môn:** Giảng dạy đúng chương trình theo quy định, dạy đủ các tiết theo kế hoạch môn Toán 6 và Toán 9, không cắt xén, không dạy dồn ghép; chấp hành nghiêm túc quy định về ngày giờ công và thực hiện nghiêm túc quy định dạy thêm, học thêm. => **Xếp loại:** **Tốt**.", indent=True)
     add_paragraph_styled(doc, "**2.2. Chuẩn bị Kế hoạch bài dạy (KHBD):** Soạn giảng kế hoạch dạy học đầy đủ theo kế hoạch dạy học, đúng với PPCT; đảm bảo đủ kiến thức, kỹ năng, có liên hệ thực tế; đầy đủ các bước lên lớp theo Công văn số 5512/BGDĐT-GDTrH, thể hiện rõ các hoạt động thầy và trò; chủ động tích hợp hiệu quả Khung Năng lực số (20%) và 12 tiết Khung AI (được in đậm, in nghiêng rõ nét theo đúng quy chuẩn); đồng bộ lên CSDL ngành và hoàn thành phê duyệt ký số tuần 100%. Soạn đủ các tiết thực hành trải nghiệm theo KHBD. => **Xếp loại:** **Tốt**.", indent=True)
     add_paragraph_styled(doc, "**2.3. Thực hiện kiểm tra, đánh giá học sinh:** Hoàn thành cơ số điểm theo quy định tới thời điểm kiểm tra; nội dung và hình thức kiểm tra thống nhất chung theo kế hoạch kiểm tra đánh giá đã phê duyệt đầu năm học; có chấm, chữa bài cẩn thận cho học sinh và có nhận xét rõ ràng; cập nhật điểm trên hệ thống và ghi sổ đầu bài khớp tiến độ; chú trọng ra đề kiểm tra bám sát các dạng toán thực tế. => **Xếp loại:** **Tốt**.", indent=True)
@@ -1789,28 +1794,28 @@ def tao_bien_ban_kiem_tra_noi_bo(out_docx_path, out_md_path=None, **kwargs):
     add_paragraph_styled(doc, "=> **Đánh giá chung về thực hiện quy chế chuyên môn:** **Tốt**.", indent=True)
     
     # 3. Hoạt động chủ nhiệm lớp (Lớp 9/7)
-    add_paragraph_styled(doc, "3. **Hoạt động chủ nhiệm lớp (Lớp 9/7):**", indent=True)
+    add_paragraph_styled(doc, "**3. Hoạt động chủ nhiệm lớp (Lớp 9/7):**", indent=True)
     add_paragraph_styled(doc, "- Xây dựng Kế hoạch chủ nhiệm năm học 2026 – 2027 đầy đủ, khoa học, bám sát phương hướng năm học của nhà trường và tình hình thực tế của học sinh khối 9 cuối cấp.", indent=True)
     add_paragraph_styled(doc, "- Quản lý nề nếp lớp 9/7 rất tốt; duy trì sĩ số chuyên cần cao; sâu sát nắm bắt hoàn cảnh từng học sinh; kịp thời uốn nắn, động viên các em học sinh có biểu hiện chểnh mảng; xây dựng tập thể lớp 9/7 đoàn kết, có ý thức tự quản và thi đua học tập tốt.", indent=True)
     add_paragraph_styled(doc, "- Thực hiện sổ sách chủ nhiệm sạch đẹp, cập nhật thông tin kịp thời; duy trì kênh phối hợp thường xuyên, hiệu quả giữa GVCN, Ban Giám hiệu, giáo viên bộ môn và Ban đại diện cha mẹ học sinh lớp 9/7; định hướng tốt cho học sinh về phân luồng và ôn thi tuyển sinh lớp 10.", indent=True)
     add_paragraph_styled(doc, "=> **Đánh giá chung về công tác chủ nhiệm:** **Tốt**.", indent=True)
     
     # 4. Thực hiện các nhiệm vụ khác
-    add_paragraph_styled(doc, "4. **Thực hiện các nhiệm vụ khác và phong trào thi đua:**", indent=True)
+    add_paragraph_styled(doc, "**4. Thực hiện các nhiệm vụ khác và phong trào thi đua:**", indent=True)
     add_paragraph_styled(doc, "Hoàn thành mọi phong trào của nhà trường, tham gia tích cực trong các cuộc vận động, đóng góp; gương mẫu hoàn thành các nhiệm vụ đột xuất do Ban Giám hiệu phân công. => **Xếp loại:** **Tốt**.", indent=True)
     
     # 6. Phần III: Đánh giá chung (Ưu điểm, Tồn tại, Nguyên nhân)
     add_section_h1(doc, "III. ĐÁNH GIÁ CHUNG")
-    add_paragraph_styled(doc, "1. Ưu điểm:", indent=True)
+    add_paragraph_styled(doc, "**1. Ưu điểm:**", indent=True)
     add_paragraph_styled(doc, "- **Về chuyên môn giảng dạy môn Toán:** Thực hiện đúng phân công chuyên môn, phân phối chương trình môn Toán (các lớp 9/5, 9/6, 9/7, 6/5) và thời khóa biểu các môn phụ trách giảng dạy; chấp hành nghiêm túc quy định về dạy thêm, học thêm. Thực hiện việc kiểm tra, đánh giá đúng theo quy định, đảm bảo cơ số điểm đến thời điểm kiểm tra. Tổ chức giảng dạy đảm bảo yêu cầu cần đạt về năng lực và phẩm chất cho học sinh, thực hiện đúng quy chế chuyên môn, kết quả giảng dạy giỏi (cả 02 tiết dự giờ thao giảng của Ban Giám hiệu và tổ chuyên môn đều đạt loại Giỏi). Hồ sơ Kế hoạch bài dạy chuẩn bị chu đáo theo CV 5512, tích hợp hiệu quả Khung NLS và AI, ký số CSDL ngành đạt 100% đúng hạn. Có ý tưởng tốt trong hoàn thành sản phẩm STEM và đồ dùng dạy học trực quan.", indent=True)
     add_paragraph_styled(doc, "- **Về công tác chủ nhiệm lớp 9/7:** Có tinh thần trách nhiệm rất cao với lớp chủ nhiệm cuối cấp; xây dựng kế hoạch chủ nhiệm chu đáo; quản lý nề nếp lớp 9/7 chặt chẽ, tạo sự đồng thuận cao với phụ huynh học sinh; sâu sát uốn nắn học sinh và định hướng thi vào lớp 10 đạt hiệu quả rõ nét.", indent=True)
     add_paragraph_styled(doc, "- **Về vai trò nòng cốt và phong trào:** Luôn gương mẫu, hoàn thành xuất sắc trọng trách Phó Tổ trưởng chuyên môn; tích cực hỗ trợ đồng nghiệp và đang chuẩn bị tốt bài dạy minh họa chuyên đề AI cấp cụm vào tháng 12/2026; tích cực tham gia mọi hoạt động, phong trào của nhà trường.", indent=True)
     
-    add_paragraph_styled(doc, "2. Tồn tại:", indent=True)
+    add_paragraph_styled(doc, "**2. Tồn tại:**", indent=True)
     add_paragraph_styled(doc, "[CHỮ ĐỎ: - Về chuyên môn: Quan tâm nhiều hơn cho học sinh yếu kém của lớp; định lượng thời gian các hoạt động trong tiết dạy đôi chỗ cần hợp lý hơn; hoạt động thực hành lưu ý việc phân công nhiệm vụ của từng thành viên trong nhóm và bài tập về nhà. Cần hướng dẫn học sinh hệ thống kiến thức qua bản đồ tư duy để học sinh dễ nắm vững kiến thức; trong soạn đề kiểm tra cần có ý tưởng sáng tạo hơn, hạn chế rập khuôn các dạng toán thực tế, cẩn trọng hơn trong soạn thảo chuẩn hóa Word Equation (OMML). Tiếp tục tìm tòi, nghiên cứu tham khảo từ đồng nghiệp, tài liệu và nguồn internet.]", indent=True)
     add_paragraph_styled(doc, "[CHỮ ĐỎ: - Về công tác chủ nhiệm: Tiếp tục theo dõi sát sao hơn nữa nhóm học sinh có nguy cơ đuối sức trong giai đoạn ôn thi tuyển sinh vào lớp 10, phân hóa biện pháp động viên phù hợp với từng đối tượng học sinh cá biệt; đa dạng hóa thêm hình thức sinh hoạt lớp cuối tuần để tạo không khí sôi nổi hơn.]", indent=True)
     
-    add_paragraph_styled(doc, "3. Nguyên nhân:", indent=True)
+    add_paragraph_styled(doc, "**3. Nguyên nhân:**", indent=True)
     add_paragraph_styled(doc, "- Ưu điểm: Do giáo viên có trình độ chuyên môn vững vàng, nhiệt tình, hòa nhã với học sinh, tinh thần trách nhiệm cao và luôn tâm huyết với nghề nghiệp.", indent=True)
     add_paragraph_styled(doc, "[CHỮ ĐỎ: - Tồn tại: Do khối lượng công việc chuyên môn phụ trách 4 lớp (9/5, 9/6, 9/7, 6/5) kèm công tác chủ nhiệm lớp 9 cuối cấp nhiều áp lực về mặt thời gian, việc bao quát tỉ mỉ từng đối tượng học sinh cá biệt đôi lúc còn gặp khó khăn.]", indent=True)
     
@@ -1886,7 +1891,7 @@ Sau đây là kết quả kiểm tra:
    - Ông: **Hoàng Xuân Ánh** – chức vụ: Giáo viên môn Toán.
 
 ## II. NỘI DUNG KIỂM TRA
-### 1. Trình độ nghiệp vụ sư phạm:
+### **1. Trình độ nghiệp vụ sư phạm:**
 **1.1. Nắm vững mục đích, yêu cầu, chương trình và nội dung giảng dạy:**  
 - Giáo viên nắm vững chương trình môn Toán (Toán 6 và Toán 9 theo Chương trình GDPT 2018); xác định đúng chuẩn kiến thức, kỹ năng và yêu cầu cần đạt (YCCĐ) của từng bài học; xác định chuẩn xác trọng tâm bài dạy.  
 - Xây dựng kế hoạch dạy học bộ môn khoa học, cấu trúc bài dạy hợp lý, thể hiện rõ năng lực chuyên môn và nghiệp vụ sư phạm vững vàng khi đứng lớp. Tích cực liên hệ kiến thức toán học với đời sống thực tế tạo ham thích, hưng phấn, giáo dục toàn diện học sinh.  
@@ -1909,7 +1914,7 @@ Sau đây là kết quả kiểm tra:
     * Nhận xét: Phương pháp đúng đặc trưng bộ môn, tổ chức hoạt động hình thành kiến thức sôi nổi; ứng dụng tốt CNTT và mô phỏng trực quan giúp học sinh nắm vững cách tìm ƯCLN. Xếp loại: **Giỏi**.  
 => **Đánh giá chung về trình độ nghiệp vụ sư phạm:** **Tốt**.
 
-### 2. Thực hiện quy chế, quy định về chuyên môn:
+### **2. Thực hiện quy chế, quy định về chuyên môn:**
 **2.1. Thực hiện tiến độ chương trình và nề nếp chuyên môn:** Giảng dạy đúng chương trình theo quy định, dạy đủ các tiết theo kế hoạch môn Toán 6 và Toán 9, không cắt xén, không dạy dồn ghép; chấp hành nghiêm túc quy định về ngày giờ công và thực hiện nghiêm túc quy định dạy thêm, học thêm. => **Xếp loại:** **Tốt**.  
 **2.2. Chuẩn bị Kế hoạch bài dạy (KHBD):** Soạn giảng kế hoạch dạy học đầy đủ theo kế hoạch dạy học, đúng với PPCT; đảm bảo đủ kiến thức, kỹ năng, có liên hệ thực tế; đầy đủ các bước lên lớp theo Công văn số 5512/BGDĐT-GDTrH, thể hiện rõ các hoạt động thầy và trò; chủ động tích hợp hiệu quả Khung Năng lực số (20%) và 12 tiết Khung AI (được in đậm, in nghiêng rõ nét theo đúng quy chuẩn); đồng bộ lên CSDL ngành và hoàn thành phê duyệt ký số tuần 100%. Soạn đủ các tiết thực hành trải nghiệm theo KHBD. => **Xếp loại:** **Tốt**.  
 **2.3. Thực hiện kiểm tra, đánh giá học sinh:** Hoàn thành cơ số điểm theo quy định tới thời điểm kiểm tra; nội dung và hình thức kiểm tra thống nhất chung theo kế hoạch kiểm tra đánh giá đã phê duyệt đầu năm học; có chấm, chữa bài cẩn thận cho học sinh và có nhận xét rõ ràng; cập nhật điểm trên hệ thống và ghi sổ đầu bài khớp tiến độ; chú trọng ra đề kiểm tra bám sát các dạng toán thực tế. => **Xếp loại:** **Tốt**.  
@@ -1917,13 +1922,13 @@ Sau đây là kết quả kiểm tra:
 **2.5. Bồi dưỡng, tự bồi dưỡng và sinh hoạt tổ chuyên môn:** Tham gia đầy đủ các buổi tập huấn theo quy định; tham gia họp tổ, chuyên môn đầy đủ; tham gia sinh hoạt chuyên đề của tổ; tích cực dự giờ khi được phân công; giữ vai trò nòng cốt Phó Tổ trưởng chuyên môn và chuẩn bị bài dạy minh họa Chuyên đề AI cấp cụm trường vào tháng 12/2026. => **Xếp loại:** **Tốt**.  
 => **Đánh giá chung về thực hiện quy chế chuyên môn:** **Tốt**.
 
-### 3. Hoạt động chủ nhiệm lớp (Lớp 9/7):
+### **3. Hoạt động chủ nhiệm lớp (Lớp 9/7):**
 - Xây dựng Kế hoạch chủ nhiệm năm học 2026 – 2027 đầy đủ, khoa học, bám sát phương hướng năm học của nhà trường và tình hình thực tế của học sinh khối 9 cuối cấp.  
 - Quản lý nề nếp lớp 9/7 rất tốt; duy trì sĩ số chuyên cần cao; sâu sát nắm bắt hoàn cảnh từng học sinh; kịp thời uốn nắn, động viên các em học sinh có biểu hiện chểnh mảng; xây dựng tập thể lớp 9/7 đoàn kết, có ý thức tự quản và thi đua học tập tốt.  
 - Thực hiện sổ sách chủ nhiệm sạch đẹp, cập nhật thông tin kịp thời; duy trì kênh phối hợp thường xuyên, hiệu quả giữa GVCN, Ban Giám hiệu, giáo viên bộ môn và Ban đại diện cha mẹ học sinh lớp 9/7; định hướng tốt cho học sinh về phân luồng và ôn thi tuyển sinh lớp 10.  
 => **Đánh giá chung về công tác chủ nhiệm:** **Tốt**.
 
-### 4. Thực hiện các nhiệm vụ khác và phong trào thi đua:
+### **4. Thực hiện các nhiệm vụ khác và phong trào thi đua:**
 Hoàn thành mọi phong trào của nhà trường, tham gia tích cực trong các cuộc vận động, đóng góp; gương mẫu hoàn thành các nhiệm vụ đột xuất do Ban Giám hiệu phân công. => **Xếp loại:** **Tốt**.
 
 ## III. ĐÁNH GIÁ CHUNG
@@ -1998,7 +2003,7 @@ def tao_bao_cao_kiem_tra_noi_bo(out_docx_path, out_md_path=None, **kwargs):
     add_section_h1(doc, "II. KẾT QUẢ KIỂM TRA, XÁC MINH")
     
     # 1. Trình độ nghiệp vụ sư phạm
-    add_paragraph_styled(doc, "1. **Trình độ nghiệp vụ sư phạm:**", indent=True)
+    add_paragraph_styled(doc, "**1. Trình độ nghiệp vụ sư phạm:**", indent=True)
     add_paragraph_styled(doc, "**1.1. Nắm vững mục đích, yêu cầu, chương trình và nội dung giảng dạy:** Nắm vững chương trình môn Toán (Toán 6, 9 Chương trình GDPT 2018), xác định chuẩn xác yêu cầu cần đạt và trọng tâm bài dạy; kế hoạch bài dạy hợp lý, thể hiện rõ năng lực chuyên môn khi đứng lớp. => **Xếp loại:** **Tốt**.", indent=True)
     add_paragraph_styled(doc, "**1.2. Vận dụng phương pháp dạy học:** Lựa chọn phương pháp dạy học tích cực phù hợp đặc trưng bộ môn Toán; tổ chức tốt các hoạt động học tập; ứng dụng CNTT và mô phỏng trực quan hiệu quả; tác phong sư phạm chuẩn mực, nhiệt tình, hòa nhã, làm chủ lớp học. => **Xếp loại:** **Tốt**.", indent=True)
     add_paragraph_styled(doc, "**1.3. Hiệu quả tiết dạy (Dự giờ thao giảng):** Học sinh tích cực học tập, vận dụng linh hoạt kiến thức giải bài tập. Kết quả dự giờ 02 tiết của giáo viên:", indent=True)
@@ -2007,7 +2012,7 @@ def tao_bao_cao_kiem_tra_noi_bo(out_docx_path, out_md_path=None, **kwargs):
     add_paragraph_styled(doc, "=> **Xếp loại chung nghiệp vụ sư phạm:** **Tốt**.", indent=True)
     
     # 2. Thực hiện quy chế, quy định về chuyên môn
-    add_paragraph_styled(doc, "2. **Thực hiện quy chế, quy định về chuyên môn:**", indent=True)
+    add_paragraph_styled(doc, "**2. Thực hiện quy chế, quy định về chuyên môn:**", indent=True)
     add_paragraph_styled(doc, "**2.1. Tiến độ chương trình và ngày giờ công:** Thực hiện đúng phân phối chương trình môn Toán, dạy đủ số tiết theo kế hoạch, không cắt xén, không dạy dồn ghép; chấp hành nghiêm túc quy định dạy thêm, học thêm. => **Xếp loại:** **Tốt**.", indent=True)
     add_paragraph_styled(doc, "**2.2. Chuẩn bị Kế hoạch bài dạy (KHBD):** Soạn bài đầy đủ theo CV 5512 cấu trúc 4 hoạt động; tích hợp Khung Năng lực số (20%) và 12 tiết Khung AI in đậm nghiêng đúng chuẩn; đồng bộ và ký số CSDL ngành đạt 100% đúng hạn. Soạn đủ các tiết thực hành trải nghiệm. => **Xếp loại:** **Tốt**.", indent=True)
     add_paragraph_styled(doc, "**2.3. Kiểm tra, đánh giá học sinh:** Đảm bảo cơ số điểm kiểm tra thường xuyên theo Thông tư 22/2021/TT-BGDĐT; chấm chữa bài cẩn thận, nhận xét rõ ràng, vào điểm và ghi sổ đầu bài khớp tiến độ; chú trọng đưa toán thực tế vào đánh giá. => **Xếp loại:** **Tốt**.", indent=True)
@@ -2016,27 +2021,27 @@ def tao_bao_cao_kiem_tra_noi_bo(out_docx_path, out_md_path=None, **kwargs):
     add_paragraph_styled(doc, "=> **Xếp loại chung thực hiện quy chế chuyên môn:** **Tốt**.", indent=True)
     
     # 3. Hoạt động chủ nhiệm lớp (Lớp 9/7)
-    add_paragraph_styled(doc, "3. **Hoạt động chủ nhiệm lớp (Lớp 9/7):**", indent=True)
+    add_paragraph_styled(doc, "**3. Hoạt động chủ nhiệm lớp (Lớp 9/7):**", indent=True)
     add_paragraph_styled(doc, "- Kế hoạch chủ nhiệm lớp 9/7 được xây dựng đầy đủ, bám sát phương hướng năm học của nhà trường và tình hình học sinh cuối cấp.", indent=True)
     add_paragraph_styled(doc, "- Quản lý nề nếp lớp 9/7 chặt chẽ, duy trì sĩ số tốt; kịp thời uốn nắn học sinh có biểu hiện sa sút, xây dựng tập thể lớp tự quản tốt.", indent=True)
     add_paragraph_styled(doc, "- Sổ sách chủ nhiệm ghi chép cẩn thận, khoa học; duy trì mối liên hệ thường xuyên, hiệu quả giữa gia đình và nhà trường; định hướng phân luồng và ôn thi tuyển sinh lớp 10 tích cực. => **Xếp loại:** **Tốt**.", indent=True)
     
     # 4. Thực hiện các nhiệm vụ khác
-    add_paragraph_styled(doc, "4. **Thực hiện các nhiệm vụ khác và phong trào thi đua:**", indent=True)
+    add_paragraph_styled(doc, "**4. Thực hiện các nhiệm vụ khác và phong trào thi đua:**", indent=True)
     add_paragraph_styled(doc, "Hoàn thành mọi phong trào thi đua của nhà trường; tích cực tham gia các cuộc vận động, đóng góp; gương mẫu hoàn thành các nhiệm vụ đột xuất được phân công. => **Xếp loại:** **Tốt**.", indent=True)
     
     # 6. Phần III: Kết luận về những nội dung đã tiến hành kiểm tra
     add_section_h1(doc, "III. KẾT LUẬN VỀ NHỮNG NỘI DUNG ĐÃ TIẾN HÀNH KIỂM TRA")
-    add_paragraph_styled(doc, "1. **Kết quả đạt được (Ưu điểm):**", indent=True)
+    add_paragraph_styled(doc, "**1. Kết quả đạt được (Ưu điểm):**", indent=True)
     add_paragraph_styled(doc, "- **Về chuyên môn môn Toán:** Thực hiện đúng phân công chuyên môn, phân phối chương trình các lớp 9/5, 9/6, 9/7, 6/5 và thời khóa biểu; chấp hành nghiêm quy định dạy thêm, học thêm. Thực hiện việc kiểm tra, đánh giá đúng theo quy định, đảm bảo cơ số điểm đến thời điểm kiểm tra. Tổ chức giảng dạy đảm bảo yêu cầu cần đạt về năng lực và phẩm chất cho học sinh, thực hiện đúng quy chế chuyên môn, kết quả giảng dạy giỏi (cả 02 tiết dự giờ thao giảng của Ban Giám hiệu và tổ chuyên môn đều đạt loại Giỏi). Hồ sơ Kế hoạch bài dạy chuẩn bị rất công phu, đúng cấu trúc 4 hoạt động theo Công văn 5512/BGDĐT-GDTrH; xác định chuẩn xác yêu cầu cần đạt và trọng tâm bài dạy; tích hợp Khung Năng lực số (20%) và 12 tiết Khung AI sáng tạo, in đậm nghiêng đúng chuẩn; đồng bộ và ký số CSDL ngành đạt 100% đúng hạn. Có ý tưởng tốt trong hoàn thành sản phẩm STEM và khai thác ĐDDH trực quan.", indent=True)
     add_paragraph_styled(doc, "- **Về công tác chủ nhiệm lớp 9/7:** Tinh thần trách nhiệm rất cao với lớp cuối cấp; quản lý nề nếp lớp 9/7 chặt chẽ, tạo sự đồng thuận cao với phụ huynh học sinh; sâu sát uốn nắn học sinh và định hướng thi vào lớp 10 đạt hiệu quả rõ nét.", indent=True)
     add_paragraph_styled(doc, "- **Về vai trò nòng cốt:** Hoàn thành xuất sắc nhiệm vụ Phó Tổ trưởng chuyên môn; nòng cốt tham gia chỉ đạo ra đề kiểm tra giữa kỳ I và tích cực chuẩn bị bài dạy minh họa chuyên đề AI cấp cụm vào tháng 12/2026.", indent=True)
     
-    add_paragraph_styled(doc, "2. **Hạn chế (Tồn tại):**", indent=True)
+    add_paragraph_styled(doc, "**2. Hạn chế (Tồn tại):**", indent=True)
     add_paragraph_styled(doc, "[CHỮ ĐỎ: - Về chuyên môn: Quan tâm nhiều hơn cho học sinh yếu kém của lớp; định lượng thời gian các hoạt động trong tiết dạy đôi chỗ cần hợp lý hơn; hoạt động thực hành lưu ý việc phân công nhiệm vụ của từng thành viên trong nhóm và bài tập về nhà. Cần hướng dẫn học sinh hệ thống kiến thức qua bản đồ tư duy để học sinh dễ nắm vững kiến thức; trong soạn đề kiểm tra cần có ý tưởng sáng tạo hơn, hạn chế rập khuôn các dạng toán thực tế, cẩn trọng hơn trong soạn thảo chuẩn hóa Word Equation (OMML). Tiếp tục tìm tòi, nghiên cứu tham khảo từ đồng nghiệp, tài liệu và nguồn internet.]", indent=True)
     add_paragraph_styled(doc, "[CHỮ ĐỎ: - Về công tác chủ nhiệm: Tiếp tục theo dõi sát sao hơn nữa nhóm học sinh có nguy cơ đuối sức trong giai đoạn ôn thi tuyển sinh vào lớp 10, phân hóa biện pháp động viên phù hợp với từng đối tượng học sinh cá biệt; đa dạng hóa thêm hình thức sinh hoạt lớp cuối tuần để tạo không khí sôi nổi hơn.]", indent=True)
     
-    add_paragraph_styled(doc, "3. **Đánh giá, xếp loại chung:** Toàn bộ hoạt động sư phạm của nhà giáo được Tổ kiểm tra thống nhất xếp loại: **TỐT**.", indent=True)
+    add_paragraph_styled(doc, "**3. Đánh giá, xếp loại chung:** Toàn bộ hoạt động sư phạm của nhà giáo được Tổ kiểm tra thống nhất xếp loại: **TỐT**.", indent=True)
     
     # 7. Phần IV: Các biện pháp xử lý theo thẩm quyền đã áp dụng (nếu có)
     add_section_h1(doc, "IV. CÁC BIỆN PHÁP XỬ LÝ THEO THẨM QUYỀN ĐÃ ÁP DỤNG (NẾU CÓ)")
@@ -2048,9 +2053,9 @@ def tao_bao_cao_kiem_tra_noi_bo(out_docx_path, out_md_path=None, **kwargs):
     
     # 9. Phần VI: Kiến nghị và biện pháp xử lý
     add_section_h1(doc, "VI. KIẾN NGHỊ VÀ BIỆN PHÁP XỬ LÝ")
-    add_paragraph_styled(doc, "1. Đề nghị Ban Giám hiệu nhà trường ghi nhận, biểu dương kết quả kiểm tra xếp loại Tốt của Thầy Trần Sáng; xem xét khen thưởng trong các đợt thi đua chào mừng Ngày Nhà giáo Việt Nam 20/11.", indent=True)
-    add_paragraph_styled(doc, "2. Đề nghị Hiệu trưởng tạo điều kiện thuận lợi và phê duyệt kế hoạch để Thầy Trần Sáng và Cô Lê Thị Bình đại diện tổ triển khai thành công bài dạy minh họa Chuyên đề AI cấp cụm trường vào tháng 12/2026.", indent=True)
-    add_paragraph_styled(doc, "3. Giao Tổ chuyên môn Toán – Tin học tổ chức sinh hoạt nhân rộng mô hình tích hợp Khung AI, Năng lực số và ứng dụng STEM của Thầy Sáng cho toàn thể giáo viên trong tổ học tập, chia sẻ.", indent=True)
+    add_paragraph_styled(doc, "**1.** Đề nghị Ban Giám hiệu nhà trường ghi nhận, biểu dương kết quả kiểm tra xếp loại Tốt của Thầy Trần Sáng; xem xét khen thưởng trong các đợt thi đua chào mừng Ngày Nhà giáo Việt Nam 20/11.", indent=True)
+    add_paragraph_styled(doc, "**2.** Đề nghị Hiệu trưởng tạo điều kiện thuận lợi và phê duyệt kế hoạch để Thầy Trần Sáng và Cô Lê Thị Bình đại diện tổ triển khai thành công bài dạy minh họa Chuyên đề AI cấp cụm trường vào tháng 12/2026.", indent=True)
+    add_paragraph_styled(doc, "**3.** Giao Tổ chuyên môn Toán – Tin học tổ chức sinh hoạt nhân rộng mô hình tích hợp Khung AI, Năng lực số và ứng dụng STEM của Thầy Sáng cho toàn thể giáo viên trong tổ học tập, chia sẻ.", indent=True)
     
     # Đoạn kết
     add_paragraph_styled(doc, f"Trên đây là Báo cáo kết quả {ten_cuoc_kt} đối với Thầy Trần Sáng, Tổ kiểm tra kính xin ý kiến chỉ đạo của Hiệu trưởng nhà trường./.", indent=True)
@@ -2106,7 +2111,7 @@ Sau đây là kết quả kiểm tra:
 - **Về phẩm chất chính trị và nề nếp:** Giáo viên có lập trường tư tưởng vững vàng, luôn chấp hành nghiêm túc đường lối, chủ trương của Đảng, chính sách pháp luật của Nhà nước và các quy chế chuyên môn của ngành, của nhà trường. Có tinh thần trách nhiệm rất cao, nề nếp ngày giờ công gương mẫu, chan hòa và uy tín đối với đồng nghiệp, phụ huynh và học sinh.
 
 ## II. KẾT QUẢ KIỂM TRA, XÁC MINH
-### 1. Trình độ nghiệp vụ sư phạm:
+### **1. Trình độ nghiệp vụ sư phạm:**
 **1.1. Nắm vững mục đích, yêu cầu, chương trình và nội dung giảng dạy:** Nắm vững chương trình môn Toán (Toán 6, 9 Chương trình GDPT 2018), xác định chuẩn xác yêu cầu cần đạt và trọng tâm bài dạy; kế hoạch bài dạy hợp lý, thể hiện rõ năng lực chuyên môn khi đứng lớp. => **Xếp loại:** **Tốt**.  
 **1.2. Vận dụng phương pháp dạy học:** Lựa chọn phương pháp dạy học tích cực phù hợp đặc trưng bộ môn Toán; tổ chức tốt các hoạt động học tập; ứng dụng CNTT và mô phỏng trực quan hiệu quả; tác phong sư phạm chuẩn mực, nhiệt tình, hòa nhã, làm chủ lớp học. => **Xếp loại:** **Tốt**.  
 **1.3. Hiệu quả tiết dạy (Dự giờ thao giảng):** Học sinh tích cực học tập, vận dụng linh hoạt kiến thức giải bài tập. Kết quả dự giờ 02 tiết của giáo viên:  
@@ -2114,7 +2119,7 @@ Sau đây là kết quả kiểm tra:
 - **Tiết dạy 2:** Tiết 21 – *Bài 11: Ước chung, ước chung lớn nhất* (Môn Toán 6, Lớp 6/5, Ngày dạy: 22/10/2026). Người dự: Thầy Hoàng Tấn Thiên, Cô Lê Thị Bình. Xếp loại: **Giỏi**.  
 => **Xếp loại chung nghiệp vụ sư phạm:** **Tốt**.
 
-### 2. Thực hiện quy chế, quy định về chuyên môn:
+### **2. Thực hiện quy chế, quy định về chuyên môn:**
 **2.1. Tiến độ chương trình và ngày giờ công:** Thực hiện đúng phân phối chương trình môn Toán, dạy đủ số tiết theo kế hoạch, không cắt xén, không dạy dồn ghép; chấp hành nghiêm túc quy định dạy thêm, học thêm. => **Xếp loại:** **Tốt**.  
 **2.2. Chuẩn bị Kế hoạch bài dạy (KHBD):** Soạn bài đầy đủ theo CV 5512 cấu trúc 4 hoạt động; tích hợp Khung Năng lực số (20%) và 12 tiết Khung AI in đậm nghiêng đúng chuẩn; đồng bộ và ký số CSDL ngành đạt 100% đúng hạn. Soạn đủ các tiết thực hành trải nghiệm. => **Xếp loại:** **Tốt**.  
 **2.3. Kiểm tra, đánh giá học sinh:** Đảm bảo cơ số điểm kiểm tra thường xuyên theo Thông tư 22/2021/TT-BGDĐT; chấm chữa bài cẩn thận, nhận xét rõ ràng, vào điểm và ghi sổ đầu bài khớp tiến độ; chú trọng đưa toán thực tế vào đánh giá. => **Xếp loại:** **Tốt**.  
@@ -2122,12 +2127,12 @@ Sau đây là kết quả kiểm tra:
 **2.5. Bồi dưỡng và sinh hoạt chuyên môn:** Tham gia đầy đủ các lớp tập huấn; dự giờ đồng nghiệp đúng quy định; nòng cốt tham gia chỉ đạo chuyên môn tổ và tích cực chuẩn bị bài dạy minh họa chuyên đề AI cấp cụm vào tháng 12/2026. => **Xếp loại:** **Tốt**.  
 => **Xếp loại chung thực hiện quy chế chuyên môn:** **Tốt**.
 
-### 3. Hoạt động chủ nhiệm lớp (Lớp 9/7):
+### **3. Hoạt động chủ nhiệm lớp (Lớp 9/7):**
 - Kế hoạch chủ nhiệm lớp 9/7 được xây dựng đầy đủ, bám sát phương hướng năm học của nhà trường và tình hình học sinh cuối cấp.  
 - Quản lý nề nếp lớp 9/7 chặt chẽ, duy trì sĩ số tốt; kịp thời uốn nắn học sinh có biểu hiện sa sút, xây dựng tập thể lớp tự quản tốt.  
 - Sổ sách chủ nhiệm ghi chép cẩn thận, khoa học; duy trì mối liên hệ thường xuyên, hiệu quả giữa gia đình và nhà trường; định hướng phân luồng và ôn thi tuyển sinh lớp 10 tích cực. => **Xếp loại:** **Tốt**.
 
-### 4. Thực hiện các nhiệm vụ khác và phong trào thi đua:
+### **4. Thực hiện các nhiệm vụ khác và phong trào thi đua:**
 Hoàn thành mọi phong trào thi đua của nhà trường; tích cực tham gia các cuộc vận động, đóng góp; gương mẫu hoàn thành các nhiệm vụ đột xuất được phân công. => **Xếp loại:** **Tốt**.
 
 ## III. KẾT LUẬN VỀ NHỮNG NỘI DUNG ĐÃ TIẾN HÀNH KIỂM TRA
