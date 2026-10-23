@@ -18,15 +18,19 @@ I. NGUYÊN TẮC THÉP TRẢ HỒ SƠ 100% (KHÔNG KHOAN NHƯỢNG, KHÔNG DUY�
    - Lỗi font MathType/Equation: Ký hiệu góc bị biến dạng thành dấu chấm trên đầu (ẋ, ẏ, ṁ, ẋ...), ký tự rác vuông, hoặc dấu perpendicular đè lên đỉnh góc -> TRẢ HỒ SƠ 100%.
    - Biến dạng công thức đại số, căn thức, phân số -> TRẢ HỒ SƠ.
 
-3. SAI VỀ NỘI DUNG CHUYÊN MÔN -> TRẢ HỒ SƠ:
-   - Sai bản chất định lý toán học (nhầm dấu phép tính, định lý tổng các góc...) -> TRẢ HỒ SƠ.
-   - Sai quy tắc chuyển vế, thứ tự phép tính, sai quy tắc dấu ngoặc -> TRẢ HỒ SƠ.
-   - Sai kết quả tính toán, sai lập luận chứng minh -> TRẢ HỒ SƠ.
+3. SAI KIẾN THỨC VÀ NỘI DUNG CHUYÊN MÔN (LỖI ĐỎ SỐNG CÒN) -> TRẢ HỒ SƠ NGAY 100%:
+   - Sai bản chất định lý toán học (nhầm dấu phép tính, định lý tổng các góc...) -> TRẢ HỒ SƠ NGAY LẬP TỨC.
+   - Sai quy tắc chuyển vế, thứ tự phép tính, sai quy tắc dấu ngoặc -> TRẢ HỒ SƠ NGAY LẬP TỨC.
+   - Sai kết quả tính toán, sai lập luận chứng minh -> TRẢ HỒ SƠ NGAY LẬP TỨC.
+   - TUYỆT ĐỐI KHÔNG ÁP DỤNG DUNG SAI CHO LỖI SAI KIẾN THỨC. SAI LÀ TRẢ NGAY 100%.
 
-II. BỘ QUY CHUẨN XẾP LOẠI HỒ SƠ:
-- DUYỆT (XẾP LOẠI: TỐT): Đảm bảo 100% tiến độ, không có bất kỳ lỗi toán học hay ký hiệu nào, 100% câu mô tả NLS/AI in đậm nghiêng chuẩn mực, thể thức hoàn hảo.
-- DUYỆT (XẾP LOẠI: KHÁ): Đạt 100% tiến độ, toán học và ký hiệu chuẩn xác 100%, chỉ có lưu ý nhỏ về thể thức hành chính phụ.
-- TRẢ HỒ SƠ: Vi phạm bất kỳ tiêu chí nào trong 3 NGUYÊN TẮC THÉP nêu trên.
+II. BỘ QUY CHUẨN XẾP LOẠI HỒ SƠ (KÈM DUNG SAI THỂ THỨC SƯ PHẠM):
+- DUYỆT (XẾP LOẠI: TỐT): Kiến thức toán học chuẩn xác 100%, tiến độ đầy đủ theo Phụ lục 3, cấu trúc 4 hoạt động CV 5512 rõ nét. Đối với tệp dài 30–50 trang, dung sai dưới 5 lưu ý nhỏ về định dạng hình thức/font mà hiển thị thực tế rõ ràng thì chấp nhận đạt Tốt theo chỉ đạo của Tổ trưởng.
+- DUYỆT (XẾP LOẠI: KHÁ): Đạt 100% tiến độ, toán học chuẩn xác 100%, có lưu ý nhỏ về câu chữ hành chính bổ trợ.
+- TRẢ HỒ SƠ: Sai kiến thức chuyên môn (trả ngay 100%), thiếu tiết không lý do chính đáng, hoặc lỗi vi phạm nghiêm trọng.
+
+III. QUY CHUẨN GỬI HỆ THỐNG TRỰC TUYẾN (vnEdu / SMAS / K12Online):
+- Bắt buộc nhận xét chung toàn thể theo từng tệp hồ sơ nộp, không chia nhỏ lẻ theo từng bài học riêng biệt.
 
 III. CHUẨN HÓA THỂ THỨC VĂN BẢN (NGHỊ ĐỊNH 30/2020/NĐ-CP):
 - Phông chữ: Times New Roman 100%.

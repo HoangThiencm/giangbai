@@ -88,8 +88,11 @@ Mỗi đợt kiểm tra sẽ xuất 3 nhóm tài liệu độc lập:
 
 ---
 
-## 4. QUY TẮC LINH HOẠT XỬ LÝ THEO Ý KIẾN CHỈ ĐẠO CỦA TỔ TRƯỞNG
-- **Ghi nhận lý do chính đáng**: Chỉ áp dụng khi Tổ trưởng/người dùng có ý kiến chỉ đạo rõ ràng bằng lời trong chat chấp thuận lý do chính đáng (ví dụ: trường hợp Thầy Hồ Đăng Danh tháng 9):
-  * Ghi nhận tiến độ: **Đạt yêu cầu** (chấp thuận giải trình / kế hoạch bù bài).
-  * Không bắt bẻ các tiết thiếu đã được miễn trừ này.
-- **Đối với tất cả giáo viên và tiêu chí còn lại**: Phải soi xét cực kỳ nghiêm ngặt, đàng hoàng, chuẩn xác từng trang, tuyệt đối không cả nể hay nương tay.
+## 4. QUY TẮC LINH HOẠT XỬ LÝ THEO Ý KIẾN CHỈ ĐẠO CỦA TỔ TRƯỞNG & BẢN VÁ SAI KIẾN THỨC
+- **BẢN VÁ QUY CHUẨN THÉP — SAI KIẾN THỨC TRẢ HỒ SƠ NGAY 100% (ZERO TOLERANCE):**
+  * Bất kỳ lỗi sai kiến thức chuyên môn, sai định lý toán học (nhầm dấu phép tính, sai định lý tổng góc...), sai quy tắc chuyển vế, sai thứ tự phép tính, sai kết quả tính toán số học $\rightarrow$ **BẮT BUỘC TRẢ HỒ SƠ NGAY LẬP TỨC (TRẢ NGAY 100%), TUYỆT ĐỐI CẤM DU DI, KHÔNG ÁP DỤNG BẤT KỲ DUNG SAI NÀO!**
+- **Dung sai thể thức và định dạng hình thức nhỏ:**
+  * Đối với các tệp dài từ 30–50 trang, nếu chỉ có dưới 5 lưu ý nhỏ về định dạng hình thức (chưa in đậm nghiêng một vài vị trí phụ, lỗi gõ font nhẹ mà hiển thị thực tế trên PDF vẫn rõ ràng, không gây nhầm lẫn kiến thức) $\rightarrow$ **ĐƯỢC CHẤP NHẬN DUYỆT (XẾP LOẠI: TỐT / KHÁ)** theo đánh giá và chỉ đạo chuyên môn của Tổ trưởng.
+- **Quy chuẩn gửi hệ thống trực tuyến (vnEdu / SMAS / K12Online):**
+  * Bắt buộc nhận xét chung toàn thể theo từng tệp hồ sơ nộp của giáo viên, không chia nhỏ lẻ theo từng bài học riêng biệt.
+- **Ghi nhận lý do chính đáng về tiến độ:** Chỉ áp dụng khi Tổ trưởng/người dùng có ý kiến chỉ đạo rõ ràng bằng lời trong chat chấp thuận lý do chính đáng (chấp thuận giải trình / kế hoạch bù bài). Không bắt bẻ các tiết thiếu đã được miễn trừ này.

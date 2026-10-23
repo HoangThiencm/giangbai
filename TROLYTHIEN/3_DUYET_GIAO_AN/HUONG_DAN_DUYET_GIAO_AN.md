@@ -43,13 +43,16 @@ flowchart TD
 
 ---
 
-### 🔴 TIÊU CHÍ 3: SAI VỀ NỘI DUNG CHUYÊN MÔN $\rightarrow$ TRẢ HỒ SƠ 100%
+### 🔴 TIÊU CHÍ 3: SAI KIẾN THỨC VÀ NỘI DUNG CHUYÊN MÔN $\rightarrow$ TRẢ HỒ SƠ NGAY 100% (ZERO TOLERANCE)
+> **BẢN VÁ QUY CHUẨN THÉP:** Sai kiến thức toán học là lỗi đỏ sống còn. Tuyệt đối không áp dụng bất kỳ ngưỡng dung sai nào đối với sai kiến thức. Dù chỉ 1 lỗi sai định lý hoặc nhầm dấu phép tính cũng bắt buộc **TRẢ HỒ SƠ NGAY LẬP TỨC 100%**!
 1. **Sai định lý toán học**:
-   - Nhầm lẫn bản chất định lý (ví dụ: viết nhầm dấu trừ trong định lý tổng các góc trong tứ giác $\widehat{H} + \widehat{E} + \widehat{F} - \widehat{G} = 360^\circ$)... $\rightarrow$ **TRẢ HỒ SƠ**.
+   - Nhầm lẫn bản chất định lý (ví dụ: viết nhầm dấu trừ trong định lý tổng các góc trong tứ giác $\widehat{H} + \widehat{E} + \widehat{F} - \widehat{G} = 360^\circ$)... $\rightarrow$ **TRẢ HỒ SƠ NGAY LẬP TỨC**.
 2. **Sai quy tắc biến đổi đại số**:
-   - Sai quy tắc chuyển vế, sai quy tắc dấu ngoặc, sai thứ tự thực hiện phép tính $\rightarrow$ **TRẢ HỒ SƠ**.
+   - Sai quy tắc chuyển vế, sai quy tắc dấu ngoặc, sai thứ tự thực hiện phép tính $\rightarrow$ **TRẢ HỒ SƠ NGAY LẬP TỨC**.
 3. **Sai kiến thức chuyên môn**:
-   - Sai kết quả bài toán, sai hình vẽ minh họa $\rightarrow$ **TRẢ HỒ SƠ**.
+   - Sai kết quả bài toán, sai hình vẽ minh họa, sai định nghĩa $\rightarrow$ **TRẢ HỒ SƠ NGAY LẬP TỨC**.
+
+*(Lưu ý: Ngưỡng dung sai dưới 5 lỗi cho tệp 30–50 trang chỉ áp dụng cho các lưu ý nhỏ về định dạng hình thức/thể thức font chữ mà không gây nhầm lẫn về mặt kiến thức).*
 
 ---
 

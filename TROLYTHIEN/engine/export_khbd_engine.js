@@ -16,6 +16,8 @@ const path = require('path');
  */
 function sanitizeKhbdMathSource(text) {
   let source = String(text || "");
+  // 0. Khắc phục thực thể HTML &nbsp; tránh lỗi lộ mã text thô trong Word
+  source = source.replace(/&nbsp;/gi, " ");
   // 1. Khôi phục các ký tự điều khiển ASCII bị nuốt dấu gạch chéo
   source = source.replace(/\u0008egin/g, "\\begin");
   source = source.replace(/\u000bdots/g, "\\vdots");
@@ -390,4 +392,269 @@ function createKhbdDocx({ mdFilePath, outputDocxPath, lessonInfo, illustrations 
   });
 }
 
-module.exports = { createKhbdDocx, loadDocx, sanitizeKhbdMathSource };
+
+function createMergedKhbdDocx({ lessons = [], outputDocxPath, docTitle }) {
+  const sections = [];
+
+  for (const item of lessons) {
+    global.appState = {
+      content: { illustrations: item.illustrations || [] },
+      teachingContext: { lessonScope: item.lessonInfo?.lessonScope || '' }
+    };
+    global.window = {
+      docx: docx,
+      appState: global.appState,
+      formatKhbdRoleLineBreaks: formatKhbdRoleLineBreaks
+    };
+
+    const khbdDocxPath = fs.existsSync(path.resolve(__dirname, '../../js/khbd-docx.js'))
+      ? path.resolve(__dirname, '../../js/khbd-docx.js')
+      : path.resolve(__dirname, '../js/khbd-docx.js');
+    const { DocxGenerator } = require(khbdDocxPath);
+    const generator = new DocxGenerator();
+
+    generator.createDocumentHeader = function (info = {}) {
+      const { Paragraph, TextRun, AlignmentType } = global.window.docx;
+      const normInfo = { ...info };
+      if (!normInfo.lessonScope && normInfo.ppct) {
+        const m = normInfo.ppct.match(/Tiết\s*[\d,\s-]+/i);
+        if (m) normInfo.lessonScope = m[0].trim();
+      }
+      let title = this.formatTietBaiHeading(normInfo)
+        .replace(/\s*\(\s*\d+\s*tiết\s*\)\s*$/i, "")
+        .replace(/^TIẾT\b/i, "Tiết")
+        .trim();
+      let durationText = this.formatDurationLine(normInfo.duration) || `Thời lượng thực hiện: ${normInfo.duration || "01 tiết (45 phút)"}`;
+
+      return [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 0, after: 60, line: this.lineSpacing, lineRule: this.lineRule },
+          children: [
+            new TextRun({
+              text: title,
+              font: this.fontFamily,
+              size: 26,
+              bold: true
+            })
+          ]
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 0, after: 140, line: this.lineSpacing, lineRule: this.lineRule },
+          children: [
+            new TextRun({
+              text: durationText,
+              font: this.fontFamily,
+              size: this.fontSizeBody,
+              italics: true
+            })
+          ]
+        })
+      ];
+    };
+
+    generator.createIllustrationParagraphs = function (altText, illustrationId) {
+      const safeId = this.safeIllustrationId(illustrationId);
+      const ill = (item.illustrations || []).find(it => it && it.id === safeId);
+      if (!ill || !ill.dataUrl) return [this.illustrationFallbackParagraph(altText)];
+
+      const b64 = ill.dataUrl.split(',')[1];
+      const bytes = Buffer.from(b64, 'base64');
+      const w = ill.width || 400;
+      const h = ill.height || 200;
+
+      return [
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 80, after: 80 },
+          children: [
+            new ImageRun({
+              data: bytes,
+              transformation: { width: w, height: h },
+              type: 'png'
+            })
+          ]
+        })
+      ];
+    };
+
+    generator.parseTableCellParagraphs = function (text, isHeader = false) {
+      const { Paragraph } = global.window.docx;
+      let normalized = String(text || "");
+      if (!isHeader) {
+        normalized = formatKhbdRoleLineBreaks(normalized);
+      }
+      const lines = normalized.replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
+      const usable = lines.filter(l => l && !/^[-+*•.]\s*$/.test(l.trim()));
+      if (!usable.length) {
+        return [new Paragraph({ spacing: { before: 0, after: 20, line: this.lineSpacing, lineRule: this.lineRule }, children: [this.coloredTextRun(" ")] })];
+      }
+
+      return usable.flatMap(line => {
+        const illParts = this.splitIllustrationSegments(line);
+        if (illParts.some(part => part.type === "illustration")) {
+          return illParts.flatMap(part => {
+            if (part.type === "illustration") {
+              const block = this.createIllustrationParagraphs(part.caption, part.id);
+              return block.length ? block : [this.illustrationFallbackParagraph(part.caption)];
+            }
+            const content = String(part.text || "").trim();
+            if (!content || /^[-+*•.]\s*$/.test(content)) return [];
+            const runs = isHeader
+              ? [this.coloredTextRun(content, { bold: true })]
+              : this.parseInlineTextToRuns(content, this.lineIntegrationColor(content, null));
+            return [new Paragraph({
+              spacing: { before: 0, after: 20, line: this.lineSpacing, lineRule: this.lineRule },
+              children: runs.length ? runs : [this.coloredTextRun(content, { bold: isHeader })]
+            })];
+          });
+        }
+
+        const roleMatch = !isHeader ? line.match(/^(-\s*)?(?:\*\*)?(GV|HS)\s*:(?:\*\*)?\s*(.*)$/i) : null;
+        const listMatch = !isHeader && !roleMatch ? line.match(/^([-+.•])\s+(.+)$/) : null;
+        const marker = listMatch ? listMatch[1] : (roleMatch ? "-" : "");
+        const contentText = roleMatch
+          ? `**${roleMatch[2].toUpperCase()}:** ${roleMatch[3] || ""}`.trim()
+          : (listMatch ? listMatch[2] : line);
+        const displayLine = roleMatch
+          ? `- ${contentText}`
+          : (listMatch ? `${marker} ${contentText}` : (line || " "));
+
+        const lineColor = isHeader ? undefined : this.lineIntegrationColor(displayLine, null);
+        const runs = isHeader
+          ? [this.coloredTextRun(line || " ", { bold: true })]
+          : this.parseInlineTextToRuns(displayLine, lineColor);
+
+        return [new Paragraph({
+          indent: { left: 0, right: 0 },
+          spacing: { before: 0, after: 25, line: 240, lineRule: "auto" },
+          children: runs.length ? runs : [this.coloredTextRun(displayLine || "", { bold: isHeader, color: lineColor })]
+        })];
+      });
+    };
+
+    generator.parseMarkdownTable = function (lines) {
+      const validLines = lines.filter(line => line.trim().startsWith("|") && line.trim().endsWith("|"));
+      if (validLines.length === 0) return null;
+
+      const rows = [];
+      const tableWidth = this.tableWidth || 9922;
+      const headerCells = this.splitMarkdownTableRow(validLines[0]).map(cell => cell.toLowerCase());
+      const isActivityTwoCol = headerCells.some(cell => cell.includes("hoạt động của gv"))
+        && headerCells.some(cell => cell.includes("nội dung"));
+      const columnCount = isActivityTwoCol ? 2 : Math.max(...validLines.map(line => this.splitMarkdownTableRow(line).length));
+
+      const columnWidths = isActivityTwoCol
+        ? [5100, 4822]
+        : Array.from({ length: columnCount }, (_, idx) => {
+            const base = Math.floor(tableWidth / columnCount);
+            return idx === columnCount - 1 ? (tableWidth - base * (columnCount - 1)) : base;
+          });
+
+      validLines.forEach((line, rowIndex) => {
+        const parsedCells = this.splitMarkdownTableRow(line);
+        const splitter = typeof semanticSplitActivityRow === "function"
+          ? semanticSplitActivityRow
+          : (cells => this.semanticSplitActivityRow(cells));
+        const rawCells = isActivityTwoCol ? splitter(parsedCells) : parsedCells;
+        const isHeader = (rowIndex === 0);
+
+        const tableCells = Array.from({ length: columnCount }, (_, columnIndex) => {
+          const cellText = rawCells[columnIndex] || "";
+          const paragraphs = this.parseTableCellParagraphs(cellText, isHeader);
+          return new TableCell({
+            children: paragraphs.length ? paragraphs : [new Paragraph({ children: [new TextRun({ text: "", font: this.fontFamily, size: this.fontSizeBody })] })],
+            margins: { top: 60, bottom: 60, left: 0, right: 0 },
+            verticalAlign: VerticalAlign?.TOP,
+            width: { size: columnWidths[columnIndex], type: WidthType.DXA }
+          });
+        });
+
+        rows.push(new TableRow({
+          children: tableCells,
+          tableHeader: isHeader,
+          cantSplit: isHeader
+        }));
+      });
+
+      const borderStyle = {
+        style: BorderStyle.SINGLE,
+        size: 4,
+        color: "333333"
+      };
+
+      return new Table({
+        rows: rows,
+        width: { size: tableWidth, type: WidthType.DXA },
+        columnWidths,
+        layout: TableLayoutType?.FIXED,
+        borders: {
+          top: borderStyle,
+          bottom: borderStyle,
+          left: borderStyle,
+          right: borderStyle,
+          insideHorizontal: borderStyle,
+          insideVertical: borderStyle
+        }
+      });
+    };
+
+    let markdownContent = sanitizeKhbdMathSource(fs.readFileSync(item.mdFilePath, 'utf8'));
+    const headerElements = generator.createDocumentHeader(item.lessonInfo);
+    const footerElements = generator.createDocumentFooter(item.lessonInfo);
+    const bodyElements = generator.parseMarkdownToDocxElements(markdownContent);
+
+    const section = {
+      properties: {
+        page: {
+          size: generator.pageSize,
+          margin: generator.pageMargins
+        }
+      },
+      children: [...headerElements, ...bodyElements]
+    };
+
+    if (typeof Footer === 'function') {
+      section.footers = { default: new Footer({ children: footerElements }) };
+    }
+
+    sections.push(section);
+  }
+
+  const doc = new Document({
+    creator: 'Trợ lý Soạn Kế hoạch Bài dạy AI',
+    title: docTitle || 'Kế hoạch bài dạy ghép',
+    styles: {
+      default: {
+        document: {
+          run: { font: "Times New Roman", size: 26 },
+          paragraph: {
+            spacing: { before: 0, after: 30, line: 240, lineRule: "auto" },
+            alignment: AlignmentType?.JUSTIFIED
+          }
+        }
+      }
+    },
+    sections: sections
+  });
+
+  return Packer.toBuffer(doc).then(buffer => {
+    let finalPath = outputDocxPath;
+    try {
+      fs.writeFileSync(finalPath, buffer);
+    } catch (err) {
+      if (err.code === 'EBUSY') {
+        const ext = path.extname(finalPath);
+        finalPath = finalPath.replace(ext, `_Moi${ext}`);
+        fs.writeFileSync(finalPath, buffer);
+        console.warn(`CẢNH BÁO: File Word đang mở nên không ghi đè được. Đã ghi sang ${finalPath}. Hãy đóng Word rồi xuất lại.`);
+      } else {
+        throw err;
+      }
+    }
+    return { success: true, path: finalPath, size: buffer.length };
+  });
+}
+
+module.exports = { createKhbdDocx, createMergedKhbdDocx, loadDocx, sanitizeKhbdMathSource };
