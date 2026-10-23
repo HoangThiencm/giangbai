@@ -144,6 +144,12 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
     4. Lập Biên bản phản biện chuyên môn: áp dụng quy tắc bằng chứng 4 thành tố (Vị trí nguồn $\rightarrow$ Dữ liệu $\rightarrow$ Phân tích $\rightarrow$ Kiến nghị); 3 mức kết luận (Có thể sử dụng / Cần chỉnh sửa / Không sử dụng); khung ký 3 bên chỉ xuất khi là biên bản hành chính chính thức.
   + Tùy chọn tạo đề mới theo ma trận: CHỈ thực hiện khi Thầy yêu cầu riêng sau khi chốt ma trận.
   + File kết quả: tự động lưu tại `TROLYTHIEN/4_DUYET_DE/Ket_qua/`
+  + **YÊU CẦU KIỂM CHỨNG BẮT BUỘC TRƯỚC KHI TRẢ KẾT QUẢ:** (1) Chỉ dùng hồ sơ gốc làm bằng chứng, kiểm tra lại nhận xét của mọi AI/biên bản trước; (2) Mỗi lỗi phải đủ tên tệp, câu/mục, nội dung gốc, kết quả kiểm tra; (3) Liệt kê đầy đủ phép cộng thành phần; (4) Lập bảng kiểm chứng: Nhận xét trước -> Bằng chứng gốc -> Đúng/Sai -> Đã xử lý chưa; (5) Mở lại chính file đầu ra kiểm tra trước khi báo xong; (6) Tách rõ lỗi xác định, điểm cần xác minh, gợi ý; (7) Cấm tuyên bố 'chính xác 100%' khi chưa có chứng cứ số liệu.
+  + **BẢN VÁ THẨM ĐỊNH TỪNG LƯỢT, RENDER TRANG GỐC & KỶ LUẬT SƯ PHẠM (Bắt buộc):**
+    * Bước 1: Liệt kê hồ sơ, **BẮT BUỘC RENDER TRANG GỐC SANG ẢNH/PDF** để đối soát trực tiếp hỗn số, công thức MathType và ký hiệu hình học inline (tránh đọc sai hỗn số thành phân số hoặc bỏ sót ảnh inline).
+    * Bước 2: Tự giải độc lập, cộng điểm kiểm chứng từng mạch kiến thức (Số & ĐS, Hình học) và từng mức độ nhận thức (trình bày phép cộng rõ ràng).
+    * Bước 3: Lập bảng phát hiện 5 trường (Lỗi xác định được / Điểm cần xác minh / Gợi ý cải thiện). Lệch Ma trận vs HDC chỉ nêu chênh lệch và đề nghị thống nhất; đề dự phòng trùng số liệu xếp nhóm gợi ý; bỏ đếm lỗi chính tả cảm tính.
+    * Bước 4: Tự kiểm tra lại, gửi bảng phát hiện trước, CHỈ viết biên bản khi được yêu cầu.
   + Tuân thủ quy chuẩn tại `TROLYTHIEN/4_DUYET_DE/HUONG_DAN_DUYET_DE.md` và `TROLYTHIEN/4_DUYET_DE/PROMPT_DUYET_DE.md`.
 - **8/ Tạo báo cáo:**
   + File đầu vào (Văn bản căn cứ, số liệu, văn bản mẫu): đặt tại `TROLYTHIEN/8_TAO_BAO_CAO/Dau_vao/`

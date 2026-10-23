@@ -89,6 +89,49 @@ Trước khi bắt đầu, xác định rõ 6 thông số từ hồ sơ:
 ```
 
 
+
+## 4.5. [!IMPORTANT]
+### YÊU CẦU KIỂM CHỨNG BẮT BUỘC TRƯỚC KHI TRẢ KẾT QUẢ (CHỐNG NHẬN ĐỊNH ẢO CỦA AI):
+1. **Chỉ dùng hồ sơ gốc làm bằng chứng:** Mọi nhận xét của Gemini, ChatGPT, đồng nghiệp hoặc các biên bản trước đều bắt buộc phải được kiểm tra lại trực tiếp từ file gốc. Tuyệt đối không tin tưởng mù quáng vào kết luận của AI khác.
+2. **Chuỗi 4 thành tố bằng chứng:** Mỗi lỗi phải dẫn đúng: **Tên tệp → Câu/mục → Nội dung gốc → Kết quả kiểm tra**. Nếu không đủ bằng chứng văn bản cụ thể thì ghi 'chưa xác định', tuyệt đối không đưa vào danh sách bắt buộc sửa.
+3. **Minh bạch phép toán thành phần:** Với mọi số liệu tổng hợp, bắt buộc liệt kê đầy đủ thành phần và phép cộng kiểm chứng (ví dụ: điểm Vận dụng gồm câu nào, mỗi câu bao nhiêu điểm; không chỉ đưa ra con số tổng).
+4. **Đối chiếu vòng đời chỉnh sửa:** Khi nhận bản điều chỉnh, lập bảng: `Nhận xét lần trước → Bằng chứng gốc → Đúng hay sai → Bản mới đã xử lý chưa`. Không coi việc người dùng nói 'đã sửa' là bằng chứng đã sửa.
+5. **Kiểm toán kép tệp đầu ra:** Trước khi báo hoàn thành, mở lại chính file đầu ra (.docx, .md) và kiểm tra từng mục trong bảng. Nếu còn nhận xét sai, thông tin tự thêm hoặc số liệu chưa thống nhất thì tiếp tục sửa.
+6. **Tách bảng kiểm chứng khỏi biên bản:** Chỉ viết biên bản sau khi hoàn thành bảng kiểm chứng. Tách rõ: **Lỗi xác định được**, **Điểm cần xác minh** và **Gợi ý cải thiện**; phần kết luận chỉ yêu cầu sửa các lỗi đã xác định có bằng chứng.
+7. **Cấm khẳng định cảm tính:** Tuyệt đối không được tuyên bố 'chính xác 100%', 'khớp tuyệt đối' hoặc 'đã kiểm tra đầy đủ' nếu chưa có bằng chứng kiểm toán tương ứng.
+
+**BẢN VÁ HỆ THỐNG — THẨM ĐỊNH TỪNG LƯỢT, RENDER TRANG GỐC & KỶ LUẬT SƯ PHẠM:**
+1. **Quy trình thẩm định từng lượt (Turn-by-turn Audit):**
+   - **Bước 1 — Xác nhận đọc được hồ sơ & Render trực quan trang in (Visual Rendering Audit):**
+     + Liệt kê các tệp đã đọc. Với công thức, hình vẽ hoặc bảng không đọc rõ, chỉ rõ vị trí; không suy đoán nội dung.
+     + **BẮT BUỘC RENDER TRANG GỐC:** Tuyệt đối không chỉ đọc XML/text thô (`<w:t>`). Các hỗn số (như $-1\frac{1}{3}$ bị đọc nhầm thành phân số $-\frac{1}{13}$ do mã nhị phân MTEF), các ký hiệu toán/hình học ($\Delta$, dấu mũ góc) hoặc hình vẽ được chèn dạng ảnh nhỏ/shape nội dòng (inline) sẽ bị biến mất khi trích xuất text thô. Phải render trang gốc sang PDF/ảnh để nhìn thấy chính xác 100% trang in trước khi kết luận.
+   - **Bước 2 — Kiểm tra độc lập:**
+     + Tự giải từng câu trước khi đối chiếu đáp án.
+     + Tự cộng điểm từng chủ đề (Mạch Số & Đại số, Hình học) và từng mức độ nhận thức; trình bày phép cộng cụ thể để kiểm chứng.
+     + Đối chiếu đề, đáp án, ma trận và bản đặc tả theo từng câu.
+     + Kiểm tra riêng đề chính thức, đề dự phòng và đề học sinh hòa nhập.
+     + Phân biệt điểm cho từng bước với điểm cộng dồn hoặc điểm của các mức hoàn thành (Rubric Mức 1 / Mức 2); tuyệt đối không cộng dồn tất cả con số xuất hiện trong hướng dẫn chấm.
+   - **Bước 3 — Lập bảng phát hiện (5 trường chuẩn):**
+     + Cấu trúc mỗi nhận xét: `Tên tệp → Câu hoặc mục → Nội dung gốc → Kết quả kiểm tra → Đề nghị xử lý`.
+     + Phân loại rõ ràng thành 3 nhóm:
+       * **Lỗi xác định được:** có bằng chứng văn bản cụ thể.
+       * **Điểm cần xác minh:** chưa đủ thông tin để kết luận.
+       * **Gợi ý cải thiện:** mang tính đề xuất sư phạm, không phải lỗi bắt buộc sửa.
+     + **Các nguyên tắc kỷ luật thực chiến:**
+       * Trước khi kết luận "thiếu", phải kiểm tra toàn bộ bảng, trang kế tiếp, ảnh inline và phần liên quan.
+       * Khi hai tài liệu lệch nhau (như Ma trận và HDC lệch điểm): Chỉ rõ sự lệch và đề nghị tổ chuyên môn thống nhất; **tuyệt đối không tự quyết định tài liệu nào bắt buộc phải sửa theo tài liệu nào**.
+       * Đề dự phòng trùng số liệu với đề chính: Xếp vào nhóm **Khuyến nghị / Gợi ý cải thiện** (không phải lỗi bắt buộc sửa khi chưa có văn bản quy định).
+       * Lỗi chính tả: Nêu rõ từ ngữ cần sửa (ví dụ: sửa "thịch" thành "thịt"), không đếm số lần xuất hiện cảm tính.
+       * Đề tự luận 100% có thể để trống cột TNKQ trong mẫu ma trận; không coi đó là lỗi.
+       * Bản đặc tả có yêu cầu cần đạt không gắn câu hỏi chưa đủ để kết luận phải xóa; cần xem mẫu và hướng dẫn đang áp dụng.
+       * Không mặc định một cơ cấu điểm là quy định chung nếu chưa có văn bản làm căn cứ.
+       * Không tự thêm tên người ký, hạn nộp, tình trạng "đã duyệt" hoặc thông tin không có trong hồ sơ.
+       * Với học sinh hòa nhập, nếu chưa có Kế hoạch giáo dục cá nhân (KHGDCN) thì chỉ nêu nội dung cần đối chiếu, không khẳng định chắc chắn đề vừa sức hay quá khó.
+       * Không bắt buộc đổi công cụ soạn công thức nếu công thức hiện tại hiển thị và in rõ.
+   - **Bước 4 — Tự kiểm tra lại & Tách biệt Biên bản:**
+     + Kiểm chứng lại từng phát hiện bằng file gốc, loại bỏ nhận xét không đủ bằng chứng.
+     + Gửi bảng phát hiện để Tổ trưởng duyệt trước; CHỈ viết biên bản chính thức khi được yêu cầu.
+
 ## 5. BẢN VÁ HỆ THỐNG: TIÊU CHUẨN XUẤT ĐỀ KIỂM TRA & ĐỀ SONG SINH WORD (.DOCX)
 - Khi Thầy yêu cầu tạo đề mới hoặc bộ đề song sinh:
   + Bắt buộc 100% công thức toán học phải là **Microsoft Word Equation (OMML `m:oMath`)** qua `TROLYTHIEN.engine.word_math_helper` (`latex_to_omml` / `add_math_paragraph`).
