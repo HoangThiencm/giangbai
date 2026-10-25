@@ -34,6 +34,10 @@ TROLYTHIEN/**/Ket_qua/**/*
 !TROLYTHIEN/**/Ket_qua/*.md
 !TROLYTHIEN/**/Ket_qua/*/*.md
 !TROLYTHIEN/**/Ket_qua/*/*/*.md
+!TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/*/
+!TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/*.docx
+!TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/*/*.docx
+!TROLYTHIEN/4_DUYET_DE/Ket_qua/*/*.docx
 !TROLYTHIEN/*.md
 !TROLYTHIEN/*/*.md
 !TROLYTHIEN/**/*.js
