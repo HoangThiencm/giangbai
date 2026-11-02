@@ -9,6 +9,7 @@ Tính năng đặc biệt: Tự động in chữ MÀU ĐỎ cho mọi nội dung
 """
 
 import os
+import sys
 import re
 from pathlib import Path
 import docx
@@ -17,6 +18,15 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
 from docx.oxml import parse_xml, OxmlElement
 from docx.oxml.ns import nsdecls, qn
+
+sys.path.append(os.path.dirname(__file__))
+try:
+    from de_cuong_docx_helper import latex_to_omml
+except ImportError:
+    try:
+        from word_math_helper import latex_to_omml
+    except ImportError:
+        latex_to_omml = None
 
 COLOR_BLACK = RGBColor(0, 0, 0)
 COLOR_RED = RGBColor(220, 20, 20)  # Đỏ nổi bật chuẩn văn bản
@@ -209,15 +219,28 @@ def add_run_parsed(paragraph, text, default_size=14, default_bold=False, default
                 run_italic = True
                 run_text = tok[1:-1]
                 
-            run = paragraph.add_run(run_text)
-            run.font.name = 'Times New Roman'
-            run.font.size = Pt(default_size)
-            run.bold = run_bold
-            run.italic = run_italic
-            if is_red_chunk:
-                run.font.color.rgb = COLOR_RED
-            else:
-                run.font.color.rgb = COLOR_BLACK
+            # Phân tách công thức Toán $...$ để chuyển sang Word Equation OMML
+            math_pattern = r'(\$[^$]+\$)'
+            math_segments = re.split(math_pattern, run_text)
+            for seg in math_segments:
+                if not seg:
+                    continue
+                if seg.startswith('$') and seg.endswith('$') and len(seg) >= 2 and latex_to_omml:
+                    try:
+                        omml = latex_to_omml(seg[1:-1])
+                        paragraph._p.append(omml)
+                        continue
+                    except Exception:
+                        pass
+                run = paragraph.add_run(seg)
+                run.font.name = 'Times New Roman'
+                run.font.size = Pt(default_size)
+                run.bold = run_bold
+                run.italic = run_italic
+                if is_red_chunk:
+                    run.font.color.rgb = COLOR_RED
+                else:
+                    run.font.color.rgb = COLOR_BLACK
 
 
 def add_paragraph_styled(doc, text, bold_prefix="", indent=True, align=WD_ALIGN_PARAGRAPH.JUSTIFY, space_before=2, space_after=2, line_spacing=1.2, force_red=False, size=14):
@@ -1226,8 +1249,8 @@ def tao_bien_ban_hop_to_lan_1_thang_9(out_docx_path, out_md_path=None):
     add_paragraph_styled(doc, "  + *Đấu trường VioEdu môn Toán:* Phân công giáo viên phụ trách hướng dẫn học sinh đăng nhập và luyện tập: Khối 6 (Cô Thảo), Khối 7 (Thầy Ánh), Khối 8 (Cô Bình), Khối 9 (Thầy Sáng).", indent=True)
     add_paragraph_styled(doc, "  + *Cuộc thi IOE Tiếng Anh:* Phối hợp tổ Ngoại ngữ đôn đốc học sinh tham gia tự luyện các vòng điều kiện.", indent=True)
     add_paragraph_styled(doc, "- **Góp ý SGK Toán – Tin theo GDPT 2018 (Khó khăn & Biện pháp khắc phục):**", indent=True)
-    add_paragraph_styled(doc, "  + *SGK Toán 8 (Bài 10: Tứ giác lồi & tổng các góc bằng 360°):* Khó khăn học sinh khó hình dung khái niệm hai đỉnh cùng phía đối với đường thẳng chứa cạnh còn lại; dễ nhầm lẫn các góc nhỏ bị chia cắt bởi đường chéo. Biện pháp: Cho học sinh dùng phần mềm GeoGebra kéo thả đỉnh tứ giác, đánh số góc 1, 2 trước khi cộng góc.", indent=True)
-    add_paragraph_styled(doc, "  + *SGK Toán 9 (Bài 11, 12: Tỉ số lượng giác & Hệ thức cạnh – góc trong tam giác vuông):* Khó khăn học sinh nhầm lẫn cạnh đối/kề, khó mô hình hóa bài toán thực tế. Biện pháp: Dùng câu vè quen thuộc \"Sao Đi Học, Cứ Khóc Hoài, Thôi Đi Tắm, Cùng Đi Tắm\", áp dụng phương pháp \"Xác định góc nhìn\" và tăng cường vẽ sơ đồ tam giác vuông từ tình huống thực tế (chiều cao cây, tòa nhà, bóng nắng).", indent=True)
+    add_paragraph_styled(doc, "  + *SGK Toán 8 – Bộ Cánh Diều (Chương III - Bài 1: Tứ giác):* Khó khăn thực tế học sinh khó hình dung định nghĩa tứ giác lồi, các đỉnh kề nhau, đỉnh đối nhau, đường chéo, và vận dụng định lý tổng các góc của một tứ giác bằng $360^\\circ$ để tính số đo góc chưa biết. Hướng khắc phục: Tổ chức cho học sinh hoạt động trải nghiệm cắt dán 4 góc của một tứ giác bất kỳ bằng giấy màu ghép thành góc $360^\\circ$ (hình tròn); kết hợp ứng dụng phần mềm GeoGebra trực quan hóa việc kéo thả các đỉnh để học sinh nhận diện trực quan tứ giác lồi và tính bất biến của tổng các góc trong một tứ giác.", indent=True)
+    add_paragraph_styled(doc, "  + *SGK Toán 9 – Bộ Cánh Diều (Chương IV - Bài 1: Tỉ số lượng giác của góc nhọn & Bài 2: Một số hệ thức về cạnh và góc trong tam giác vuông):* Khó khăn học sinh hay nhầm lẫn giữa các tỉ số $\\sin, \\cos, \\tan, \\cot$; xác định sai cạnh đối, cạnh kề tương ứng với góc nhọn đang xét; thao tác bấm máy tính cầm tay bị nhầm lẫn giữa đơn vị Độ (DEG) và Radian (RAD). Hướng khắc phục: Rèn luyện kỹ năng vẽ hình chuẩn xác, xác định rõ góc nhọn đang xét trước khi lập tỉ số; chuẩn hóa quy trình cài đặt máy tính Casio fx-580VN X luôn ở chế độ độ (hiển thị chữ D trên màn hình); sử dụng sơ đồ tư duy khắc sâu các hệ thức cạnh và góc trong tam giác vuông.", indent=True)
     
     add_section_h2(doc, "4. Ngoại khóa và các hoạt động khác:")
     add_paragraph_styled(doc, "- Thực hiện hoạt động ngoài giờ lên lớp theo chủ điểm \"Truyền thống nhà trường\"; tham gia tổ chức Tết Trung thu cho học sinh toàn trường.", indent=True)
@@ -1403,8 +1426,8 @@ Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt các văn 
   + *Đấu trường VioEdu môn Toán:* Phân công giáo viên phụ trách hướng dẫn học sinh đăng nhập và luyện tập: Khối 6 (Cô Thảo), Khối 7 (Thầy Ánh), Khối 8 (Cô Bình), Khối 9 (Thầy Sáng).
   + *Cuộc thi IOE Tiếng Anh:* Phối hợp tổ Ngoại ngữ đôn đốc học sinh tham gia tự luyện các vòng điều kiện.
 - **Góp ý SGK Toán – Tin theo GDPT 2018 (Khó khăn & Biện pháp khắc phục):**
-  + *SGK Toán 8 (Bài 10: Tứ giác lồi & tổng các góc bằng 360°):* Khó khăn học sinh khó hình dung khái niệm hai đỉnh cùng phía đối với đường thẳng chứa cạnh còn lại; dễ nhầm lẫn các góc nhỏ bị chia cắt bởi đường chéo. Biện pháp: Cho học sinh dùng phần mềm GeoGebra kéo thả đỉnh tứ giác, đánh số góc 1, 2 trước khi cộng góc.
-  + *SGK Toán 9 (Bài 11, 12: Tỉ số lượng giác & Hệ thức cạnh – góc trong tam giác vuông):* Khó khăn học sinh nhầm lẫn cạnh đối/kề, khó mô hình hóa bài toán thực tế. Biện pháp: Dùng câu vè quen thuộc "Sao Đi Học, Cứ Khóc Hoài, Thôi Đi Tắm, Cùng Đi Tắm", áp dụng phương pháp "Xác định góc nhìn" và tăng cường vẽ sơ đồ tam giác vuông từ tình huống thực tế (chiều cao cây, tòa nhà, bóng nắng).
+  + *SGK Toán 8 – Bộ Cánh Diều (Chương III - Bài 1: Tứ giác):* Khó khăn thực tế học sinh khó hình dung định nghĩa tứ giác lồi, các đỉnh kề nhau, đỉnh đối nhau, đường chéo, và vận dụng định lý tổng các góc của một tứ giác bằng $360^\circ$ để tính số đo góc chưa biết. Hướng khắc phục: Tổ chức cho học sinh hoạt động trải nghiệm cắt dán 4 góc của một tứ giác bất kỳ bằng giấy màu ghép thành góc $360^\circ$ (hình tròn); kết hợp ứng dụng phần mềm GeoGebra trực quan hóa việc kéo thả các đỉnh để học sinh nhận diện trực quan tứ giác lồi và tính bất biến của tổng các góc trong một tứ giác.
+  + *SGK Toán 9 – Bộ Cánh Diều (Chương IV - Bài 1: Tỉ số lượng giác của góc nhọn & Bài 2: Một số hệ thức về cạnh và góc trong tam giác vuông):* Khó khăn học sinh hay nhầm lẫn giữa các tỉ số $\sin, \cos, \tan, \cot$; xác định sai cạnh đối, cạnh kề tương ứng với góc nhọn đang xét; thao tác bấm máy tính cầm tay bị nhầm lẫn giữa đơn vị Độ (DEG) và Radian (RAD). Hướng khắc phục: Rèn luyện kỹ năng vẽ hình chuẩn xác, xác định rõ góc nhọn đang xét trước khi lập tỉ số; chuẩn hóa quy trình cài đặt máy tính Casio fx-580VN X luôn ở chế độ độ (hiển thị chữ D trên màn hình); sử dụng sơ đồ tư duy khắc sâu các hệ thức cạnh và góc trong tam giác vuông.
 
 ### **4. Ngoại khóa và các hoạt động khác:**
 - Thực hiện hoạt động ngoài giờ lên lớp theo chủ điểm "Truyền thống nhà trường"; tham gia tổ chức Tết Trung thu cho học sinh toàn trường.
@@ -1502,7 +1525,7 @@ def tao_bien_ban_hop_to_lan_2_thang_9(out_docx_path, out_md_path=None):
     add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Giáo viên bộ môn Toán và Tin học làm gương, tuyệt đối không sử dụng điện thoại làm việc riêng trong giờ lên lớp. Phân định rõ ràng: Trong giờ học lý thuyết Toán và Tin học, học sinh tuyệt đối không dùng điện thoại; chỉ khi có yêu cầu nghiệp vụ bài dạy rõ ràng (tra cứu phần mềm GeoGebra, làm bài kiểm tra trực tuyến OLM/VioEdu tại phòng máy hoặc theo nhóm có kiểm soát) thì giáo viên mới cho phép mở thiết bị. Giáo viên chủ nhiệm phối hợp chặt chẽ với cha mẹ học sinh để thống nhất quản lý, phòng ngừa bắt nạt mạng và xao nhãng học tập.", indent=True)
     
     # 2. Kế hoạch 5264
-    add_paragraph_styled(doc, "**2. Kế hoạch thực hiện nhiệm vụ ứng dụng công nghệ thông tin, chuyển đổi số và thống kê giáo dục năm học 2026 – 2027 (Kế hoạch số 5264/KH-SGDĐT ngày 22/9/2026 của Sở GDĐT thành phố Đồng Nai):**", indent=True)
+    add_paragraph_styled(doc, "**2. Kế hoạch thực hiện nhiệm vụ ứng dụng công nghệ thông tin, chuyển đổi số và thống kê giáo dục năm học 2026 – 2027 (Kế hoạch số 5264/KH-SGDĐT ngày 12/9/2026 của Sở GDĐT thành phố Đồng Nai):**", indent=True)
     add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Bám sát Công văn 6020/BGDĐT-KHCNTT của Bộ GD&ĐT, Nghị quyết 57-NQ/TW của Bộ Chính trị, Luật Chuyển đổi số số 148/2025/QH15, Luật Dữ liệu số 60/2024/QH15, Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 và Luật Trí tuệ nhân tạo số 134/2025/QH15. Chỉ đạo xuyên suốt theo tinh thần **“6 rõ”** (*rõ người, rõ việc, rõ thời gian, rõ trách nhiệm, rõ sản phẩm, rõ thẩm quyền*). Dữ liệu giáo dục phải bảo đảm *“đúng, đủ, sạch, sống, thống nhất, dùng chung”*; thực hiện nghiêm nguyên tắc *“dữ liệu cập nhật một lần, sử dụng nhiều lần”*, cắt giảm thủ tục hành chính. Đẩy mạnh phong trào *“Bình dân học vụ số”* và hưởng ứng Ngày Chuyển đổi số Quốc gia (10/10). Định hướng rõ việc thúc đẩy ứng dụng Trí tuệ nhân tạo (AI) an toàn, có kiểm soát và có trách nhiệm: Khuyến khích ứng dụng AI hỗ trợ soạn bài, xây dựng học liệu, thiết kế đề kiểm tra; tuy nhiên *kết quả do AI tạo ra phải được giáo viên kiểm chứng về tính chính xác và phù hợp sư phạm; AI tuyệt đối không thay thế trách nhiệm chuyên môn và quyền ra quyết định của nhà giáo*.", indent=True)
     add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ Toán - Tin là đơn vị nòng cốt triển khai chuyển đổi số trong nhà trường; 100% giáo viên hoàn thành phê duyệt Kế hoạch bài dạy (KHBD) trên hệ thống số CSDL ngành đúng thời hạn; đảm bảo an toàn dữ liệu học bạ số và thông tin cá nhân học sinh; giáo viên Tin học chủ động tham mưu nâng cấp đường truyền và bảo đảm an ninh mạng cho hệ thống phòng máy.", indent=True)
     
@@ -1566,12 +1589,12 @@ def tao_bien_ban_hop_to_lan_2_thang_9(out_docx_path, out_md_path=None):
     add_paragraph_styled(doc, "- Phân công nhiệm vụ cụ thể hướng dẫn học sinh tham gia các vòng thi VioEdu đạt hiệu quả: Cô Nguyễn Thị Thảo (Khối 6), Thầy Hoàng Xuân Ánh (Khối 7), Cô Lê Thị Bình (Khối 8), Thầy Trần Sáng (Khối 9), Thầy Dương Quang Tùng (Phòng máy & đường truyền).", indent=True)
     add_paragraph_styled(doc, "- Thầy Trần Sáng tiếp tục hoàn thành bài dự thi về Chuyên môn, nghiệp vụ giáo dục phòng, chống ma túy đạt chất lượng cao.", indent=True)
     add_paragraph_styled(doc, "- **Tập trung góp ý chuyên sâu chương trình Sách giáo khoa GDPT 2018 môn Toán - Tin, nhận diện các khó khăn sư phạm và thống nhất hướng khắc phục:**", indent=True)
-    add_paragraph_styled(doc, "  + *Đối với sách giáo khoa Toán lớp 8 (Bài 12: Hình thang cân):*", indent=True)
-    add_paragraph_styled(doc, "    • Khó khăn thực tế: Học sinh rất dễ ngụy biện và mặc định sai lầm rằng “Hình thang có 2 cạnh bên bằng nhau là hình thang cân” (trong khi nếu 2 cạnh bên bằng nhau và song song thì đó lại là hình bình hành). Việc chứng minh Định lý 3 (Ví dụ 2 trang 54) đòi hỏi kẻ thêm đường phụ khá phức tạp so với trình độ đầu năm lớp 8.", indent=True)
-    add_paragraph_styled(doc, "    • Hướng khắc phục: Khai thác triệt để phần “Tranh luận” (trang 59) và “Luyện tập chung” (trang 56) để cho học sinh vẽ cả 2 trường hợp (hai cạnh bên không song song -> hình thang cân; hai cạnh bên song song -> hình bình hành). Chuẩn hóa quy trình kẻ đường song song phụ qua một đỉnh để đưa bài toán về tam giác cân quen thuộc.", indent=True)
-    add_paragraph_styled(doc, "  + *Đối với sách giáo khoa Toán lớp 6 (Bài 18 và Bài 19 về các hình phẳng trong thực tiễn):*", indent=True)
-    add_paragraph_styled(doc, "    • Khó khăn thực tế: Học sinh gặp khó khăn lớn khi sử dụng compa và êke để vẽ các hình đòi hỏi kỹ thuật cao như hình lục giác đều hay hình thoi. Bên cạnh đó, học sinh rất dễ nhầm lẫn thuộc tính đường chéo giữa các hình (ví dụ: nhầm đường chéo bằng nhau của hình chữ nhật/hình thang cân với đường chéo vuông góc của hình thoi/hình vuông).", indent=True)
-    add_paragraph_styled(doc, "    • Hướng khắc phục: Xây dựng Quy trình vẽ hình từng bước: Chuẩn bị phiếu học tập có hình ảnh minh họa rõ ràng các bước đặt thước, quay compa để vẽ hình thoi và hình lục giác đều. Cho học sinh lập Bảng so sánh các yếu tố Cạnh - Góc - Đường chéo của 7 hình phẳng đã học để rèn luyện tư duy phân loại thị giác.", indent=True)
+    add_paragraph_styled(doc, "  + *Đối với sách giáo khoa Toán lớp 8 – Bộ Cánh Diều (Chương III - Bài 2: Hình thang cân):*", indent=True)
+    add_paragraph_styled(doc, "    • Khó khăn thực tế: Học sinh rất dễ mắc ngụy biện rằng “Hình thang có 2 cạnh bên bằng nhau là hình thang cân” (trong khi hình bình hành là hình thang có 2 cạnh bên bằng nhau nhưng không phải là hình thang cân). Việc chứng minh dấu hiệu nhận biết “Hình thang có hai đường chéo bằng nhau là hình thang cân” đòi hỏi kẻ thêm đường thẳng phụ qua một đỉnh song song với một đường chéo để tạo tam giác cân, học sinh đầu năm lớp 8 còn khá lúng túng khi vẽ đường phụ.", indent=True)
+    add_paragraph_styled(doc, "    • Hướng khắc phục: Khai thác Hoạt động khám phá và phần Luyện tập trong Bài 2 SGK Cánh Diều; cho học sinh vẽ phản ví dụ bằng hình bình hành để khắc sâu bản chất: hai cạnh bên bằng nhau phải kèm điều kiện không song song hoặc hai góc kề một đáy bằng nhau / hai đường chéo bằng nhau. Chuẩn hóa quy trình kẻ đường phụ song song để quy bài toán về tam giác cân quen thuộc.", indent=True)
+    add_paragraph_styled(doc, "  + *Đối với sách giáo khoa Toán lớp 6 – Bộ Cánh Diều (Chương 3 - Hình học trực quan: Các hình phẳng trong thực tiễn):*", indent=True)
+    add_paragraph_styled(doc, "    • Khó khăn thực tế: Học sinh lớp 6 mới làm quen với compa, thước thẳng và êke nên thao tác vẽ hình lục giác đều, hình thoi còn lúng túng, chưa chuẩn xác về độ dài cạnh và số đo góc. Bên cạnh đó, học sinh rất dễ nhầm lẫn thuộc tính đường chéo giữa các hình phẳng (ví dụ: nhầm đường chéo bằng nhau của hình thang cân/hình chữ nhật với đường chéo vuông góc của hình thoi/hình vuông).", indent=True)
+    add_paragraph_styled(doc, "    • Hướng khắc phục: Xây dựng quy trình vẽ hình từng bước bằng phiếu hướng dẫn thực hành trực quan; cho học sinh lập Bảng so sánh các yếu tố Cạnh - Góc - Đường chéo của các hình phẳng trong Chương 3 để rèn luyện tư duy phân loại và nhận biết hình học.", indent=True)
     add_paragraph_styled(doc, "- Hoàn thành toàn bộ hồ sơ tổ chuyên môn theo kế hoạch năm học của nhà trường.", indent=True)
     
     add_section_h2(doc, "4. Công tác chuyên đề và nghiên cứu bài học:")
@@ -1698,7 +1721,7 @@ Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt sâu sắc
 - **Ý chính cốt lõi:** Căn cứ Thông tư 15/2026/TT-BGDĐT và Công văn 3147/BGDĐT-HSSV của Bộ GD&ĐT. Nhằm giảm thiểu sự phụ thuộc quá mức vào thiết bị công nghệ, tạo không gian học tập tập trung, cải thiện khả năng tư duy độc lập và bảo vệ sức khỏe học đường (thị lực, cột sống, sức khỏe tâm thần) cho học sinh. Học sinh phấn đấu thực hiện bốn tiêu chuẩn “Tự”: *Tự giác* (tắt thiết bị hoặc để chế độ im lặng và cất vào nơi quy định ngay khi bước vào trường/lớp); *Tự quản* (thành lập tổ tự quản nhắc nhở nhau); *Tự rèn* (làm chủ hành vi, không để bị cuốn vào mạng xã hội); *Tự chủ* (sử dụng công nghệ đúng lúc, đúng chỗ phục vụ học tập). Triển khai đồng bộ 03 mô hình vận dụng linh hoạt: (1) Mô hình *“Hộp lưu trữ niềm tin”* (bố trí tủ/khay/túi chuyên dụng tại lớp, học sinh cất thiết bị đầu buổi và nhận lại sau buổi học); (2) Mô hình *“Giờ ra chơi không màn hình”* (tổ chức cờ vua, trò chơi dân gian, góc đọc sách xanh); (3) Mô hình *“Tích hợp giáo dục kỹ năng số”* (hướng dẫn lọc thông tin, bảo mật cá nhân, ứng xử văn minh trên không gian mạng).
 - **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Giáo viên bộ môn Toán và Tin học làm gương, tuyệt đối không sử dụng điện thoại làm việc riêng trong giờ lên lớp. Phân định rõ ràng: Trong giờ học lý thuyết Toán và Tin học, học sinh tuyệt đối không dùng điện thoại; chỉ khi có yêu cầu nghiệp vụ bài dạy rõ ràng (tra cứu phần mềm GeoGebra, làm bài kiểm tra trực tuyến OLM/VioEdu tại phòng máy hoặc theo nhóm có kiểm soát) thì giáo viên mới cho phép mở thiết bị. Giáo viên chủ nhiệm phối hợp chặt chẽ với cha mẹ học sinh để thống nhất quản lý, phòng ngừa bắt nạt mạng và xao nhãng học tập.
 
-**2. Kế hoạch thực hiện nhiệm vụ ứng dụng công nghệ thông tin, chuyển đổi số và thống kê giáo dục năm học 2026 – 2027 (Kế hoạch số 5264/KH-SGDĐT ngày 22/9/2026 của Sở GDĐT thành phố Đồng Nai):**
+**2. Kế hoạch thực hiện nhiệm vụ ứng dụng công nghệ thông tin, chuyển đổi số và thống kê giáo dục năm học 2026 – 2027 (Kế hoạch số 5264/KH-SGDĐT ngày 12/9/2026 của Sở GDĐT thành phố Đồng Nai):**
 - **Ý chính cốt lõi:** Bám sát Công văn 6020/BGDĐT-KHCNTT của Bộ GD&ĐT, Nghị quyết 57-NQ/TW của Bộ Chính trị, Luật Chuyển đổi số số 148/2025/QH15, Luật Dữ liệu số 60/2024/QH15, Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 và Luật Trí tuệ nhân tạo số 134/2025/QH15. Chỉ đạo xuyên suốt theo tinh thần **“6 rõ”** (*rõ người, rõ việc, rõ thời gian, rõ trách nhiệm, rõ sản phẩm, rõ thẩm quyền*). Dữ liệu giáo dục phải bảo đảm *“đúng, đủ, sạch, sống, thống nhất, dùng chung”*; thực hiện nghiêm nguyên tắc *“dữ liệu cập nhật một lần, sử dụng nhiều lần”*, cắt giảm thủ tục hành chính. Đẩy mạnh phong trào *“Bình dân học vụ số”* và hưởng ứng Ngày Chuyển đổi số Quốc gia (10/10). Định hướng rõ việc thúc đẩy ứng dụng Trí tuệ nhân tạo (AI) an toàn, có kiểm soát và có trách nhiệm: Khuyến khích ứng dụng AI hỗ trợ soạn bài, xây dựng học liệu, thiết kế đề kiểm tra; tuy nhiên *kết quả do AI tạo ra phải được giáo viên kiểm chứng về tính chính xác và phù hợp sư phạm; AI tuyệt đối không thay thế trách nhiệm chuyên môn và quyền ra quyết định của nhà giáo*.
 - **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ Toán - Tin là đơn vị nòng cốt triển khai chuyển đổi số trong nhà trường; 100% giáo viên hoàn thành phê duyệt Kế hoạch bài dạy (KHBD) trên hệ thống số CSDL ngành đúng thời hạn; đảm bảo an toàn dữ liệu học bạ số và thông tin cá nhân học sinh; giáo viên Tin học chủ động tham mưu nâng cấp đường truyền và bảo đảm an ninh mạng cho hệ thống phòng máy.
 
@@ -1757,12 +1780,12 @@ Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt sâu sắc
 - Phân công nhiệm vụ cụ thể hướng dẫn học sinh tham gia các vòng thi VioEdu đạt hiệu quả: Cô Nguyễn Thị Thảo (Khối 6), Thầy Hoàng Xuân Ánh (Khối 7), Cô Lê Thị Bình (Khối 8), Thầy Trần Sáng (Khối 9), Thầy Dương Quang Tùng (Phòng máy & đường truyền).
 - Thầy Trần Sáng tiếp tục hoàn thành bài dự thi về Chuyên môn, nghiệp vụ giáo dục phòng, chống ma túy đạt chất lượng cao.
 - **Tập trung góp ý chuyên sâu chương trình Sách giáo khoa GDPT 2018 môn Toán - Tin, nhận diện các khó khăn sư phạm và thống nhất hướng khắc phục:**
-  - *Đối với sách giáo khoa Toán lớp 8 (Bài 12: Hình thang cân):*
-    - **Khó khăn thực tế:** Học sinh rất dễ ngụy biện và mặc định sai lầm rằng “Hình thang có 2 cạnh bên bằng nhau là hình thang cân” (trong khi nếu 2 cạnh bên bằng nhau và song song thì đó lại là hình bình hành). Việc chứng minh Định lý 3 (Ví dụ 2 trang 54) đòi hỏi kẻ thêm đường phụ khá phức tạp so với trình độ đầu năm lớp 8.
-    - **Hướng khắc phục:** Khai thác triệt để phần “Tranh luận” (trang 59) và “Luyện tập chung” (trang 56) để cho học sinh vẽ cả 2 trường hợp (hai cạnh bên không song song -> hình thang cân; hai cạnh bên song song -> hình bình hành). Chuẩn hóa quy trình kẻ đường song song phụ qua một đỉnh để đưa bài toán về tam giác cân quen thuộc.
-  - *Đối với sách giáo khoa Toán lớp 6 (Bài 18 và Bài 19 về các hình phẳng trong thực tiễn):*
-    - **Khó khăn thực tế:** Học sinh gặp khó khăn lớn khi sử dụng compa và êke để vẽ các hình đòi hỏi kỹ thuật cao như hình lục giác đều hay hình thoi. Bên cạnh đó, học sinh rất dễ nhầm lẫn thuộc tính đường chéo giữa các hình (ví dụ: nhầm đường chéo bằng nhau của hình chữ nhật/hình thang cân với đường chéo vuông góc của hình thoi/hình vuông).
-    - **Hướng khắc phục:** Xây dựng Quy trình vẽ hình từng bước: Chuẩn bị phiếu học tập có hình ảnh minh họa rõ ràng các bước đặt thước, quay compa để vẽ hình thoi và hình lục giác đều. Cho học sinh lập Bảng so sánh các yếu tố Cạnh - Góc - Đường chéo của 7 hình phẳng đã học để rèn luyện tư duy phân loại thị giác.
+  - *Đối với sách giáo khoa Toán lớp 8 – Bộ Cánh Diều (Chương III - Bài 2: Hình thang cân):*
+    - **Khó khăn thực tế:** Học sinh rất dễ mắc ngụy biện rằng “Hình thang có 2 cạnh bên bằng nhau là hình thang cân” (trong khi hình bình hành là hình thang có 2 cạnh bên bằng nhau nhưng không phải là hình thang cân). Việc chứng minh dấu hiệu nhận biết “Hình thang có hai đường chéo bằng nhau là hình thang cân” đòi hỏi kẻ thêm đường thẳng phụ qua một đỉnh song song với một đường chéo để tạo tam giác cân, học sinh đầu năm lớp 8 còn khá lúng túng khi vẽ đường phụ.
+    - **Hướng khắc phục:** Khai thác Hoạt động khám phá và phần Luyện tập trong Bài 2 SGK Cánh Diều; cho học sinh vẽ phản ví dụ bằng hình bình hành để khắc sâu bản chất: hai cạnh bên bằng nhau phải kèm điều kiện không song song hoặc hai góc kề một đáy bằng nhau / hai đường chéo bằng nhau. Chuẩn hóa quy trình kẻ đường phụ song song để quy bài toán về tam giác cân quen thuộc.
+  - *Đối với sách giáo khoa Toán lớp 6 – Bộ Cánh Diều (Chương 3 - Hình học trực quan: Các hình phẳng trong thực tiễn):*
+    - **Khó khăn thực tế:** Học sinh lớp 6 mới làm quen với compa, thước thẳng và êke nên thao tác vẽ hình lục giác đều, hình thoi còn lúng túng, chưa chuẩn xác về độ dài cạnh và số đo góc. Bên cạnh đó, học sinh rất dễ nhầm lẫn thuộc tính đường chéo giữa các hình phẳng (ví dụ: nhầm đường chéo bằng nhau của hình thang cân/hình chữ nhật với đường chéo vuông góc của hình thoi/hình vuông).
+    - **Hướng khắc phục:** Xây dựng quy trình vẽ hình từng bước bằng phiếu hướng dẫn thực hành trực quan; cho học sinh lập Bảng so sánh các yếu tố Cạnh - Góc - Đường chéo của các hình phẳng trong Chương 3 để rèn luyện tư duy phân loại và nhận biết hình học.
 - Hoàn thành toàn bộ hồ sơ tổ chuyên môn theo kế hoạch năm học của nhà trường.
 
 ### **4. Công tác chuyên đề và nghiên cứu bài học:**
@@ -1929,16 +1952,16 @@ def tao_bien_ban_hop_to_lan_1_thang_10(out_docx_path, out_md_path=None):
     
     ratings_data = [
         ("STT", "Họ và tên giáo viên", "Môn giảng dạy", "Số tiết nộp", "Xếp loại tháng 9"),
-        ("1", "Hoàng Tấn Thiên", "Toán 9, Tin học 6", "Đầy đủ", "Tốt"),
-        ("2", "Hồ Đăng Danh", "Toán 6, Toán 9", "Đầy đủ", "Tốt"),
-        ("3", "Trần Sáng", "Toán 6, Toán 9", "Đầy đủ", "Tốt"),
-        ("4", "Trần Long Hải", "Toán 8", "Đầy đủ", "Khá"),
-        ("5", "Nguyễn Thị Thảo", "Toán 6, Toán 7", "Đầy đủ", "Khá"),
-        ("6", "Lê Thị Bình", "Toán 7, Toán 8, HĐTN", "Đầy đủ", "Khá"),
-        ("7", "Hoàng Xuân Ánh", "Toán 7, HĐTN 6", "Đầy đủ", "Khá"),
-        ("8", "Nguyễn Văn Tính", "HĐTN 7", "Đầy đủ", "Khá"),
-        ("9", "Đinh Văn Đông", "Toán 8", "Đầy đủ", "Khá"),
-        ("10", "Dương Quang Tùng", "Tin học 6, 7, 8, 9", "Đầy đủ", "Tốt")
+        ("1", "Hoàng Tấn Thiên", "Toán 6 (3 lớp - 12t), TTCM, CĐS", "Đầy đủ", "Tốt"),
+        ("2", "Hồ Đăng Danh", "Toán 9 (4 lớp - 16t)", "Đầy đủ", "Tốt"),
+        ("3", "Trần Sáng", "Toán 9 (3 lớp - 12t), Tin 9 (1 lớp - 1t)", "Đầy đủ", "Tốt"),
+        ("4", "Trần Long Hải", "Toán 8 (3 lớp - 12t), HĐTN, HN (3t)", "Đầy đủ", "Khá"),
+        ("5", "Nguyễn Thị Thảo", "Toán 6 (4t), Toán 7 (4t), Tin 6 (2t), Tin 7 (2t), HĐTN (3t)", "Đầy đủ", "Khá"),
+        ("6", "Lê Thị Bình", "Toán 7 (3 lớp - 12t), HĐTN, HN (3t)", "Đầy đủ", "Khá"),
+        ("7", "Hoàng Xuân Ánh", "Toán 8 (3 lớp - 12t), Tin học 6 (4 lớp - 4t)", "Đầy đủ", "Khá"),
+        ("8", "Nguyễn Văn Tính", "Toán 6 (2 lớp - 8t), Toán 7 (2 lớp - 8t)", "Đầy đủ", "Khá"),
+        ("9", "Đinh Văn Đông", "HĐTN, HN 8/6 (3 tiết) - Hiệu trưởng", "Đầy đủ", "Khá"),
+        ("10", "Dương Quang Tùng", "Tin 7 (4t), Tin 8 (6t), Tin 9 (6t), PT phòng máy", "Đầy đủ", "Tốt")
     ]
     
     tbl_rate = doc.add_table(rows=len(ratings_data), cols=5)
@@ -2063,7 +2086,12 @@ def tao_bien_ban_hop_to_lan_1_thang_10(out_docx_path, out_md_path=None):
     add_paragraph_styled(doc, "*- Công tác xây dựng Ma trận, Bản đặc tả, Đề cương và Đề kiểm tra giữa học kỳ 1:*", indent=True)
     add_paragraph_styled(doc, "  + Toàn tổ thực hiện nghiêm túc Công văn số 5529/SGDĐT-GDPT&GDTX của Sở GD&ĐT thành phố Đồng Nai về tổ chức kiểm tra, đánh giá định kỳ.", indent=True)
     add_paragraph_styled(doc, "  + **Yêu cầu chuyên môn:** Ma trận và bản đặc tả phải bám sát nội dung chương trình GDPT 2018, bảo đảm đúng tỉ lệ 4 mức độ nhận thức (Nhận biết 40%, Thông hiểu 30%, Vận dụng 20%, Vận dụng cao 10%). Đề kiểm tra phải bám sát ma trận và đề cương ôn tập, có tính phân hóa phù hợp với đối tượng học sinh.", indent=True)
-    add_paragraph_styled(doc, "  + **Phân công phụ trách xây dựng đề cương, ma trận và đề kiểm tra:** Môn Toán khối 6 do Cô Nguyễn Thị Thảo phụ trách; Môn Toán khối 7 do Thầy Hoàng Xuân Ánh phụ trách; Môn Toán khối 8 do Cô Lê Thị Bình phụ trách; Môn Toán khối 9 do Thầy Trần Sáng phụ trách; Môn Tin học (Khối 6, 7, 8, 9) do Thầy Dương Quang Tùng phụ trách.", indent=True)
+    add_paragraph_styled(doc, "  + **Phân công phụ trách xây dựng đề cương, ma trận và đề kiểm tra:**", indent=True)
+    add_paragraph_styled(doc, "    • Môn Toán khối 6: Cô Nguyễn Thị Thảo và Thầy Hoàng Tấn Thiên biên soạn; Thầy Hồ Đăng Danh phản biện.", indent=True)
+    add_paragraph_styled(doc, "    • Môn Toán khối 7: Cô Lê Thị Bình biên soạn; Thầy Hoàng Xuân Ánh phản biện.", indent=True)
+    add_paragraph_styled(doc, "    • Môn Toán khối 8: Thầy Trần Long Hải biên soạn; Cô Lê Thị Bình phản biện.", indent=True)
+    add_paragraph_styled(doc, "    • Môn Toán khối 9: Thầy Trần Sáng biên soạn; Thầy Hoàng Tấn Thiên phản biện.", indent=True)
+    add_paragraph_styled(doc, "    • Môn Tin học (Khối 6, 7, 8, 9): Thầy Dương Quang Tùng biên soạn; Thầy Hoàng Tấn Thiên phản biện.", indent=True)
     add_paragraph_styled(doc, "  + **Hình thức và thời lượng kiểm tra thống nhất toàn tổ:**", indent=True)
     add_paragraph_styled(doc, "    • Môn Toán (Khối 6, 7, 8, 9): Thời gian làm bài 60 phút; hình thức: 100% Tự luận làm trên giấy thi theo đúng hướng dẫn kiểm tra định kỳ.", indent=True)
     add_paragraph_styled(doc, "    • Môn Tin học (Khối 6, 7, 8, 9): Thời gian làm bài 45 phút; hình thức: Kiểm tra trực tuyến trên phòng máy vi tính thông qua nền tảng OLM (đảm bảo tính khách quan, tự động trộn đề và chấm điểm).", indent=True)
@@ -2083,7 +2111,7 @@ def tao_bien_ban_hop_to_lan_1_thang_10(out_docx_path, out_md_path=None):
     # 3.5. Góp ý SGK
     add_paragraph_styled(doc, "*- Góp ý chuyên sâu chương trình Sách giáo khoa GDPT 2018 môn Toán - Tin:*", indent=True)
     add_paragraph_styled(doc, "  + **Đại số 9:** Trong bài kiểm tra, phần giải bài toán bằng cách lập hệ phương trình, trong quá trình làm bài học sinh được phép sử dụng máy tính cầm tay để bấm nghiệm kiểm tra kết quả và ghi bước kết luận theo đúng tinh thần giảm tải tính toán cơ học.", indent=True)
-    add_paragraph_styled(doc, "  + **Hình học 9:** Các hệ thức lượng trong tam giác vuông (như trong SGK cũ) không được áp dụng trực tiếp như định lý sẵn có để làm bài tập; nếu học sinh sử dụng trong bài thi thì bắt buộc phải chứng minh lại bằng tam giác đồng dạng, tuân thủ đúng kết luận thống nhất của Hội đồng bộ môn cấp tỉnh.", indent=True)
+    add_paragraph_styled(doc, "  + **Hình học 9 (Chương IV - Hệ thức lượng trong tam giác vuông – Bộ Cánh Diều):** Giáo viên lưu ý rèn luyện cho học sinh nắm chắc bản chất hình học suy ra từ các tam giác đồng dạng; trong các bài thi tuyển sinh vào lớp 10, nếu bài toán yêu cầu giải thích hoặc áp dụng hệ thức lượng nâng cao thì học sinh phải chỉ ra tam giác đồng dạng tương ứng, tránh việc áp dụng công thức một cách máy móc.", indent=True)
     
     add_section_h2(doc, "4. Công tác chuyên đề và bồi dưỡng:")
     add_paragraph_styled(doc, "- Phát động phong trào thi đua chào mừng ngày Phụ nữ Việt Nam 20/10: Mỗi giáo viên trong tổ đăng ký ít nhất 01 tiết dạy tốt, tăng cường ứng dụng công nghệ thông tin và chuyển đổi số trong giảng dạy.", indent=True)
@@ -2094,13 +2122,13 @@ def tao_bien_ban_hop_to_lan_1_thang_10(out_docx_path, out_md_path=None):
     add_section_h1(doc, "IV. Ý KIẾN THẢO LUẬN VÀ GIẢI PHÁP CHUYÊN MÔN THỰC CHIẾN")
     add_paragraph_styled(doc, "Phiên họp diễn ra sôi nổi, thẳng thắn, phản ánh đúng thực tế lớp học và đề xuất các giải pháp kỹ thuật cụ thể:", indent=True)
     
-    add_paragraph_styled(doc, "- **Cô Lê Thị Bình (Giáo viên môn Toán 8, Thư ký):** Qua theo dõi vòng 1 Đấu trường VioEdu, còn một số học sinh ở các lớp bỏ thi hoặc điểm đạt được chưa cao. Đề nghị các thầy cô giáo viên phụ trách khối cần chủ động phối hợp chặt chẽ với giáo viên chủ nhiệm để nhắc nhở các em vào thi trước khi hệ thống tự động khóa vòng vào 23h59 Chủ nhật hàng tuần. Về nhiệm vụ dạy minh họa Nghiên cứu bài học bài “Định lí Thalès trong tam giác”, tôi nhất trí nhận nhiệm vụ và sẽ kết hợp hoạt động đo đạc thực tế ngoài sân trường với mô phỏng GeoGebra; cam kết nộp đề cương Toán 8 giữa kỳ đúng hạn 15/10/2026.", indent=True)
+    add_paragraph_styled(doc, "- **Cô Lê Thị Bình (Giáo viên môn Toán 7, Thư ký):** Qua theo dõi vòng 1 Đấu trường VioEdu khối 7, còn một số học sinh ở các lớp bỏ thi hoặc điểm đạt được chưa cao. Đề nghị các thầy cô giáo viên phụ trách khối cần chủ động phối hợp chặt chẽ với giáo viên chủ nhiệm để nhắc nhở các em vào thi trước khi hệ thống tự động khóa vòng vào 23h59 Chủ nhật hàng tuần. Về nhiệm vụ dạy minh họa Nghiên cứu bài học bài “Định lí Thalès trong tam giác” (Toán 8) do tổ phân công, tôi nhất trí nhận nhiệm vụ và phối hợp cùng nhóm Toán 8 (Thầy Hải, Thầy Ánh) kết hợp hoạt động đo đạc thực tế ngoài sân trường với mô phỏng GeoGebra; cam kết nộp đề cương Toán 7 giữa kỳ đúng hạn 15/10/2026.", indent=True)
     
-    add_paragraph_styled(doc, "- **Thầy Trần Long Hải (Giáo viên môn Toán 8):** Đề nghị Ban Thi đua nhà trường phổ biến rõ ràng, cụ thể tiêu chí chấm điểm thi đua cho đội cờ đỏ/sao đỏ các lớp để bảo đảm chấm điểm đồng đều, khách quan giữa các lớp (hiện nay đang có sự chênh lệch cách chấm giữa học sinh học ở Cơ sở 1 và Cơ sở 2). Đồng thời, Thầy Hải cam kết sẽ phối hợp cùng Thầy Tính hỗ trợ cô Bình thiết kế phiếu học tập và chuẩn bị dụng cụ đo đạc thực hành cho tiết dạy minh họa Thalès.", indent=True)
+    add_paragraph_styled(doc, "- **Thầy Trần Long Hải (Giáo viên môn Toán 8):** Đề nghị Ban Thi đua nhà trường phổ biến rõ ràng, cụ thể tiêu chí chấm điểm thi đua cho đội cờ đỏ/sao đỏ các lớp để bảo đảm chấm điểm đồng đều, khách quan giữa các lớp (hiện nay đang có sự chênh lệch cách chấm giữa học sinh học ở Cơ sở 1 và Cơ sở 2). Đồng thời, Thầy Hải cam kết sẽ phối hợp cùng Thầy Ánh hỗ trợ cô Bình thiết kế phiếu học tập và chuẩn bị dụng cụ đo đạc thực hành cho tiết dạy minh họa Thalès; đồng thời hoàn thiện ma trận và đề kiểm tra Toán 8 đúng tiến độ.", indent=True)
     
-    add_paragraph_styled(doc, "- **Thầy Hoàng Xuân Ánh (Giáo viên môn Toán 7, Phụ trách VioEdu K7):** Hoàn toàn nhất trí với phần đánh giá và kế hoạch hoạt động của tổ chuyên môn. Nhóm Toán 7 sẽ tập trung bám sát chuẩn kiến thức kỹ năng để xây dựng ma trận và đề cương kiểm tra giữa kỳ 1 có tính phân hóa phù hợp với học sinh khối 7, bảo đảm nộp đúng hạn 15/10/2026.", indent=True)
+    add_paragraph_styled(doc, "- **Thầy Hoàng Xuân Ánh (Giáo viên môn Toán 8, Tin học 6):** Hoàn toàn nhất trí với phần đánh giá và kế hoạch hoạt động của tổ chuyên môn. Cam kết thực hiện nghiêm túc công tác phản biện đề kiểm tra Toán 7 và phối hợp Thầy Tùng chuẩn bị chu đáo đường truyền phòng máy cho học sinh làm bài thi Tin học và thi VioEdu các vòng tiếp theo.", indent=True)
     
-    add_paragraph_styled(doc, "- **Cô Nguyễn Thị Thảo (Giáo viên môn Toán 6, Phụ trách VioEdu K6):** Cảm ơn tổ chuyên môn đã đồng thuận chuyển nhiệm vụ Nghiên cứu bài học sang khối 8, tạo điều kiện thuận lợi cho nhóm Toán 6 tập trung toàn lực xây dựng bộ ngân hàng 35 câu hỏi và kịch bản chi tiết cho Chuyên đề Ngoại khóa “Rung chuông vàng môn Toán khối 6” chào mừng ngày 20/11; cam kết hoàn thành dự thảo ngân hàng câu hỏi trước ngày 15/10/2026.", indent=True)
+    add_paragraph_styled(doc, "- **Cô Nguyễn Thị Thảo (Giáo viên môn Toán 6, 7, Tin 6, 7):** Cảm ơn tổ chuyên môn đã đồng thuận chuyển nhiệm vụ Nghiên cứu bài học sang khối 8, tạo điều kiện thuận lợi cho nhóm Toán 6 tập trung toàn lực xây dựng bộ ngân hàng 35 câu hỏi và kịch bản chi tiết cho Chuyên đề Ngoại khóa “Rung chuông vàng môn Toán khối 6” chào mừng ngày 20/11; đồng thời phối hợp cùng Thầy Thiên hoàn thiện đề kiểm tra Toán 6 đúng hạn.", indent=True)
     
     add_paragraph_styled(doc, "- **Thầy Trần Sáng (Giáo viên môn Toán 9, KTNB):** Tiếp thu toàn diện kế hoạch kiểm tra nội bộ của nhà trường; Thầy Sáng cam kết hoàn thiện hồ sơ Kế hoạch bài dạy chuẩn Công văn 5512, tích hợp chỉ báo Năng lực số và AI in đậm, in nghiêng rõ nét theo đúng kết luận rút kinh nghiệm của tổ; chủ động gửi lịch dạy trong tuần cho Tổ trưởng để tổ sắp xếp dự giờ. Về ma trận và đề kiểm tra Toán 9, Thầy Sáng đảm bảo bám sát cấu trúc đề thi tuyển sinh 10, nộp đúng tiến độ (ma trận ngày 15/10, đề kiểm tra ngày 24/10) để tổ phản biện chéo.", indent=True)
     
@@ -2235,16 +2263,16 @@ Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt sâu sắc
 ### **Kết quả xếp loại hồ sơ chuyên môn tháng 9/2026:**
 | STT | Họ và tên giáo viên | Môn giảng dạy | Số tiết nộp | Xếp loại tháng 9 |
 |:---:|:---|:---|:---:|:---:|
-| 1 | Hoàng Tấn Thiên | Toán 9, Tin học 6 | Đầy đủ | **Tốt** |
-| 2 | Hồ Đăng Danh | Toán 6, Toán 9 | Đầy đủ | **Tốt** |
-| 3 | Trần Sáng | Toán 6, Toán 9 | Đầy đủ | **Tốt** |
-| 4 | Trần Long Hải | Toán 8 | Đầy đủ | **Khá** |
-| 5 | Nguyễn Thị Thảo | Toán 6, Toán 7 | Đầy đủ | **Khá** |
-| 6 | Lê Thị Bình | Toán 7, Toán 8, HĐTN | Đầy đủ | **Khá** |
-| 7 | Hoàng Xuân Ánh | Toán 7, HĐTN 6 | Đầy đủ | **Khá** |
-| 8 | Nguyễn Văn Tính | HĐTN 7 | Đầy đủ | **Khá** |
-| 9 | Đinh Văn Đông | Toán 8 | Đầy đủ | **Khá** |
-| 10 | Dương Quang Tùng | Tin học 6, 7, 8, 9 | Đầy đủ | **Tốt** |
+| 1 | Hoàng Tấn Thiên | Toán 6 (3 lớp - 12t), TTCM, CĐS | Đầy đủ | **Tốt** |
+| 2 | Hồ Đăng Danh | Toán 9 (4 lớp - 16t) | Đầy đủ | **Tốt** |
+| 3 | Trần Sáng | Toán 9 (3 lớp - 12t), Tin 9 (1 lớp - 1t) | Đầy đủ | **Tốt** |
+| 4 | Trần Long Hải | Toán 8 (3 lớp - 12t), HĐTN, HN (3t) | Đầy đủ | **Khá** |
+| 5 | Nguyễn Thị Thảo | Toán 6 (4t), Toán 7 (4t), Tin 6 (2t), Tin 7 (2t), HĐTN (3t) | Đầy đủ | **Khá** |
+| 6 | Lê Thị Bình | Toán 7 (3 lớp - 12t), HĐTN, HN (3t) | Đầy đủ | **Khá** |
+| 7 | Hoàng Xuân Ánh | Toán 8 (3 lớp - 12t), Tin học 6 (4 lớp - 4t) | Đầy đủ | **Khá** |
+| 8 | Nguyễn Văn Tính | Toán 6 (2 lớp - 8t), Toán 7 (2 lớp - 8t) | Đầy đủ | **Khá** |
+| 9 | Đinh Văn Đông | HĐTN, HN 8/6 (3 tiết) - Hiệu trưởng | Đầy đủ | **Khá** |
+| 10 | Dương Quang Tùng | Tin 7 (4t), Tin 8 (6t), Tin 9 (6t), PT phòng máy | Đầy đủ | **Tốt** |
 
 - **Tổng hợp số lượng học sinh tham gia thi Đấu trường VioEdu vòng sơ loại 1:** Toàn trường có **107 học sinh** tham gia dự thi. Cụ thể từng khối: Khối 6: 30 học sinh; Khối 7: 24 học sinh; Khối 8: 31 học sinh; Khối 9: 22 học sinh.
 
@@ -2300,7 +2328,12 @@ Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt sâu sắc
 **c) Công tác xây dựng Ma trận, Bản đặc tả, Đề cương và Đề kiểm tra giữa học kỳ 1:**
 - Toàn tổ thực hiện nghiêm túc Công văn số 5529/SGDĐT-GDPT&GDTX của Sở GD&ĐT thành phố Đồng Nai về tổ chức kiểm tra, đánh giá định kỳ.
 - **Yêu cầu chuyên môn:** Ma trận và bản đặc tả phải bám sát nội dung chương trình GDPT 2018, bảo đảm đúng tỉ lệ 4 mức độ nhận thức (Nhận biết 40%, Thông hiểu 30%, Vận dụng 20%, Vận dụng cao 10%). Đề kiểm tra phải bám sát ma trận và đề cương ôn tập, có tính phân hóa phù hợp với đối tượng học sinh.
-- **Phân công phụ trách:** Môn Toán khối 6 do Cô Nguyễn Thị Thảo phụ trách; Môn Toán khối 7 do Thầy Hoàng Xuân Ánh phụ trách; Môn Toán khối 8 do Cô Lê Thị Bình phụ trách; Môn Toán khối 9 do Thầy Trần Sáng phụ trách; Môn Tin học (Khối 6, 7, 8, 9) do Thầy Dương Quang Tùng phụ trách.
+- **Phân công phụ trách xây dựng đề cương, ma trận và đề kiểm tra:**
+  + Môn Toán khối 6: Cô Nguyễn Thị Thảo và Thầy Hoàng Tấn Thiên biên soạn; Thầy Hồ Đăng Danh phản biện.
+  + Môn Toán khối 7: Cô Lê Thị Bình biên soạn; Thầy Hoàng Xuân Ánh phản biện.
+  + Môn Toán khối 8: Thầy Trần Long Hải biên soạn; Cô Lê Thị Bình phản biện.
+  + Môn Toán khối 9: Thầy Trần Sáng biên soạn; Thầy Hoàng Tấn Thiên phản biện.
+  + Môn Tin học (Khối 6, 7, 8, 9): Thầy Dương Quang Tùng biên soạn; Thầy Hoàng Tấn Thiên phản biện.
 - **Hình thức và thời lượng:**
   - Môn Toán (Khối 6, 7, 8, 9): Thời gian làm bài 60 phút; hình thức: 100% Tự luận làm trên giấy thi theo đúng hướng dẫn kiểm tra định kỳ.
   - Môn Tin học (Khối 6, 7, 8, 9): Thời gian làm bài 45 phút; hình thức: Kiểm tra trực tuyến trên phòng máy vi tính thông qua nền tảng OLM (đảm bảo tính khách quan, tự động trộn đề và chấm điểm).
@@ -2318,7 +2351,7 @@ Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt sâu sắc
 
 **e) Góp ý chuyên sâu chương trình Sách giáo khoa GDPT 2018 môn Toán - Tin:**
 - **Đại số 9:** Trong bài kiểm tra, phần giải bài toán bằng cách lập hệ phương trình, trong quá trình làm bài học sinh được phép sử dụng máy tính cầm tay để bấm nghiệm kiểm tra kết quả và ghi bước kết luận theo đúng tinh thần giảm tải tính toán cơ học.
-- **Hình học 9:** Các hệ thức lượng trong tam giác vuông (như trong SGK cũ) không được áp dụng trực tiếp như định lý sẵn có để làm bài tập; nếu học sinh sử dụng trong bài thi thì bắt buộc phải chứng minh lại bằng tam giác đồng dạng, tuân thủ đúng kết luận thống nhất của Hội đồng bộ môn cấp tỉnh.
+- **Hình học 9 (Chương IV - Hệ thức lượng trong tam giác vuông – Bộ Cánh Diều):** Giáo viên lưu ý rèn luyện cho học sinh nắm chắc bản chất hình học suy ra từ các tam giác đồng dạng; trong các bài thi tuyển sinh vào lớp 10, nếu bài toán yêu cầu giải thích hoặc áp dụng hệ thức lượng nâng cao thì học sinh phải chỉ ra tam giác đồng dạng tương ứng, tránh việc áp dụng công thức một cách máy móc.
 
 ### **4. Công tác chuyên đề và bồi dưỡng:**
 - Phát động phong trào thi đua chào mừng ngày Phụ nữ Việt Nam 20/10: Mỗi giáo viên trong tổ đăng ký ít nhất 01 tiết dạy tốt, tăng cường ứng dụng công nghệ thông tin và chuyển đổi số trong giảng dạy.
@@ -2331,13 +2364,13 @@ Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt sâu sắc
 
 Phiên họp diễn ra sôi nổi, thẳng thắn, phản ánh đúng thực tế lớp học và đề xuất các giải pháp kỹ thuật cụ thể:
 
-- **Cô Lê Thị Bình (Giáo viên môn Toán 8, Thư ký):** Qua theo dõi vòng 1 Đấu trường VioEdu, còn một số học sinh ở các lớp bỏ thi hoặc điểm đạt được chưa cao. Đề nghị các thầy cô giáo viên phụ trách khối cần chủ động phối hợp chặt chẽ với giáo viên chủ nhiệm để nhắc nhở các em vào thi trước khi hệ thống tự động khóa vòng vào 23h59 Chủ nhật hàng tuần. Về nhiệm vụ dạy minh họa Nghiên cứu bài học bài “Định lí Thalès trong tam giác”, tôi nhất trí nhận nhiệm vụ và sẽ kết hợp hoạt động đo đạc thực tế ngoài sân trường với mô phỏng GeoGebra; cam kết nộp đề cương Toán 8 giữa kỳ đúng hạn 15/10/2026.
+- **Cô Lê Thị Bình (Giáo viên môn Toán 7, Thư ký):** Qua theo dõi vòng 1 Đấu trường VioEdu khối 7, còn một số học sinh ở các lớp bỏ thi hoặc điểm đạt được chưa cao. Đề nghị các thầy cô giáo viên phụ trách khối cần chủ động phối hợp chặt chẽ với giáo viên chủ nhiệm để nhắc nhở các em vào thi trước khi hệ thống tự động khóa vòng vào 23h59 Chủ nhật hàng tuần. Về nhiệm vụ dạy minh họa Nghiên cứu bài học bài “Định lí Thalès trong tam giác” (Toán 8) do tổ phân công, tôi nhất trí nhận nhiệm vụ và phối hợp cùng nhóm Toán 8 (Thầy Hải, Thầy Ánh) kết hợp hoạt động đo đạc thực tế ngoài sân trường với mô phỏng GeoGebra; cam kết nộp đề cương Toán 7 giữa kỳ đúng hạn 15/10/2026.
 
-- **Thầy Trần Long Hải (Giáo viên môn Toán 8):** Đề nghị Ban Thi đua nhà trường phổ biến rõ ràng, cụ thể tiêu chí chấm điểm thi đua cho đội cờ đỏ/sao đỏ các lớp để bảo đảm chấm điểm đồng đều, khách quan giữa các lớp (hiện nay đang có sự chênh lệch cách chấm giữa học sinh học ở Cơ sở 1 và Cơ sở 2). Đồng thời, Thầy Hải cam kết sẽ phối hợp cùng Thầy Tính hỗ trợ cô Bình thiết kế phiếu học tập và chuẩn bị dụng cụ đo đạc thực hành cho tiết dạy minh họa Thalès.
+- **Thầy Trần Long Hải (Giáo viên môn Toán 8):** Đề nghị Ban Thi đua nhà trường phổ biến rõ ràng, cụ thể tiêu chí chấm điểm thi đua cho đội cờ đỏ/sao đỏ các lớp để bảo đảm chấm điểm đồng đều, khách quan giữa các lớp (hiện nay đang có sự chênh lệch cách chấm giữa học sinh học ở Cơ sở 1 và Cơ sở 2). Đồng thời, Thầy Hải cam kết sẽ phối hợp cùng Thầy Ánh hỗ trợ cô Bình thiết kế phiếu học tập và chuẩn bị dụng cụ đo đạc thực hành cho tiết dạy minh họa Thalès; đồng thời hoàn thiện ma trận và đề kiểm tra Toán 8 đúng tiến độ.
 
-- **Thầy Hoàng Xuân Ánh (Giáo viên môn Toán 7, Phụ trách VioEdu K7):** Hoàn toàn nhất trí với phần đánh giá và kế hoạch hoạt động của tổ chuyên môn. Nhóm Toán 7 sẽ tập trung bám sát chuẩn kiến thức kỹ năng để xây dựng ma trận và đề cương kiểm tra giữa kỳ 1 có tính phân hóa phù hợp với học sinh khối 7, bảo đảm nộp đúng hạn 15/10/2026.
+- **Thầy Hoàng Xuân Ánh (Giáo viên môn Toán 8, Tin học 6):** Hoàn toàn nhất trí với phần đánh giá và kế hoạch hoạt động của tổ chuyên môn. Cam kết thực hiện nghiêm túc công tác phản biện đề kiểm tra Toán 7 và phối hợp Thầy Tùng chuẩn bị chu đáo đường truyền phòng máy cho học sinh làm bài thi Tin học và thi VioEdu các vòng tiếp theo.
 
-- **Cô Nguyễn Thị Thảo (Giáo viên môn Toán 6, Phụ trách VioEdu K6):** Cảm ơn tổ chuyên môn đã đồng thuận chuyển nhiệm vụ Nghiên cứu bài học sang khối 8, tạo điều kiện thuận lợi cho nhóm Toán 6 tập trung toàn lực xây dựng bộ ngân hàng 35 câu hỏi và kịch bản chi tiết cho Chuyên đề Ngoại khóa “Rung chuông vàng môn Toán khối 6” chào mừng ngày 20/11; cam kết hoàn thành dự thảo ngân hàng câu hỏi trước ngày 15/10/2026.
+- **Cô Nguyễn Thị Thảo (Giáo viên môn Toán 6, 7, Tin 6, 7):** Cảm ơn tổ chuyên môn đã đồng thuận chuyển nhiệm vụ Nghiên cứu bài học sang khối 8, tạo điều kiện thuận lợi cho nhóm Toán 6 tập trung toàn lực xây dựng bộ ngân hàng 35 câu hỏi và kịch bản chi tiết cho Chuyên đề Ngoại khóa “Rung chuông vàng môn Toán khối 6” chào mừng ngày 20/11; đồng thời phối hợp cùng Thầy Thiên hoàn thiện đề kiểm tra Toán 6 đúng hạn.
 
 - **Thầy Trần Sáng (Giáo viên môn Toán 9, KTNB):** Tiếp thu toàn diện kế hoạch kiểm tra nội bộ của nhà trường; Thầy Sáng cam kết hoàn thiện hồ sơ Kế hoạch bài dạy chuẩn Công văn 5512, tích hợp chỉ báo Năng lực số và AI in đậm, in nghiêng rõ nét theo đúng kết luận rút kinh nghiệm của tổ; chủ động gửi lịch dạy trong tuần cho Tổ trưởng để tổ sắp xếp dự giờ. Về ma trận và đề kiểm tra Toán 9, Thầy Sáng đảm bảo bám sát cấu trúc đề thi tuyển sinh 10, nộp đúng tiến độ (ma trận ngày 15/10, đề kiểm tra ngày 24/10) để tổ phản biện chéo.
 
@@ -2577,7 +2610,7 @@ def tao_bien_ban_hop_to_lan_2_thang_10(out_docx_path, out_md_path=None):
             "Trần Sáng",
             "Tổ phó",
             "A",
-            "Thực hiện tốt giảng dạy môn Toán 6, 9; chủ nhiệm lớp 97 nghiêm túc; tích cực tham gia dạy thay 03 tiết Toán và chuẩn bị tốt kịch bản MC Rung chuông vàng.",
+            "Thực hiện tốt giảng dạy môn Toán 9 (3 lớp - 12t), Tin 9 (1t); chủ nhiệm lớp 97 nghiêm túc; tích cực tham gia dạy thay 03 tiết Toán 9 và chuẩn bị tốt kịch bản MC Rung chuông vàng.",
             "A",
             "Hoàn thành tốt nhiệm vụ, tích cực dạy thay."
         ),
@@ -2586,7 +2619,7 @@ def tao_bien_ban_hop_to_lan_2_thang_10(out_docx_path, out_md_path=None):
             "Hồ Đăng Danh",
             "Giáo viên",
             "A",
-            "Thực hiện nghiêm túc tiến độ giảng dạy Toán 6, 9; hồ sơ sổ sách đầy đủ; tích cực tham gia dạy thay 02 tiết Toán 9 cho đồng nghiệp.",
+            "Thực hiện nghiêm túc tiến độ giảng dạy Toán 9 (4 lớp - 16t); hồ sơ sổ sách đầy đủ, phụ trách kỹ thuật CSDL ngành tốt; tham gia dạy thay 02 tiết Toán 9.",
             "A",
             "Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời."
         ),
@@ -2595,7 +2628,7 @@ def tao_bien_ban_hop_to_lan_2_thang_10(out_docx_path, out_md_path=None):
             "Hoàng Xuân Ánh",
             "Giáo viên",
             "A",
-            "Giảng dạy môn Toán 7, HĐTN khối 6 đúng phân phối chương trình; nề nếp ngày giờ công đảm bảo, hồ sơ giáo án đầy đủ.",
+            "Giảng dạy môn Toán 8 (3 lớp - 12t), Tin học 6 (4 lớp - 4t) đúng phân phối chương trình; nề nếp ngày giờ công đảm bảo, hồ sơ giáo án đầy đủ.",
             "A",
             "Hoàn thành tốt nhiệm vụ được giao."
         ),
@@ -2604,7 +2637,7 @@ def tao_bien_ban_hop_to_lan_2_thang_10(out_docx_path, out_md_path=None):
             "Trần Long Hải",
             "Giáo viên",
             "A",
-            "Giảng dạy môn Toán khối 8 đúng tiến độ; chủ nhiệm lớp 83 trách nhiệm, sâu sát nề nếp học sinh; chuẩn bị tốt đề kiểm tra Toán 8.",
+            "Giảng dạy môn Toán khối 8 (3 lớp - 12t), HĐTN, HN (3t) đúng tiến độ; chủ nhiệm lớp 83 trách nhiệm, sâu sát nề nếp học sinh; hoàn thành tốt đề kiểm tra Toán 8.",
             "A",
             "Hoàn thành tốt nhiệm vụ chuyên môn và chủ nhiệm."
         ),
@@ -2613,7 +2646,7 @@ def tao_bien_ban_hop_to_lan_2_thang_10(out_docx_path, out_md_path=None):
             "Lê Thị Bình",
             "Giáo viên (Thư ký)",
             "A",
-            "Giảng dạy môn Toán 7, 8; chủ nhiệm lớp 71 tốt; ghi chép biên bản tổ chu đáo; tham gia dạy thay 03 tiết Toán; chuẩn bị chu đáo NCBH Toán 8 và ngân hàng câu hỏi RCV.",
+            "Giảng dạy môn Toán 7 (3 lớp - 12t), HĐTN (3t); chủ nhiệm lớp 71 tốt; ghi chép biên bản tổ chu đáo; tham gia dạy thay 03 tiết Toán; chuẩn bị chu đáo NCBH Toán 8 và đề kiểm tra Toán 7.",
             "A",
             "Hoàn thành tốt nhiệm vụ, nhiệt tình dạy thay."
         ),
@@ -2631,7 +2664,7 @@ def tao_bien_ban_hop_to_lan_2_thang_10(out_docx_path, out_md_path=None):
             "Nguyễn Văn Tính",
             "Giáo viên",
             "A",
-            "Giảng dạy Toán 65, HĐTN khối 6, 7 đúng tiến độ; chấp hành tốt ngày giờ công; tích cực tham gia dạy thay 02 tiết HĐTN 86.",
+            "Giảng dạy Toán 6 (8t), Toán 7 (8t) đúng tiến độ; chấp hành tốt ngày giờ công; tích cực tham gia dạy thay 02 tiết HĐTN 86.",
             "A",
             "Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời."
         ),
@@ -2640,24 +2673,24 @@ def tao_bien_ban_hop_to_lan_2_thang_10(out_docx_path, out_md_path=None):
             "Dương Quang Tùng",
             "Giáo viên",
             "A",
-            "Giảng dạy môn Tin học các khối 6, 7, 8, 9 nghiêm túc; quản lý phòng máy vi tính chu đáo, bảo đảm kỹ thuật đường truyền phục vụ kiểm tra giữa kỳ trên OLM.",
+            "Giảng dạy môn Tin học các khối 7, 8, 9 (16t) nghiêm túc; quản lý phòng máy vi tính chu đáo, bảo đảm kỹ thuật đường truyền phục vụ kiểm tra giữa kỳ trên OLM.",
             "A",
             "Hoàn thành tốt nhiệm vụ chuyên môn và quản lý thiết bị."
         )
     ]
     add_thi_dua_table(doc, thi_dua_data)
-    add_paragraph_styled(doc, "*(Ghi chú: Thầy Đinh Văn Đông – Phó Hiệu trưởng thuộc diện cán bộ quản lý do Ban Giám hiệu và cấp trên đánh giá xếp loại riêng; tham gia sinh hoạt tổ và ký xác nhận biên bản đầy đủ).*")
+    add_paragraph_styled(doc, "*(Ghi chú: Thầy Đinh Văn Đông – Hiệu trưởng thuộc diện cán bộ quản lý do Ban Giám hiệu và cấp trên đánh giá xếp loại riêng; tham gia sinh hoạt tổ và ký xác nhận biên bản đầy đủ).*")
     
     # 8. Góp ý SGK
     add_section_h2(doc, "8. Thảo luận vướng mắc chuyên môn (Góp ý SGK GDPT 2018)")
     add_paragraph_styled(doc, "Toàn thể tổ chuyên môn tiến hành thảo luận, ghi nhận các khó khăn, vướng mắc trong quá trình giảng dạy chương trình SGK Toán, Tin học theo Chương trình GDPT 2018 và đề xuất hướng khắc phục cụ thể như sau:", indent=True)
-    add_paragraph_styled(doc, "- Sách giáo khoa Toán lớp 7: Bài “Bài 3: Lũy thừa với số mũ tự nhiên của một số hữu tỉ”:", indent=True)
+    add_paragraph_styled(doc, "- Sách giáo khoa Toán lớp 7 – Bộ Cánh Diều: Bài “Bài 3: Phép tính lũy thừa với số mũ tự nhiên của một số hữu tỉ”:", indent=True)
     add_paragraph_styled(doc, "  + Khó khăn: Phần khởi động đề bài cho một số rất lớn, học sinh khó hình dung được nội dung và bản chất của bài học.", indent=True)
     add_paragraph_styled(doc, "  + Hướng khắc phục: Đề nghị nên lấy một bài toán thực tế khác với số liệu nhỏ hơn, gần gũi hơn để học sinh dễ hình dung nội dung và yêu cầu của bài toán.", indent=True)
-    add_paragraph_styled(doc, "- Sách giáo khoa Toán lớp 7: “Bài 13. Hai tam giác bằng nhau. Trường hợp bằng nhau thứ nhất của tam giác”:", indent=True)
+    add_paragraph_styled(doc, "- Sách giáo khoa Toán lớp 7 – Bộ Cánh Diều: “Bài 4. Hai tam giác bằng nhau. Trường hợp bằng nhau thứ nhất của tam giác (cạnh – cạnh – cạnh)”:", indent=True)
     add_paragraph_styled(doc, "  + Khó khăn: Nhiều học sinh lúng túng khi viết kí hiệu hai tam giác bằng nhau, chưa xác định đúng thứ tự các đỉnh tương ứng.", indent=True)
     add_paragraph_styled(doc, "  + Hướng khắc phục: Cần bổ sung thêm lưu ý rõ ràng trong SGK: “Khi kí hiệu sự bằng nhau của hai tam giác, các đỉnh tương ứng phải được viết đúng thứ tự”.", indent=True)
-    add_paragraph_styled(doc, "- Sách giáo khoa Toán lớp 6: Đối với các bài toán đố có liên quan đến BCNN, ƯCLN, thống nhất cho phép học sinh được sử dụng máy tính cầm tay để tính kết quả, không bắt buộc phải trình bày dài dòng toàn bộ các bước phân tích ra thừa số nguyên tố để tìm BCNN hay ƯCLN.", indent=True)
+    add_paragraph_styled(doc, "- Sách giáo khoa Toán lớp 6 – Bộ Cánh Diều: Đối với các bài toán có liên quan đến BCNN, ƯCLN, thống nhất cho phép học sinh được sử dụng máy tính cầm tay để tính kết quả, không bắt buộc phải trình bày dài dòng toàn bộ các bước phân tích ra thừa số nguyên tố để tìm BCNN hay ƯCLN.", indent=True)
     
     # ==================== PHẦN IV ====================
     add_section_h1(doc, "IV. Ý KIẾN THẢO LUẬN")
@@ -2709,1676 +2742,6 @@ def tao_bien_ban_hop_to_lan_2_thang_10(out_docx_path, out_md_path=None):
         os.makedirs(os.path.dirname(out_md_path), exist_ok=True)
         tao_bien_ban_hop_to_lan_2_thang_10_md(out_md_path)
         print(f"Da xuat thanh cong file Markdown: {out_md_path}")
-
-
-def add_table_phan_cong_thang_8(doc):
-    """Bảng dự kiến phân công chuyên môn HKI năm học 2026 - 2027 (chuẩn 6 cột)."""
-    headers = ["STT", "Họ và tên giáo viên", "Môn và lớp phụ trách giảng dạy", "Nhiệm vụ kiêm nhiệm / khác", "Số tiết/tuần", "Ghi chú"]
-    data = [
-        ["1", "Hoàng Tấn Thiên", "Toán 6 (3 lớp - 12 tiết)", "Tổ trưởng chuyên môn (3t), Phụ trách Chuyển đổi số (3t)", "18", "Tổ trưởng"],
-        ["2", "Trần Sáng", "Toán 9 (3 lớp - 12 tiết), Tin học 9 (1 lớp - 1 tiết)", "Phó Tổ trưởng (1t), Chủ nhiệm lớp 9/7 (4t)", "18", "Phó Tổ trưởng"],
-        ["3", "Đinh Văn Đông", "Hoạt động TN, HN (3 tiết)", "Hiệu trưởng nhà trường", "3", "BGH sinh hoạt tổ"],
-        ["4", "Hồ Đăng Danh", "Toán 9 (4 lớp - 16 tiết)", "Thành viên ban CNTT & CSDL ngành", "16", "GV môn Toán"],
-        ["5", "Hoàng Xuân Ánh", "Toán 8 (3 lớp - 12 tiết), Tin học 6 (4 lớp - 4 tiết)", "Ủy viên tổ chuyên môn", "16", "GV Toán - Tin"],
-        ["6", "Trần Long Hải", "Toán 8 (3 lớp - 12 tiết), HĐTN, HN (3 tiết)", "Chủ nhiệm lớp 8/3 (4t)", "19", "GV môn Toán"],
-        ["7", "Lê Thị Bình", "Toán 7 (3 lớp - 12 tiết), HĐTN, HN (3 tiết)", "Chủ nhiệm lớp 7/1 (4t), Thư ký tổ", "19", "GV môn Toán"],
-        ["8", "Nguyễn Thị Thảo", "Toán 6 (1 lớp - 4t), Toán 7 (1 lớp - 4t)\nTin 6 (2 lớp - 2t), Tin 7 (2 lớp - 2t), HĐTN (3t)", "Chủ nhiệm lớp 6/2 (4t)", "19", "GV Toán - Tin"],
-        ["9", "Nguyễn Văn Tính", "Toán 6 (2 lớp - 8 tiết), Toán 7 (2 lớp - 8 tiết)", "Ủy viên tổ chuyên môn", "16", "GV môn Toán"],
-        ["10", "Dương Quang Tùng", "Tin 7 (4 lớp - 4t), Tin 8 (6 lớp - 6t), Tin 9 (6 lớp - 6t)", "Phụ trách phòng máy vi tính bộ môn (3t)", "19", "GV Tin học"]
-    ]
-    
-    col_widths = [Inches(0.5), Inches(1.5), Inches(2.3), Inches(2.0), Inches(0.8), Inches(0.9)]
-    
-    table = doc.add_table(rows=len(data) + 1, cols=len(headers))
-    table.alignment = WD_TABLE_ALIGNMENT.CENTER
-    table.autofit = False
-    format_table_borders_closed(table)
-    
-    # Header row
-    hdr_cells = table.rows[0].cells
-    for i, title in enumerate(headers):
-        hdr_cells[i].width = col_widths[i]
-        shading = parse_xml(r'<w:shd {} w:fill="F2F2F2"/>'.format(nsdecls('w')))
-        hdr_cells[i]._tc.get_or_add_tcPr().append(shading)
-        
-        p = hdr_cells[i].paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.paragraph_format.line_spacing = 1.15
-        p.paragraph_format.space_before = Pt(3)
-        p.paragraph_format.space_after = Pt(3)
-        
-        r = p.add_run(title)
-        r.font.name = 'Times New Roman'
-        r.font.size = Pt(11.5)
-        r.bold = True
-        
-    # Data rows
-    for row_idx, row_data in enumerate(data):
-        row_cells = table.rows[row_idx + 1].cells
-        for col_idx, cell_value in enumerate(row_data):
-            row_cells[col_idx].width = col_widths[col_idx]
-            p = row_cells[col_idx].paragraphs[0]
-            p.paragraph_format.line_spacing = 1.15
-            p.paragraph_format.space_before = Pt(2)
-            p.paragraph_format.space_after = Pt(2)
-            
-            if col_idx in (0, 4, 5):
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            else:
-                p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                
-            add_run_parsed(p, str(cell_value), default_size=11.5)
-            
-    p_sp = doc.add_paragraph()
-    p_sp.paragraph_format.space_before = Pt(4)
-    p_sp.paragraph_format.space_after = Pt(2)
-
-def tao_bien_ban_hop_to_lan_1_thang_8(out_docx_path, out_md_path=None):
-    """
-    Soạn thảo hoàn chỉnh Biên bản họp Tổ chuyên môn Lần 1 Tháng 8/2026.
-    Chuẩn Nghị định 30/2020/NĐ-CP và đặc thù Trường THCS Trần Phú.
-    """
-    doc = create_nd30_document()
-    
-    # 1. Header chuẩn
-    add_header_thcs_tran_phu(
-        doc,
-        so_hieu="01/BB-TCM",
-        ngay_thang_str="Xuân Đông, ngày 26 tháng 8 năm 2026"
-    )
-    
-    # 2. Tiêu đề
-    add_doc_title(
-        doc,
-        "BIÊN BẢN HỌP TỔ CHUYÊN MÔN LẦN 1",
-        "SINH HOẠT CHUYÊN MÔN TỔ TOÁN – TIN THÁNG 8/2026\n(Chuẩn bị năm học mới 2026 – 2027)"
-    )
-    
-    # 3. Thời gian, địa điểm, thành phần
-    add_paragraph_styled(doc, "Hôm nay, vào lúc 10 giờ 00 phút, ngày 26 tháng 8 năm 2026, tại Phòng sinh hoạt chuyên môn Trường THCS Trần Phú, Tổ Toán – Tin học đã tiến hành phiên họp chuyên môn định kỳ lần 1 tháng 8 chuẩn bị cho năm học mới 2026 – 2027.", indent=True)
-    add_paragraph_styled(doc, "Thầy **Hoàng Tấn Thiên** – Tổ trưởng chuyên môn.", bold_prefix="- Chủ trì cuộc họp:", indent=True)
-    add_paragraph_styled(doc, "Cô **Lê Thị Bình** – Giáo viên môn Toán.", bold_prefix="- Thư ký cuộc họp:", indent=True)
-    add_paragraph_styled(doc, "10/10 thành viên trong tổ (Có mặt: 10/10, Vắng: 0).", bold_prefix="- Thành viên tham dự:", indent=True)
-    add_paragraph_styled(doc, "Thầy Hoàng Tấn Thiên, Thầy Trần Sáng, Thầy Đinh Văn Đông, Thầy Hồ Đăng Danh, Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Cô Lê Thị Bình, Cô Nguyễn Thị Thảo, Thầy Nguyễn Văn Tính, Thầy Dương Quang Tùng.", bold_prefix="  + Danh sách thành viên:", indent=True)
-    
-    # 4. NỘI DUNG CUỘC HỌP
-    add_doc_title(doc, "NỘI DUNG CUỘC HỌP", "")
-    
-    # ==================== PHẦN I ====================
-    add_section_h1(doc, "I. TRIỂN KHAI VĂN BẢN CHỈ ĐẠO CỦA CẤP TRÊN")
-    add_paragraph_styled(doc, "Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt các văn bản chỉ đạo trọng tâm của Bộ Giáo dục và Đào tạo, UBND thành phố Đồng Nai và Sở Giáo dục và Đào tạo; đồng thời tóm tắt các vấn đề cốt lõi tác động trực tiếp đến kế hoạch thực hiện của nhà trường và Tổ chuyên môn Toán – Tin học như sau:", indent=True)
-    
-    # 1. Kế hoạch thời gian năm học (QĐ 2308/QĐ-BGDĐT & QĐ 2322/QĐ-UBND)
-    add_paragraph_styled(doc, "**1. Kế hoạch thời gian năm học 2026 – 2027 (Quyết định số 2308/QĐ-BGDĐT ngày 06/8/2026 của Bộ GD&ĐT và Quyết định số 2322/QĐ-UBND ngày 19/8/2026 của UBND thành phố Đồng Nai):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Toàn quốc và thành phố thống nhất tổ chức Khai giảng năm học mới vào ngày 05/9/2026. Khung kế hoạch bảo đảm đủ 35 tuần thực học (Học kỳ I: 18 tuần, từ ngày 07/9/2026 đến ngày 16/01/2027; Học kỳ II: 17 tuần, từ ngày 18/01/2027 đến ngày 24/5/2027; kết thúc năm học trước ngày 31/5/2027). Tựu trường sớm nhất đối với học sinh lớp 9 từ ngày 21/8/2026 và học sinh lớp 6 từ ngày 28/8/2026.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ chuyên môn phải xây dựng Kế hoạch dạy học (phân phối chương trình môn Toán và môn Tin học) khớp đúng khung 35 tuần, tuyệt đối không cắt xén hoặc dồn ghép cơ học; tính toán tuần đệm kiểm tra giữa kỳ (tuần 9) và cuối kỳ (tuần 17-18) khoa học, tránh dồn ép điểm số; giáo viên chủ nhiệm khối 6 và khối 9 chủ động ổn định sĩ số, nề nếp học tập ngay từ những ngày tựu trường sớm.", indent=True)
-    
-    # 2. Hướng dẫn nhiệm vụ năm học GDPT (Công văn 4200/SGDĐT-GDPT&GDTX)
-    add_paragraph_styled(doc, "**2. Hướng dẫn thực hiện nhiệm vụ giáo dục phổ thông năm học 2026 – 2027 (Công văn số 4200/SGDĐT-GDPT&GDTX ngày 21/8/2026 của Sở GD&ĐT thành phố Đồng Nai):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Năm học 2026 – 2027 thực hiện toàn diện Chương trình GDPT 2018 cho cả 4 khối lớp (6, 7, 8, 9). Nhiệm vụ trọng tâm gồm: Đổi mới phương pháp dạy học chuyển từ truyền thụ kiến thức sang phát triển năng lực, phẩm chất học sinh; đẩy mạnh giáo dục STEM/STEAM và tăng cường bài học gắn với giải quyết vấn đề thực tiễn; đổi mới kiểm tra, đánh giá thường xuyên và định kỳ theo Thông tư 22/2021/TT-BGDĐT; đẩy mạnh ứng dụng công nghệ thông tin và chuyển đổi số trong quản lý, dạy học.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ Toán – Tin học giữ vai trò nòng cốt trong nhà trường, cần tiên phong thiết kế Kế hoạch bài dạy theo Công văn 5512/BGDĐT-GDTrH gắn với thực tế đời sống; rà soát chuẩn hóa ngân hàng câu hỏi, ma trận và bản đặc tả đề kiểm tra định kỳ (không ra đề đánh đố, vượt cấp); xây dựng Kế hoạch giáo dục STEM với tối thiểu 02 chủ đề STEM/học kỳ cho bộ môn Toán và Tin học.", indent=True)
-    
-    # 3. Quy định về Học bạ số (Thông tư số 70/2026/TT-BGDĐT)
-    add_paragraph_styled(doc, "**3. Quy định về quản lý và sử dụng Học bạ số (Thông tư số 70/2026/TT-BGDĐT ngày 22/8/2026 của Bộ GD&ĐT):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Bãi bỏ học bạ giấy truyền thống, áp dụng Học bạ số 100% trong toàn bộ các cơ sở giáo dục phổ thông trên nền tảng Cơ sở dữ liệu ngành; Học bạ số có đầy đủ giá trị pháp lý chính thức tương đương học bạ giấy, được ký số điện tử bởi giáo viên bộ môn, giáo viên chủ nhiệm và người đứng đầu cơ sở giáo dục (Hiệu trưởng); liên thông dữ liệu phục vụ tuyển sinh đầu cấp và thi vào lớp 10.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** 100% giáo viên trong tổ (kể cả giáo viên bộ môn và GVCN) bắt buộc phải có chứng thư số cá nhân hợp lệ và thành thạo thao tác ký số; giáo viên có trách nhiệm cập nhật điểm kiểm tra, nhận xét học sinh định kỳ chính xác, đúng hạn trên phần mềm; bảo mật tuyệt đối tài khoản chữ ký số cá nhân, tuyệt đối không nhờ người khác ký hộ; hoàn thành ký số đúng tiến độ quy định, không để chậm trễ làm ảnh hưởng đến tiến độ đồng bộ dữ liệu của toàn trường.", indent=True)
-    
-    # 4. Hướng dẫn giáo dục Trí tuệ nhân tạo - AI (Công văn 5588/BGDĐT-GDPT)
-    add_paragraph_styled(doc, "**4. Hướng dẫn triển khai nội dung giáo dục Trí tuệ nhân tạo (AI) cấp phổ thông từ năm học 2026 – 2027 (Công văn số 5588/BGDĐT-GDPT ngày 19/8/2026 của Bộ GD&ĐT):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Cấu trúc Khung giáo dục AI cốt lõi gồm 12 tiết/lớp/năm học, áp dụng 3 hình thức triển khai linh hoạt: (1) Thực hiện chuyên đề giáo dục AI trong kế hoạch 2 buổi/ngày; (2) Lồng ghép tích hợp vào môn Tin học và các môn học khác (Toán, KHTN...); (3) Tổ chức qua câu lạc bộ, hoạt động ngoại khóa tự nguyện; bảo đảm không gây quá tải học tập, không làm biến đổi yêu cầu cần đạt của môn học.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Môn Tin học là lực lượng chủ công triển khai các nội dung cốt lõi về hiểu biết AI, kỹ năng sử dụng AI an toàn; môn Toán chủ động lựa chọn các bài học phù hợp để tích hợp công cụ AI và mô phỏng số hỗ trợ giải toán; tổ chuyên môn ghi rõ địa chỉ bài học tích hợp trong Kế hoạch giáo dục của tổ (Phụ lục 3) và Kế hoạch bài dạy (Phụ lục 4); chuẩn bị xây dựng bài dạy minh họa chuyên đề AI cấp trường và cấp cụm trường.", indent=True)
-    
-    # ==================== PHẦN II ====================
-    add_section_h1(doc, "II. ĐÁNH GIÁ CÔNG TÁC CHUẨN BỊ NĂM HỌC MỚI TRONG THÁNG 8/2026")
-    
-    add_section_h2(doc, "1. Công tác chủ nhiệm:")
-    add_paragraph_styled(doc, "- Giáo viên chủ nhiệm các khối lớp đã nhận lớp, nhanh chóng ổn định tổ chức nề nếp lớp học, lập nhóm Zalo kết nối thường xuyên với phụ huynh học sinh.", indent=True)
-    add_paragraph_styled(doc, "- Đã hoàn thành thông báo danh mục sách giáo khoa bộ sách Cánh Diều cho cha mẹ học sinh chuẩn bị đầy đủ cho con em; rà soát, hoàn thành danh sách học sinh có hoàn cảnh khó khăn đề nghị nhà trường và địa phương hỗ trợ học bổng, sách giáo khoa đầu năm.", indent=True)
-    
-    add_section_h2(doc, "2. Kỷ luật lao động và ngày giờ công:")
-    add_paragraph_styled(doc, "- Toàn thể 10/10 giáo viên trong tổ chấp hành nghiêm túc quy định ngày giờ công, tham gia đầy đủ các buổi tập trung chuẩn bị năm học của nhà trường và các đợt học tập chính trị hè 2026; đeo thẻ công chức/viên chức theo quy chế.", indent=True)
-    
-    add_section_h2(doc, "3. Công tác chuyên môn:")
-    add_paragraph_styled(doc, "- Các nhóm bộ môn đã tham gia đầy đủ, nghiêm túc các đợt tập huấn chuyên môn do Sở GD&ĐT tổ chức: Tập huấn SGK lớp 9 mới, chuỗi tập huấn Năng lực số, Giáo dục Trí tuệ nhân tạo (AI), Giáo dục STEM và phương pháp dạy học trên nền tảng trực tuyến OLM theo đúng tiến độ.", indent=True)
-    add_paragraph_styled(doc, "- Quy mô biên chế trường năm học 2026 – 2027 gồm **25 lớp** (Khối 6: 6 lớp; Khối 7: 6 lớp; Khối 8: 6 lớp; Khối 9: 7 lớp).", indent=True)
-    add_paragraph_styled(doc, "- Tổ chuyên môn đã dự kiến phân công nhiệm vụ giảng dạy và công tác kiêm nhiệm Học kỳ I năm học 2026 – 2027 cho 10 giáo viên như sau:", indent=True)
-    
-    # Chèn bảng phân công chuyên môn
-    add_table_phan_cong_thang_8(doc)
-    
-    add_paragraph_styled(doc, "- Các nhóm chuyên môn theo khối lớp đã thống nhất chương trình làm việc, thiết lập nhóm Zalo chuyên môn để trao đổi tài liệu, rà soát phân phối chương trình môn học.", indent=True)
-    add_paragraph_styled(doc, "- Các đồng chí nhận lớp chủ nhiệm đã hoàn thành phiếu điều tra cơ bản đầu năm đúng hạn (Cô Nguyễn Thị Thảo lớp 6/2, Cô Lê Thị Bình lớp 7/1, Thầy Trần Long Hải lớp 8/3, Thầy Trần Sáng lớp 9/7).", indent=True)
-    
-    add_section_h2(doc, "4. Đánh giá thi đua tháng 8/2026:")
-    add_paragraph_styled(doc, "- **Đánh giá chung:** Toàn thể thành viên trong tổ nêu cao tinh thần trách nhiệm, thực hiện nghiêm túc, kịp thời mọi kế hoạch của nhà trường, chuẩn bị chu đáo điều kiện cơ sở vật chất và chuyên môn cho ngày khai giảng.", indent=True)
-    add_paragraph_styled(doc, "- **Xếp loại thi đua:** 10/10 đồng chí xếp loại A (Thầy Hoàng Tấn Thiên, Thầy Trần Sáng, Thầy Đinh Văn Đông, Thầy Hồ Đăng Danh, Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Cô Lê Thị Bình, Cô Nguyễn Thị Thảo, Thầy Nguyễn Văn Tính, Thầy Dương Quang Tùng).", indent=True)
-    
-    # ==================== PHẦN III ====================
-    add_section_h1(doc, "III. KẾ HOẠCH TRỌNG TÂM THÁNG 9/2026")
-    
-    add_section_h2(doc, "1. Công tác chủ nhiệm:")
-    add_paragraph_styled(doc, "- Ổn định nề nếp lớp chủ nhiệm ngay từ tuần học đầu tiên; tích cực duy trì sinh hoạt 15 phút đầu giờ trước buổi học; hướng dẫn học sinh học tập nội quy, bình bầu ban cán sự lớp.", indent=True)
-    add_paragraph_styled(doc, "- Tham gia lao động vệ sinh phong quang trường lớp, tập dượt nghi thức chuẩn bị lễ khai giảng năm học mới vào ngày 05/9/2026; quản lý tốt học sinh trong ngày khai giảng.", indent=True)
-    
-    add_section_h2(doc, "2. Kỷ luật ngày giờ công:")
-    add_paragraph_styled(doc, "- Giáo viên trong tổ phấn đấu bảo đảm ngày giờ công, chấp hành nghiêm túc thời khóa biểu chính thức bắt đầu từ ngày 07/9/2026.", indent=True)
-    add_paragraph_styled(doc, "- Thực hiện đúng quy định dạy thay, dạy bù khi đồng nghiệp đi công tác hoặc ốm đau; không tự ý đổi giờ khi chưa báo cáo Ban Giám hiệu và Tổ trưởng.", indent=True)
-    
-    add_section_h2(doc, "3. Công tác chuyên môn:")
-    add_paragraph_styled(doc, "- Nhóm bộ môn họp thống nhất kế hoạch dạy học, hoàn thiện các phụ lục theo Công văn 5512/BGDĐT-GDTrH (Phụ lục 1, Phụ lục 2, Phụ lục 3) và Kế hoạch kiểm tra đánh giá nộp về nhà trường phê duyệt chậm nhất ngày 10/9/2026.", indent=True)
-    add_paragraph_styled(doc, "- Toàn thể giáo viên bộ môn: Cập nhật địa chỉ lồng ghép **Khung Năng lực số (20%)** và **12 tiết Khung AI** vào Kế hoạch bài dạy (Phụ lục 4); chuẩn bị giáo án đầy đủ trước khi lên lớp, đồng bộ lên Cơ sở dữ liệu ngành để ký số tuần đúng hạn.", indent=True)
-    add_paragraph_styled(doc, "- Giáo viên đăng ký mượn đồ dùng dạy học, thiết bị thực hành, sách giáo khoa và sách tham khảo phục vụ giảng dạy tại phòng thiết bị - thư viện.", indent=True)
-    add_paragraph_styled(doc, "- Khai thác có hiệu quả phòng máy vi tính và phòng học chức năng, bảo đảm an toàn điện và phòng cháy chữa cháy trong quá trình sử dụng.", indent=True)
-    
-    add_section_h2(doc, "4. Ngoại khóa và các hoạt động khác:")
-    add_paragraph_styled(doc, "- Tập trung chuẩn bị cho lễ khai giảng ngày 05/9/2026 (phân công đọc quyết tâm thư, quản lý học sinh theo phân công của nhà trường).", indent=True)
-    add_paragraph_styled(doc, "- Tham gia tuyên truyền học sinh chấp hành tốt luật An toàn giao thông (đặc biệt đội mũ bảo hiểm khi ngồi trên xe máy, xe đạp điện), phòng chống bạo lực học đường; tham gia các phong trào thi đua do Nhà trường và Đội TNTP phát động.", indent=True)
-    
-    # ==================== PHẦN IV ====================
-    add_section_h1(doc, "IV. THẢO LUẬN CHUYÊN MÔN VÀ Ý KIẾN CỦA CÁC THÀNH VIÊN TRONG TỔ")
-    add_paragraph_styled(doc, "Cuộc họp đã dành phần lớn thời gian để các thầy cô đi thẳng vào các vấn đề chuyên môn cốt lõi, trao đổi thẳng thắn về các khó khăn thực tế khi đứng lớp và thống nhất phương án giải quyết cho năm học mới 2026 – 2027:", indent=True)
-    
-    # Ý kiến 1: Thảo luận về Chương trình Toán 9 mới và đề thi tuyển sinh 10
-    add_paragraph_styled(doc, "**1. Thảo luận về Chương trình môn Toán 9 mới (năm đầu áp dụng GDPT 2018) và định hướng thi vào lớp 10:**", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Trần Sáng (Tổ phó chuyên môn, phụ trách Toán 9):** Năm học này là năm bản lề khi khối 9 bắt đầu học SGK mới theo Chương trình GDPT 2018. Khung kiến thức có sự thay đổi rất lớn: hệ thức lượng trong tam giác vuông, đường tròn, hàm số bậc nhất, bậc hai và đặc biệt là các bài toán thống kê - xác suất thực tế chiếm tỉ trọng điểm số đáng kể. Kỳ thi tuyển sinh vào lớp 10 tới đây chắc chắn sẽ ra đề theo cấu trúc ma trận mới 100%. Nếu giáo viên chỉ dạy lý thuyết sách giáo khoa theo lối mòn cũ thì học sinh sẽ rất lúng túng khi gặp bài toán thực tế (bài toán thực tế về đo đạc hình học, bài toán kinh tế, bài toán tối ưu...). Đề nghị nhóm Toán 9 ngay trong tháng 9 phải ngồi lại biên soạn một bộ chuyên đề bài tập thực tế chuẩn hóa theo từng chương để giáo viên dùng chung cho cả 7 lớp khối 9, bảo đảm tính đồng bộ và chất lượng đại trà.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Hồ Đăng Danh (GV môn Toán 9):** Hoàn toàn nhất trí với ý kiến của thầy Sáng. Cần đặc biệt lưu ý về độ phân hóa giữa 7 lớp khối 9: lớp 9/7 học sinh tiếp thu rất nhanh, nhưng một số lớp khác học sinh còn hổng nhiều kiến thức đại số lớp 8. Do đó, trong Kế hoạch bài dạy, phần bài tập luyện tập phải thiết kế phân tầng rõ rệt: từ mức độ nhận biết, thông hiểu đến vận dụng thực tế; không nên áp dụng bài tập quá sức ngay từ đầu khiến học sinh có học lực trung bình, yếu bị nản chí.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Hoàng Tấn Thiên (Chủ trì / Tổ trưởng):** Kết luận và thống nhất: Giao Thầy Trần Sáng làm trưởng nhóm Toán 9, chủ trì cùng Thầy Hồ Đăng Danh rà soát khung ma trận đề kiểm tra định kỳ và biên soạn ngân hàng bài tập thực tế khối 9. Tổ chuyên môn sẽ bố trí một buổi sinh hoạt chuyên môn chuyên đề vào tuần 3 tháng 9 để toàn tổ thẩm định và đóng góp ý kiến trước khi đưa vào giảng dạy chính thức.", indent=True)
-    
-    # Ý kiến 2: Thảo luận về tích hợp 12 tiết AI và Khung NLS (20%)
-    add_paragraph_styled(doc, "**2. Thảo luận về phương pháp tích hợp 12 tiết Khung AI và Khung Năng lực số (20%) vào KHBD:**", indent=True)
-    add_paragraph_styled(doc, "- **Cô Lê Thị Bình (GV môn Toán khối 7):** Giáo viên trong tổ đều ủng hộ chủ trương tích hợp AI và Năng lực số, nhưng băn khoăn lớn nhất là việc tích hợp cụ thể như thế nào trong tiến trình 4 hoạt động của Công văn 5512/BGDĐT-GDTrH để không làm loãng kiến thức trọng tâm bài Toán. Thời lượng 1 tiết chỉ có 45 phút, nếu đưa quá nhiều thuật ngữ AI hay công nghệ vào bài giảng thì học sinh sẽ không còn thời gian để rèn kỹ năng tính toán và lập luận hình học.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Dương Quang Tùng (GV môn Tin học):** Về phía môn Tin học, việc tích hợp 12 tiết AI rất thuận lợi vì chương trình Tin học có sẵn các mạch kiến thức về dữ liệu, thuật toán và đạo đức số. Nhóm Tin học (thầy Tùng, thầy Danh, cô Thảo) sẽ chủ động gánh vác phần lớn các bài học AI lý thuyết và kỹ năng sử dụng công cụ AI an toàn. Đối với môn Toán, việc tích hợp chỉ nên dừng lại ở mức độ công cụ trực quan (ví dụ: dùng phần mềm GeoGebra để vẽ hình động, dùng AI gợi ý hướng giải hoặc kiểm tra nghiệm), tuyệt đối không dạy kỹ thuật AI chuyên sâu trong giờ Toán làm quá tải học sinh.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Hoàng Tấn Thiên (Tổ trưởng):** Thống nhất quan điểm: Tích hợp AI vào môn Toán phải thực chất, nhẹ nhàng và tự nhiên. Trong Kế hoạch bài dạy (Phụ lục 4), giáo viên chỉ cần in đậm, in nghiêng mục tiêu AI/NLS tại Hoạt động Luyện tập hoặc Vận dụng. Giao nhóm Tin học phối hợp cùng Thầy Sáng và Cô Bình soạn 01 giáo án mẫu tích hợp AI môn Toán lớp 8 và lớp 9 để gửi vào nhóm Zalo tổ cho cả tổ tham khảo trước ngày 10/9.", indent=True)
-    
-    # Ý kiến 3: Thảo luận về Cơ sở vật chất phòng máy vi tính môn Tin học
-    add_paragraph_styled(doc, "**3. Thảo luận về cơ sở vật chất phòng máy vi tính và thiết bị thực hành môn Tin học:**", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Dương Quang Tùng (Phụ trách phòng máy vi tính):** Báo cáo hiện trạng: Nhà trường có 02 phòng máy vi tính (phòng 1 có 32 máy, phòng 2 có 30 máy). Qua rà soát kỹ thuật đầu năm, hiện có 6 máy tính bị hỏng chuột, 4 máy nguồn chập chờn và đường truyền mạng internet ở phòng 2 đôi lúc bị nghẽn khi học sinh cùng đăng nhập. Trong khi năm học này môn Tin học có tổng cộng 25 lớp, tần suất sử dụng phòng máy là liên tục cả sáng và chiều.", indent=True)
-    add_paragraph_styled(doc, "- **Cô Nguyễn Thị Thảo (GV môn Tin học):** Nếu phòng máy thiếu máy tính hoạt động tốt thì học sinh phải ngồi ghép 2 đến 3 em một máy, rất khó quản lý nề nếp và hiệu quả thực hành lập trình Scratch (khối 6, 7) và Python (khối 8, 9) sẽ giảm sút rõ rệt. Đề nghị Tổ trưởng kiến nghị Ban Giám hiệu mua bổ sung chuột, bàn phím dự phòng và cấu hình lại mạng nội bộ trước ngày 05/9.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Đinh Văn Đông (Hiệu trưởng):** Tiếp thu ý kiến xác đáng của thầy Tùng và cô Thảo. Nhà trường đã phê duyệt kinh phí bảo dưỡng thiết bị dạy học đầu năm. Giao bộ phận thiết bị phối hợp với thầy Tùng hoàn thành việc kiểm tra, thay thế linh kiện hư hỏng và sửa chữa dứt điểm đường truyền internet phòng máy xong trước ngày 02/9 để đảm bảo ngày 07/9 học sinh vào học thực hành thuận lợi.", indent=True)
-    
-    # Ý kiến 4: Thảo luận về Triển khai Học bạ số và chữ ký số giáo viên (Thông tư 70)
-    add_paragraph_styled(doc, "**4. Thảo luận về triển khai Học bạ số và chữ ký số giáo viên (Thông tư số 70/2026/TT-BGDĐT):**", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Hoàng Xuân Ánh (GV môn Toán):** Việc triển khai Học bạ số thay cho học bạ giấy là bước tiến lớn, giúp giảm bớt áp lực ghi chép thủ công. Tuy nhiên, một số thầy cô còn lúng túng trong thao tác cài đặt chứng thư số trên điện thoại thông minh (SmartCA / VNPT CA), việc xác thực ký số điện tử và quy trình kiểm tra dữ liệu điểm số trước khi ký để tránh sai lệch.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Hồ Đăng Danh (GV Tin học, CSDL ngành):** Đề xuất nhóm Tin học sẽ hỗ trợ kỹ thuật trực tiếp cho từng thầy cô trong tổ, hướng dẫn cài đặt app, kích hoạt chứng thư số và tổ chức một buổi thao tác ký số thử nghiệm trên hệ thống Cơ sở dữ liệu ngành vào đầu tháng 9.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Đinh Văn Đông (Hiệu trưởng):** Quán triệt nghiêm túc: Học bạ số là hồ sơ pháp lý liên thông quốc gia, giáo viên phải quản lý tài khoản ký số cá nhân như con dấu của mình, tuyệt đối không chia sẻ mật khẩu hay nhờ người khác ký hộ. Điểm số khi đã ký số sẽ khóa dữ liệu, sửa chữa rất phức tạp. Yêu cầu toàn thể giáo viên trong tổ nêu cao tinh thần trách nhiệm, vào điểm đúng hạn và kiểm tra thật kỹ trước khi ký số.", indent=True)
-    
-    # Ý kiến 5: Thảo luận về Giải pháp phụ đạo học sinh yếu kém và công tác chủ nhiệm đầu năm
-    add_paragraph_styled(doc, "**5. Thảo luận về giải pháp phụ đạo học sinh yếu kém môn Toán và nề nếp chủ nhiệm:**", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Nguyễn Văn Tính (GV môn Toán khối 6 & 7):** Học sinh lớp 6 mới chuyển cấp từ tiểu học lên còn bỡ ngỡ về phương pháp học THCS; kỹ năng trình bày bài toán có lời văn và kỹ năng tính toán phân số, số thập phân còn nhiều hạn chế. Giáo viên dạy khối 6 cần kiên nhẫn, rèn phương pháp ghi chép và cách lập luận chuẩn mực ngay từ những tuần đầu tiên.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Trần Long Hải (GV môn Toán, GVCN lớp 8/3):** Đồng ý với thầy Tính. Đối với học sinh khối 8 và khối 9, ngay trong tháng 9 giáo viên bộ môn cần phối hợp chặt chẽ với giáo viên chủ nhiệm rà soát, lập danh sách học sinh có nguy cơ mất gốc kiến thức để có kế hoạch kèm cặp, phân công bạn học khá giúp đỡ bạn yếu trong 15 phút đầu giờ hoặc giao thêm bài tập vừa sức.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Hoàng Xuân Ánh (GV môn Toán):** Lưu ý thêm về công tác an toàn giao thông đầu năm: Đề nghị các giáo viên chủ nhiệm (đặc biệt khối 8, khối 9) phối hợp chặt chẽ với Tổng phụ trách Đội và phụ huynh nhắc nhở học sinh nghiêm túc đội mũ bảo hiểm khi đi xe đạp điện, xe máy điện tới trường.", indent=True)
-    
-    # ==================== PHẦN V ====================
-    add_section_h1(doc, "V. KẾT LUẬN VÀ BIỂU QUYẾT")
-    add_paragraph_styled(doc, "- Thầy Tổ trưởng Hoàng Tấn Thiên tổng hợp các ý kiến thảo luận và kết luận: Toàn thể giáo viên trong tổ phát huy tinh thần đoàn kết, trách nhiệm, tập trung hoàn thiện Kế hoạch bài dạy theo chuẩn CV 5512, tích hợp hiệu quả Khung AI và Năng lực số, chủ động hỗ trợ học sinh và chuẩn bị tốt nhất cho năm học mới 2026 – 2027.", indent=True)
-    add_paragraph_styled(doc, "- **Biểu quyết:** 10/10 thành viên có mặt tán thành 100% với các nội dung đánh giá công tác tháng 8/2026, kế hoạch hoạt động tháng 9/2026 và các giải pháp chuyên môn đã thống nhất.", indent=True)
-    add_paragraph_styled(doc, "Biên bản cuộc họp kết thúc vào lúc 11 giờ 30 phút cùng ngày, đã được đọc lại cho toàn thể các thành viên cùng nghe, nhất trí thông qua và ký xác nhận dưới đây; biên bản được lập thành 02 bản có giá trị như nhau, lưu hồ sơ tổ chuyên môn và gửi Ban Giám hiệu nhà trường./.", indent=True)
-    
-    # 5. Khung chữ ký chuẩn
-    add_bien_ban_signatures(doc, chu_tri="Hoàng Tấn Thiên", thu_ky="Lê Thị Bình")
-    
-    # 6. Danh sách các thành viên khác của tổ ký xác nhận
-    p_tv = doc.add_paragraph()
-    p_tv.paragraph_format.space_before = Pt(12)
-    p_tv.paragraph_format.space_after = Pt(4)
-    r_tv = p_tv.add_run("CÁC THÀNH VIÊN KHÁC CỦA TỔ CHUYÊN MÔN KÝ XÁC NHẬN:\n")
-    r_tv.font.name = 'Times New Roman'
-    r_tv.font.size = Pt(13)
-    r_tv.bold = True
-    
-    # Bảng 4 cột thành viên ký xác nhận
-    table_tv = doc.add_table(rows=2, cols=4)
-    table_tv.alignment = WD_TABLE_ALIGNMENT.CENTER
-    table_tv.autofit = False
-    
-    # Bỏ viền bảng chữ ký
-    for r in table_tv.rows:
-        for c in r.cells:
-            tcPr = c._tc.get_or_add_tcPr()
-            tcBorders = parse_xml(r'<w:tcBorders {}><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders>'.format(nsdecls('w')))
-            tcPr.append(tcBorders)
-            
-    members_r1 = ["Đinh Văn Đông", "Trần Sáng", "Hồ Đăng Danh", "Hoàng Xuân Ánh"]
-    members_r2 = ["Trần Long Hải", "Nguyễn Thị Thảo", "Nguyễn Văn Tính", "Dương Quang Tùng"]
-    
-    for i, name in enumerate(members_r1):
-        cell = table_tv.rows[0].cells[i]
-        cell.width = Inches(1.7)
-        p = cell.paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.paragraph_format.space_before = Pt(25)
-        r = p.add_run(f"(Ký tên)\n\n\n**{name}**")
-        r.font.name = 'Times New Roman'
-        r.font.size = Pt(12)
-        
-    for i, name in enumerate(members_r2):
-        cell = table_tv.rows[1].cells[i]
-        cell.width = Inches(1.7)
-        p = cell.paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.paragraph_format.space_before = Pt(25)
-        r = p.add_run(f"(Ký tên)\n\n\n**{name}**")
-        r.font.name = 'Times New Roman'
-        r.font.size = Pt(12)
-        
-    os.makedirs(os.path.dirname(out_docx_path), exist_ok=True)
-    save_docx_robust(doc, out_docx_path)
-    print(f"Da xuat thanh cong file Word: {out_docx_path}")
-    
-    if out_md_path:
-        os.makedirs(os.path.dirname(out_md_path), exist_ok=True)
-        tao_bien_ban_hop_to_lan_1_thang_8_md(out_md_path)
-        print(f"Da xuat thanh cong file Markdown: {out_md_path}")
-
-def tao_bien_ban_hop_to_lan_1_thang_8_md(out_md_path):
-    """Xuất phiên bản Markdown cho Biên bản họp tổ Lần 1 Tháng 8/2026."""
-    md_content = """<div align="center">
-
-| **TRƯỜNG THCS TRẦN PHÚ**<br>**TỔ TOÁN - TIN HỌC**<br>Số: 01/BB-TCM | **CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM**<br>**Độc lập – Tự do – Hạnh phúc**<br>──────────────────<br>*Xuân Đông, ngày 26 tháng 8 năm 2026* |
-|:---:|:---:|
-
----
-
-# BIÊN BẢN HỌP TỔ CHUYÊN MÔN LẦN 1
-### SINH HOẠT CHUYÊN MÔN TỔ TOÁN – TIN THÁNG 8/2026
-*(Chuẩn bị năm học mới 2026 – 2027)*
-──────────────────
-
-</div>
-
-Hôm nay, vào lúc 10 giờ 00 phút, ngày 26 tháng 8 năm 2026, tại Phòng sinh hoạt chuyên môn Trường THCS Trần Phú, Tổ Toán – Tin học đã tiến hành phiên họp chuyên môn định kỳ lần 1 tháng 8 chuẩn bị cho năm học mới 2026 – 2027.
-
-- **Chủ trì cuộc họp:** Thầy **Hoàng Tấn Thiên** – Tổ trưởng chuyên môn.  
-- **Thư ký cuộc họp:** Cô **Lê Thị Bình** – Giáo viên môn Toán.  
-- **Thành viên tham dự:** 10/10 thành viên trong tổ (Có mặt: 10/10, Vắng: 0).  
-  + *Danh sách thành viên:* Thầy Hoàng Tấn Thiên, Thầy Trần Sáng, Thầy Đinh Văn Đông, Thầy Hồ Đăng Danh, Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Cô Lê Thị Bình, Cô Nguyễn Thị Thảo, Thầy Nguyễn Văn Tính, Thầy Dương Quang Tùng.
-
-<div align="center">
-
-### NỘI DUNG CUỘC HỌP
-
-</div>
-
-## I. TRIỂN KHAI VĂN BẢN CHỈ ĐẠO CỦA CẤP TRÊN
-
-Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt các văn bản chỉ đạo trọng tâm của Bộ Giáo dục và Đào tạo, UBND thành phố Đồng Nai và Sở Giáo dục và Đào tạo; đồng thời tóm tắt các vấn đề cốt lõi tác động trực tiếp đến kế hoạch thực hiện của nhà trường và Tổ chuyên môn Toán – Tin học như sau:
-
-**1. Kế hoạch thời gian năm học 2026 – 2027 (Quyết định số 2308/QĐ-BGDĐT ngày 06/8/2026 của Bộ GD&ĐT và Quyết định số 2322/QĐ-UBND ngày 19/8/2026 của UBND thành phố Đồng Nai):**
-- **Ý chính cốt lõi:** Toàn quốc và thành phố thống nhất tổ chức Khai giảng năm học mới vào ngày 05/9/2026. Khung kế hoạch bảo đảm đủ 35 tuần thực học (Học kỳ I: 18 tuần, từ ngày 07/9/2026 đến ngày 16/01/2027; Học kỳ II: 17 tuần, từ ngày 18/01/2027 đến ngày 24/5/2027; kết thúc năm học trước ngày 31/5/2027). Tựu trường sớm nhất đối với học sinh lớp 9 từ ngày 21/8/2026 và học sinh lớp 6 từ ngày 28/8/2026.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ chuyên môn phải xây dựng Kế hoạch dạy học (phân phối chương trình môn Toán và môn Tin học) khớp đúng khung 35 tuần, tuyệt đối không cắt xén hoặc dồn ghép cơ học; tính toán tuần đệm kiểm tra giữa kỳ (tuần 9) và cuối kỳ (tuần 17-18) khoa học, tránh dồn ép điểm số; giáo viên chủ nhiệm khối 6 và khối 9 chủ động ổn định sĩ số, nề nếp học tập ngay từ những ngày tựu trường sớm.
-
-**2. Hướng dẫn thực hiện nhiệm vụ giáo dục phổ thông năm học 2026 – 2027 (Công văn số 4200/SGDĐT-GDPT&GDTX ngày 21/8/2026 của Sở GD&ĐT thành phố Đồng Nai):**
-- **Ý chính cốt lõi:** Năm học 2026 – 2027 thực hiện toàn diện Chương trình GDPT 2018 cho cả 4 khối lớp (6, 7, 8, 9). Nhiệm vụ trọng tâm gồm: Đổi mới phương pháp dạy học chuyển từ truyền thụ kiến thức sang phát triển năng lực, phẩm chất học sinh; đẩy mạnh giáo dục STEM/STEAM và tăng cường bài học gắn với giải quyết vấn đề thực tiễn; đổi mới kiểm tra, đánh giá thường xuyên và định kỳ theo Thông tư 22/2021/TT-BGDĐT; đẩy mạnh ứng dụng công nghệ thông tin và chuyển đổi số trong quản lý, dạy học.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ Toán – Tin học giữ vai trò nòng cốt trong nhà trường, cần tiên phong thiết kế Kế hoạch bài dạy theo Công văn 5512/BGDĐT-GDTrH gắn với thực tế đời sống; rà soát chuẩn hóa ngân hàng câu hỏi, ma trận và bản đặc tả đề kiểm tra định kỳ (không ra đề đánh đố, vượt cấp); xây dựng Kế hoạch giáo dục STEM với tối thiểu 02 chủ đề STEM/học kỳ cho bộ môn Toán và Tin học.
-
-**3. Quy định về quản lý và sử dụng Học bạ số (Thông tư số 70/2026/TT-BGDĐT ngày 22/8/2026 của Bộ GD&ĐT):**
-- **Ý chính cốt lõi:** Bãi bỏ học bạ giấy truyền thống, áp dụng Học bạ số 100% trong toàn bộ các cơ sở giáo dục phổ thông trên nền tảng Cơ sở dữ liệu ngành; Học bạ số có đầy đủ giá trị pháp lý chính thức tương đương học bạ giấy, được ký số điện tử bởi giáo viên bộ môn, giáo viên chủ nhiệm và người đứng đầu cơ sở giáo dục (Hiệu trưởng); liên thông dữ liệu phục vụ tuyển sinh đầu cấp và thi vào lớp 10.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** 100% giáo viên trong tổ (kể cả giáo viên bộ môn và GVCN) bắt buộc phải có chứng thư số cá nhân hợp lệ và thành thạo thao tác ký số; giáo viên có trách nhiệm cập nhật điểm kiểm tra, nhận xét học sinh định kỳ chính xác, đúng hạn trên phần mềm; bảo mật tuyệt đối tài khoản chữ ký số cá nhân, tuyệt đối không nhờ người khác ký hộ; hoàn thành ký số đúng tiến độ quy định, không để chậm trễ làm ảnh hưởng đến tiến độ đồng bộ dữ liệu của toàn trường.
-
-**4. Hướng dẫn triển khai nội dung giáo dục Trí tuệ nhân tạo (AI) cấp phổ thông từ năm học 2026 – 2027 (Công văn số 5588/BGDĐT-GDPT ngày 19/8/2026 của Bộ GD&ĐT):**
-- **Ý chính cốt lõi:** Cấu trúc Khung giáo dục AI cốt lõi gồm 12 tiết/lớp/năm học, áp dụng 3 hình thức triển khai linh hoạt: (1) Thực hiện chuyên đề giáo dục AI trong kế hoạch 2 buổi/ngày; (2) Lồng ghép tích hợp vào môn Tin học và các môn học khác (Toán, KHTN...); (3) Tổ chức qua câu lạc bộ, hoạt động ngoại khóa tự nguyện; bảo đảm không gây quá tải học tập, không làm biến đổi yêu cầu cần đạt của môn học.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Môn Tin học là lực lượng chủ công triển khai các nội dung cốt lõi về hiểu biết AI, kỹ năng sử dụng AI an toàn; môn Toán chủ động lựa chọn các bài học phù hợp để tích hợp công cụ AI và mô phỏng số hỗ trợ giải toán; tổ chuyên môn ghi rõ địa chỉ bài học tích hợp trong Kế hoạch giáo dục của tổ (Phụ lục 3) và Kế hoạch bài dạy (Phụ lục 4); chuẩn bị xây dựng bài dạy minh họa chuyên đề AI cấp trường và cấp cụm trường.
-
-## II. ĐÁNH GIÁ CÔNG TÁC CHUẨN BỊ NĂM HỌC MỚI TRONG THÁNG 8/2026
-
-### **1. Công tác chủ nhiệm:**
-- Giáo viên chủ nhiệm các khối lớp đã nhận lớp, nhanh chóng ổn định tổ chức nề nếp lớp học, lập nhóm Zalo kết nối thường xuyên với phụ huynh học sinh.
-- Đã hoàn thành thông báo danh mục sách giáo khoa bộ sách Cánh Diều cho cha mẹ học sinh chuẩn bị đầy đủ cho con em; rà soát, hoàn thành danh sách học sinh có hoàn cảnh khó khăn đề nghị nhà trường và địa phương hỗ trợ học bổng, sách giáo khoa đầu năm.
-
-### **2. Kỷ luật lao động và ngày giờ công:**
-- Toàn thể 10/10 giáo viên trong tổ chấp hành nghiêm túc quy định ngày giờ công, tham gia đầy đủ các buổi tập trung chuẩn bị năm học của nhà trường và các đợt học tập chính trị hè 2026; đeo thẻ công chức/viên chức theo quy chế.
-
-### **3. Công tác chuyên môn:**
-- Các nhóm bộ môn đã tham gia đầy đủ, nghiêm túc các đợt tập huấn chuyên môn do Sở GD&ĐT tổ chức: Tập huấn SGK lớp 9 mới, chuỗi tập huấn Năng lực số, Giáo dục Trí tuệ nhân tạo (AI), Giáo dục STEM và phương pháp dạy học trên nền tảng trực tuyến OLM theo đúng tiến độ.
-- Quy mô biên chế trường năm học 2026 – 2027 gồm **25 lớp** (Khối 6: 6 lớp; Khối 7: 6 lớp; Khối 8: 6 lớp; Khối 9: 7 lớp).
-- Tổ chuyên môn đã dự kiến phân công nhiệm vụ giảng dạy và công tác kiêm nhiệm Học kỳ I năm học 2026 – 2027 cho 10 giáo viên như sau:
-
-| STT | Họ và tên giáo viên | Môn và lớp phụ trách giảng dạy | Nhiệm vụ kiêm nhiệm / khác | Số tiết/tuần | Ghi chú |
-|:---:|:---|:---|:---|:---:|:---:|
-| 1 | Hoàng Tấn Thiên | Toán 6 (3 lớp - 12 tiết) | Tổ trưởng chuyên môn (3t), Phụ trách Chuyển đổi số (3t) | 18 | Tổ trưởng |
-| 2 | Trần Sáng | Toán 9 (3 lớp - 12 tiết), Tin học 9 (1 lớp - 1 tiết) | Phó Tổ trưởng (1t), Chủ nhiệm lớp 9/7 (4t) | 18 | Phó Tổ trưởng |
-| 3 | Đinh Văn Đông | Hoạt động TN, HN (3 tiết) | Hiệu trưởng nhà trường | 3 | BGH sinh hoạt tổ |
-| 4 | Hồ Đăng Danh | Toán 9 (4 lớp - 16 tiết) | Thành viên ban CNTT & CSDL ngành | 16 | GV môn Toán |
-| 5 | Hoàng Xuân Ánh | Toán 8 (3 lớp - 12 tiết), Tin học 6 (4 lớp - 4 tiết) | Ủy viên tổ chuyên môn | 16 | GV Toán - Tin |
-| 6 | Trần Long Hải | Toán 8 (3 lớp - 12 tiết), HĐTN, HN (3 tiết) | Chủ nhiệm lớp 8/3 (4t) | 19 | GV môn Toán |
-| 7 | Lê Thị Bình | Toán 7 (3 lớp - 12 tiết), HĐTN, HN (3 tiết) | Chủ nhiệm lớp 7/1 (4t), Thư ký tổ | 19 | GV môn Toán |
-| 8 | Nguyễn Thị Thảo | Toán 6 (1 lớp - 4t), Toán 7 (1 lớp - 4t)<br>Tin 6 (2 lớp - 2t), Tin 7 (2 lớp - 2t), HĐTN (3t) | Chủ nhiệm lớp 6/2 (4t) | 19 | GV Toán - Tin |
-| 9 | Nguyễn Văn Tính | Toán 6 (2 lớp - 8 tiết), Toán 7 (2 lớp - 8 tiết) | Ủy viên tổ chuyên môn | 16 | GV môn Toán |
-| 10 | Dương Quang Tùng | Tin 7 (4 lớp - 4t), Tin 8 (6 lớp - 6t), Tin 9 (6 lớp - 6t) | Phụ trách phòng máy vi tính bộ môn (3t) | 19 | GV Tin học |
-
-- Các nhóm chuyên môn theo khối lớp đã thống nhất chương trình làm việc, thiết lập nhóm Zalo chuyên môn để trao đổi tài liệu, rà soát phân phối chương trình môn học.
-- Các đồng chí nhận lớp chủ nhiệm đã hoàn thành phiếu điều tra cơ bản đầu năm đúng hạn (Cô Nguyễn Thị Thảo lớp 6/2, Cô Lê Thị Bình lớp 7/1, Thầy Trần Long Hải lớp 8/3, Thầy Trần Sáng lớp 9/7).
-
-### **4. Đánh giá thi đua tháng 8/2026:**
-- **Đánh giá chung:** Toàn thể thành viên trong tổ nêu cao tinh thần trách nhiệm, thực hiện nghiêm túc, kịp thời mọi kế hoạch của nhà trường, chuẩn bị chu đáo điều kiện cơ sở vật chất và chuyên môn cho ngày khai giảng.
-- **Xếp loại thi đua:** 10/10 đồng chí xếp loại A (Thầy Hoàng Tấn Thiên, Thầy Trần Sáng, Thầy Đinh Văn Đông, Thầy Hồ Đăng Danh, Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Cô Lê Thị Bình, Cô Nguyễn Thị Thảo, Thầy Nguyễn Văn Tính, Thầy Dương Quang Tùng).
-
-## III. KẾ HOẠCH TRỌNG TÂM THÁNG 9/2026
-
-### **1. Công tác chủ nhiệm:**
-- Ổn định nề nếp lớp chủ nhiệm ngay từ tuần học đầu tiên; tích cực duy trì sinh hoạt 15 phút đầu giờ trước buổi học; hướng dẫn học sinh học tập nội quy, bình bầu ban cán sự lớp.
-- Tham gia lao động vệ sinh phong quang trường lớp, tập dượt nghi thức chuẩn bị lễ khai giảng năm học mới vào ngày 05/9/2026; quản lý tốt học sinh trong ngày khai giảng.
-
-### **2. Kỷ luật ngày giờ công:**
-- Giáo viên trong tổ phấn đấu bảo đảm ngày giờ công, chấp hành nghiêm túc thời khóa biểu chính thức bắt đầu từ ngày 07/9/2026.
-- Thực hiện đúng quy định dạy thay, dạy bù khi đồng nghiệp đi công tác hoặc ốm đau; không tự ý đổi giờ khi chưa báo cáo Ban Giám hiệu và Tổ trưởng.
-
-### **3. Công tác chuyên môn:**
-- Nhóm bộ môn họp thống nhất kế hoạch dạy học, hoàn thiện các phụ lục theo Công văn 5512/BGDĐT-GDTrH (Phụ lục 1, Phụ lục 2, Phụ lục 3) và Kế hoạch kiểm tra đánh giá nộp về nhà trường phê duyệt chậm nhất ngày 10/9/2026.
-- Toàn thể giáo viên bộ môn: Cập nhật địa chỉ lồng ghép **Khung Năng lực số (20%)** và **12 tiết Khung AI** vào Kế hoạch bài dạy (Phụ lục 4); chuẩn bị giáo án đầy đủ trước khi lên lớp, đồng bộ lên Cơ sở dữ liệu ngành để ký số tuần đúng hạn.
-- Giáo viên đăng ký mượn đồ dùng dạy học, thiết bị thực hành, sách giáo khoa và sách tham khảo phục vụ giảng dạy tại phòng thiết bị - thư viện.
-- Khai thác có hiệu quả phòng máy vi tính và phòng học chức năng, bảo đảm an toàn điện và phòng cháy chữa cháy trong quá trình sử dụng.
-
-### **4. Ngoại khóa và các hoạt động khác:**
-- Tập trung chuẩn bị cho lễ khai giảng ngày 05/9/2026 (phân công đọc quyết tâm thư, quản lý học sinh theo phân công của nhà trường).
-- Tham gia tuyên truyền học sinh chấp hành tốt luật An toàn giao thông (đặc biệt đội mũ bảo hiểm khi ngồi trên xe máy, xe đạp điện), phòng chống bạo lực học đường; tham gia các phong trào thi đua do Nhà trường và Đội TNTP phát động.
-
-## IV. THẢO LUẬN CHUYÊN MÔN VÀ Ý KIẾN CỦA CÁC THÀNH VIÊN TRONG TỔ
-
-Cuộc họp đã dành phần lớn thời gian để các thầy cô đi thẳng vào các vấn đề chuyên môn cốt lõi, trao đổi thẳng thắn về các khó khăn thực tế khi đứng lớp và thống nhất phương án giải quyết cho năm học mới 2026 – 2027:
-
-**1. Thảo luận về Chương trình môn Toán 9 mới (năm đầu áp dụng GDPT 2018) và định hướng thi vào lớp 10:**
-- **Thầy Trần Sáng (Tổ phó chuyên môn, phụ trách Toán 9):** Năm học này là năm bản lề khi khối 9 bắt đầu học SGK mới theo Chương trình GDPT 2018. Khung kiến thức có sự thay đổi rất lớn: hệ thức lượng trong tam giác vuông, đường tròn, hàm số bậc nhất, bậc hai và đặc biệt là các bài toán thống kê - xác suất thực tế chiếm tỉ trọng điểm số đáng kể. Kỳ thi tuyển sinh vào lớp 10 tới đây chắc chắn sẽ ra đề theo cấu trúc ma trận mới 100%. Nếu giáo viên chỉ dạy lý thuyết sách giáo khoa theo lối mòn cũ thì học sinh sẽ rất lúng túng khi gặp bài toán thực tế (bài toán thực tế về đo đạc hình học, bài toán kinh tế, bài toán tối ưu...). Đề nghị nhóm Toán 9 ngay trong tháng 9 phải ngồi lại biên soạn một bộ chuyên đề bài tập thực tế chuẩn hóa theo từng chương để giáo viên dùng chung cho cả 7 lớp khối 9, bảo đảm tính đồng bộ và chất lượng đại trà.
-- **Thầy Hồ Đăng Danh (GV môn Toán 9):** Hoàn toàn nhất trí với ý kiến của thầy Sáng. Cần đặc biệt lưu ý về độ phân hóa giữa 7 lớp khối 9: lớp 9/7 học sinh tiếp thu rất nhanh, nhưng một số lớp khác học sinh còn hổng nhiều kiến thức đại số lớp 8. Do đó, trong Kế hoạch bài dạy, phần bài tập luyện tập phải thiết kế phân tầng rõ rệt: từ mức độ nhận biết, thông hiểu đến vận dụng thực tế; không nên áp dụng bài tập quá sức ngay từ đầu khiến học sinh có học lực trung bình, yếu bị nản chí.
-- **Thầy Hoàng Tấn Thiên (Chủ trì / Tổ trưởng):** Kết luận và thống nhất: Giao Thầy Trần Sáng làm trưởng nhóm Toán 9, chủ trì cùng Thầy Hồ Đăng Danh rà soát khung ma trận đề kiểm tra định kỳ và biên soạn ngân hàng bài tập thực tế khối 9. Tổ chuyên môn sẽ bố trí một buổi sinh hoạt chuyên môn chuyên đề vào tuần 3 tháng 9 để toàn tổ thẩm định và đóng góp ý kiến trước khi đưa vào giảng dạy chính thức.
-
-**2. Thảo luận về phương pháp tích hợp 12 tiết Khung AI và Khung Năng lực số (20%) vào KHBD:**
-- **Cô Lê Thị Bình (GV môn Toán khối 7):** Giáo viên trong tổ đều ủng hộ chủ trương tích hợp AI và Năng lực số, nhưng băn khoăn lớn nhất là việc tích hợp cụ thể như thế nào trong tiến trình 4 hoạt động của Công văn 5512/BGDĐT-GDTrH để không làm loãng kiến thức trọng tâm bài Toán. Thời lượng 1 tiết chỉ có 45 phút, nếu đưa quá nhiều thuật ngữ AI hay công nghệ vào bài giảng thì học sinh sẽ không còn thời gian để rèn kỹ năng tính toán và lập luận hình học.
-- **Thầy Dương Quang Tùng (GV môn Tin học):** Về phía môn Tin học, việc tích hợp 12 tiết AI rất thuận lợi vì chương trình Tin học có sẵn các mạch kiến thức về dữ liệu, thuật toán và đạo đức số. Nhóm Tin học (thầy Tùng, thầy Danh, cô Thảo) sẽ chủ động gánh vác phần lớn các bài học AI lý thuyết và kỹ năng sử dụng công cụ AI an toàn. Đối với môn Toán, việc tích hợp chỉ nên dừng lại ở mức độ công cụ trực quan (ví dụ: dùng phần mềm GeoGebra để vẽ hình động, dùng AI gợi ý hướng giải hoặc kiểm tra nghiệm), tuyệt đối không dạy kỹ thuật AI chuyên sâu trong giờ Toán làm quá tải học sinh.
-- **Thầy Hoàng Tấn Thiên (Tổ trưởng):** Thống nhất quan điểm: Tích hợp AI vào môn Toán phải thực chất, nhẹ nhàng và tự nhiên. Trong Kế hoạch bài dạy (Phụ lục 4), giáo viên chỉ cần in đậm, in nghiêng mục tiêu AI/NLS tại Hoạt động Luyện tập hoặc Vận dụng. Giao nhóm Tin học phối hợp cùng Thầy Sáng và Cô Bình soạn 01 giáo án mẫu tích hợp AI môn Toán lớp 8 và lớp 9 để gửi vào nhóm Zalo tổ cho cả tổ tham khảo trước ngày 10/9.
-
-**3. Thảo luận về cơ sở vật chất phòng máy vi tính và thiết bị thực hành môn Tin học:**
-- **Thầy Dương Quang Tùng (Phụ trách phòng máy vi tính):** Báo cáo hiện trạng: Nhà trường có 02 phòng máy vi tính (phòng 1 có 32 máy, phòng 2 có 30 máy). Qua rà soát kỹ thuật đầu năm, hiện có 6 máy tính bị hỏng chuột, 4 máy nguồn chập chờn và đường truyền mạng internet ở phòng 2 đôi lúc bị nghẽn khi học sinh cùng đăng nhập. Trong khi năm học này môn Tin học có tổng cộng 25 lớp, tần suất sử dụng phòng máy là liên tục cả sáng và chiều.
-- **Cô Nguyễn Thị Thảo (GV môn Tin học):** Nếu phòng máy thiếu máy tính hoạt động tốt thì học sinh phải ngồi ghép 2 đến 3 em một máy, rất khó quản lý nề nếp và hiệu quả thực hành lập trình Scratch (khối 6, 7) và Python (khối 8, 9) sẽ giảm sút rõ rệt. Đề nghị Tổ trưởng kiến nghị Ban Giám hiệu mua bổ sung chuột, bàn phím dự phòng và cấu hình lại mạng nội bộ trước ngày 05/9.
-- **Thầy Đinh Văn Đông (Hiệu trưởng):** Tiếp thu ý kiến xác đáng của thầy Tùng và cô Thảo. Nhà trường đã phê duyệt kinh phí bảo dưỡng thiết bị dạy học đầu năm. Giao bộ phận thiết bị phối hợp với thầy Tùng hoàn thành việc kiểm tra, thay thế linh kiện hư hỏng và sửa chữa dứt điểm đường truyền internet phòng máy xong trước ngày 02/9 để đảm bảo ngày 07/9 học sinh vào học thực hành thuận lợi.
-
-**4. Thảo luận về triển khai Học bạ số và chữ ký số giáo viên (Thông tư số 70/2026/TT-BGDĐT):**
-- **Thầy Hoàng Xuân Ánh (GV môn Toán):** Việc triển khai Học bạ số thay cho học bạ giấy là bước tiến lớn, giúp giảm bớt áp lực ghi chép thủ công. Tuy nhiên, một số thầy cô còn lúng túng trong thao tác cài đặt chứng thư số trên điện thoại thông minh (SmartCA / VNPT CA), việc xác thực ký số điện tử và quy trình kiểm tra dữ liệu điểm số trước khi ký để tránh sai lệch.
-- **Thầy Hồ Đăng Danh (GV Tin học, CSDL ngành):** Đề xuất nhóm Tin học sẽ hỗ trợ kỹ thuật trực tiếp cho từng thầy cô trong tổ, hướng dẫn cài đặt app, kích hoạt chứng thư số và tổ chức một buổi thao tác ký số thử nghiệm trên hệ thống Cơ sở dữ liệu ngành vào đầu tháng 9.
-- **Thầy Đinh Văn Đông (Hiệu trưởng):** Quán triệt nghiêm túc: Học bạ số là hồ sơ pháp lý liên thông quốc gia, giáo viên phải quản lý tài khoản ký số cá nhân như con dấu của mình, tuyệt đối không chia sẻ mật khẩu hay nhờ người khác ký hộ. Điểm số khi đã ký số sẽ khóa dữ liệu, sửa chữa rất phức tạp. Yêu cầu toàn thể giáo viên trong tổ nêu cao tinh thần trách nhiệm, vào điểm đúng hạn và kiểm tra thật kỹ trước khi ký số.
-
-**5. Thảo luận về giải pháp phụ đạo học sinh yếu kém môn Toán và nề nếp chủ nhiệm:**
-- **Thầy Nguyễn Văn Tính (GV môn Toán khối 6 & 7):** Học sinh lớp 6 mới chuyển cấp từ tiểu học lên còn bỡ ngỡ về phương pháp học THCS; kỹ năng trình bày bài toán có lời văn và kỹ năng tính toán phân số, số thập phân còn nhiều hạn chế. Giáo viên dạy khối 6 cần kiên nhẫn, rèn phương pháp ghi chép và cách lập luận chuẩn mực ngay từ những tuần đầu tiên.
-- **Thầy Trần Long Hải (GV môn Toán, GVCN lớp 8/3):** Đồng ý với thầy Tính. Đối với học sinh khối 8 và khối 9, ngay trong tháng 9 giáo viên bộ môn cần phối hợp chặt chẽ với giáo viên chủ nhiệm rà soát, lập danh sách học sinh có nguy cơ mất gốc kiến thức để có kế hoạch kèm cặp, phân công bạn học khá giúp đỡ bạn yếu trong 15 phút đầu giờ hoặc giao thêm bài tập vừa sức.
-- **Thầy Hoàng Xuân Ánh (GV môn Toán):** Lưu ý thêm về công tác an toàn giao thông đầu năm: Đề nghị các giáo viên chủ nhiệm (đặc biệt khối 8, khối 9) phối hợp chặt chẽ với Tổng phụ trách Đội và phụ huynh nhắc nhở học sinh nghiêm túc đội mũ bảo hiểm khi đi xe đạp điện, xe máy điện tới trường.
-
-## V. KẾT LUẬN VÀ BIỂU QUYẾT
-
-- Thầy Tổ trưởng Hoàng Tấn Thiên tổng hợp các ý kiến thảo luận và kết luận: Toàn thể giáo viên trong tổ phát huy tinh thần đoàn kết, trách nhiệm, tập trung hoàn thiện Kế hoạch bài dạy theo chuẩn CV 5512, tích hợp hiệu quả Khung AI và Năng lực số, chủ động hỗ trợ học sinh và chuẩn bị tốt nhất cho năm học mới 2026 – 2027.
-- **Biểu quyết:** 10/10 thành viên có mặt tán thành 100% với các nội dung đánh giá công tác tháng 8/2026, kế hoạch hoạt động tháng 9/2026 và các giải pháp chuyên môn đã thống nhất.
-
-Biên bản cuộc họp kết thúc vào lúc 11 giờ 30 phút cùng ngày, đã được đọc lại cho toàn thể các thành viên cùng nghe, nhất trí thông qua và ký xác nhận dưới đây; biên bản được lập thành 02 bản có giá trị như nhau, lưu hồ sơ tổ chuyên môn và gửi Ban Giám hiệu nhà trường./.
-
----
-
-| **THƯ KÝ CUỘC HỌP**<br>*(Ký, ghi rõ họ tên)*<br><br><br><br>**Lê Thị Bình** | **TỔ TRƯỞNG CHUYÊN MÔN**<br>*(Ký, ghi rõ họ tên)*<br><br><br><br>**Hoàng Tấn Thiên** |
-|:---:|:---:|
-
-**CÁC THÀNH VIÊN KHÁC CỦA TỔ CHUYÊN MÔN KÝ XÁC NHẬN:**
-
-| Đinh Văn Đông | Trần Sáng | Hồ Đăng Danh | Hoàng Xuân Ánh |
-|:---:|:---:|:---:|:---:|
-| *(Ký tên)* | *(Ký tên)* | *(Ký tên)* | *(Ký tên)* |
-
-| Trần Long Hải | Nguyễn Thị Thảo | Nguyễn Văn Tính | Dương Quang Tùng |
-|:---:|:---:|:---:|:---:|
-| *(Ký tên)* | *(Ký tên)* | *(Ký tên)* | *(Ký tên)* |
-"""
-    with open(out_md_path, 'w', encoding='utf-8') as f:
-        f.write(md_content)
-
-
-def tao_bien_ban_hop_to_lan_1_thang_9(out_docx_path, out_md_path=None):
-    """
-    Soạn thảo hoàn chỉnh Biên bản họp Tổ chuyên môn Lần 1 Tháng 9/2026.
-    Chuẩn Nghị định 30/2020/NĐ-CP và đặc thù Trường THCS Trần Phú.
-    """
-    doc = create_nd30_document()
-    
-    # 1. Header chuẩn
-    add_header_thcs_tran_phu(
-        doc,
-        so_hieu="02/BB-TCM",
-        ngay_thang_str="Xuân Đông, ngày 12 tháng 9 năm 2026"
-    )
-    
-    # 2. Tiêu đề
-    add_doc_title(
-        doc,
-        "BIÊN BẢN HỌP TỔ CHUYÊN MÔN LẦN 1",
-        "SINH HOẠT CHUYÊN MÔN TỔ TOÁN – TIN THÁNG 9/2026 (LẦN 1)\nNăm học: 2026 - 2027"
-    )
-    
-    # 3. Thời gian, địa điểm, thành phần
-    add_paragraph_styled(doc, "Hôm nay, vào lúc 07 giờ 30 phút, ngày 12 tháng 9 năm 2026, tại Phòng sinh hoạt chuyên môn Trường THCS Trần Phú, Tổ Toán – Tin học đã tiến hành phiên họp chuyên môn định kỳ lần 1 tháng 9 năm học 2026 – 2027.", indent=True)
-    add_paragraph_styled(doc, "Thầy **Hoàng Tấn Thiên** – Tổ trưởng chuyên môn.", bold_prefix="- Chủ trì cuộc họp:", indent=True)
-    add_paragraph_styled(doc, "Cô **Lê Thị Bình** – Giáo viên môn Toán.", bold_prefix="- Thư ký cuộc họp:", indent=True)
-    add_paragraph_styled(doc, "10/10 thành viên trong tổ (Có mặt: 10/10, Vắng: 0).", bold_prefix="- Thành viên tham dự:", indent=True)
-    add_paragraph_styled(doc, "Thầy Hoàng Tấn Thiên, Thầy Trần Sáng, Thầy Đinh Văn Đông, Thầy Hồ Đăng Danh, Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Cô Lê Thị Bình, Cô Nguyễn Thị Thảo, Thầy Nguyễn Văn Tính, Thầy Dương Quang Tùng.", bold_prefix="  + Danh sách thành viên:", indent=True)
-    
-    # 4. NỘI DUNG CUỘC HỌP
-    add_doc_title(doc, "NỘI DUNG CUỘC HỌP", "")
-    
-    # ==================== PHẦN I ====================
-    add_section_h1(doc, "I. TRIỂN KHAI VĂN BẢN CHỈ ĐẠO CỦA CẤP TRÊN")
-    add_paragraph_styled(doc, "Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt các văn bản chỉ đạo trọng tâm của Bộ Giáo dục và Đào tạo, Sở Giáo dục và Đào tạo và kế hoạch của nhà trường; nêu rõ các nội dung cốt lõi và tóm tắt tác động trực tiếp đến nhiệm vụ của tổ chuyên môn như sau:", indent=True)
-    
-    # 1. Công văn 5512/BGDĐT-GDTrH
-    add_paragraph_styled(doc, "**1. Hướng dẫn xây dựng và tổ chức thực hiện kế hoạch giáo dục của nhà trường (Công văn số 5512/BGDĐT-GDTrH ngày 18/12/2020 của Bộ GD&ĐT):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Quy định chuẩn hóa hệ thống hồ sơ kế hoạch giáo dục của tổ chuyên môn và giáo viên bao gồm: (1) **Phụ lục 1** – Khung kế hoạch dạy học môn học của tổ chuyên môn (phân phối chương trình 35 tuần, yêu cầu cần đạt, thiết bị dạy học, phòng học bộ môn); (2) **Phụ lục 2** – Khung kế hoạch tổ chức các hoạt động giáo dục của tổ chuyên môn (chuyên đề, chủ đề liên môn, bài học STEM); (3) **Phụ lục 3** – Khung kế hoạch giáo dục của giáo viên trong năm học (kế hoạch cá nhân theo phân công chuyên môn, chỉ tiêu, bồi dưỡng học sinh); (4) **Phụ lục 4** – Khung kế hoạch bài dạy (KHBD) cấu trúc 4 hoạt động: Mở đầu/Khởi động, Hình thành kiến thức mới, Luyện tập, Vận dụng.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Các nhóm bộ môn (Toán 6, 7, 8, 9; Tin học 6, 7, 8, 9) hoàn thiện Phụ lục 1, Phụ lục 2 và từng cá nhân hoàn thiện Phụ lục 3 nộp phê duyệt trên Cơ sở dữ liệu ngành chậm nhất ngày 30/9/2026; đặc biệt, bắt buộc tích hợp **Khung Năng lực số (20% số tiết)** và **12 tiết Khung AI** vào Phụ lục 1, Phụ lục 3 và thể hiện in đậm, in nghiêng rõ nét trong Kế hoạch bài dạy (Phụ lục 4) để phục vụ kiểm tra, duyệt giáo án ký số.", indent=True)
-    
-    # 2. Hội thi giáo dục phòng chống ma túy
-    add_paragraph_styled(doc, "**2. Kế hoạch tham gia Hội thi giáo dục phòng, chống ma túy năm học 2026 – 2027 (Kế hoạch số 81/KH-THCS.TP ngày 11/9/2026 của Trường THCS Trần Phú và Kế hoạch số 4777/KH-SGDĐT của Sở GD&ĐT):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Mỗi sản phẩm dự thi gồm 01 Kế hoạch bài dạy (hoặc Kế hoạch tổ chức hoạt động giáo dục) + 01 Bài giảng điện tử tương ứng bám sát chủ đề phòng, chống ma túy trong học đường; toàn bộ sản phẩm được số hóa, đóng gói dưới dung lượng 1GB; sản phẩm có tính nguyên gốc do chính giáo viên xây dựng; được phép sử dụng công cụ số/AI hỗ trợ thiết kế nhưng không dùng AI thay thế phần sáng tạo và chuyên môn của tác giả; hạn nộp cấp trường ngày 20/9/2026 và nộp về Sở GD&ĐT trước ngày 25/9/2026.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ chuyên môn phân công **Thầy Trần Sáng** và **Cô Lê Thị Bình** trực tiếp biên soạn 02 sản phẩm đại diện tổ tham gia dự thi; Thầy Tổ trưởng theo dõi tiến độ, chủ trì phiên họp tổ góp ý chuyên môn và thẩm định sản phẩm trước khi nộp Ban Giám hiệu; các thành viên trong tổ hỗ trợ tư liệu, video học liệu và kỹ thuật công nghệ thông tin phục vụ đóng gói bài giảng điện tử.", indent=True)
-    
-    # ==================== PHẦN II ====================
-    add_section_h1(doc, "II. ĐÁNH GIÁ CÔNG TÁC GIAI ĐOẠN ĐẦU THÁNG 9/2026")
-    
-    add_section_h2(doc, "1. Công tác chủ nhiệm:")
-    add_paragraph_styled(doc, "- Giáo viên chủ nhiệm các khối lớp đã nhanh chóng ổn định tổ chức nề nếp lớp chủ nhiệm ngay từ ngày tựu trường; duy trì nghiêm túc sinh hoạt 15 phút đầu giờ trước buổi học; hoàn thành phổ biến nội quy trường lớp, kiện toàn ban cán sự lớp.", indent=True)
-    add_paragraph_styled(doc, "- Đã lập danh sách học sinh có hoàn cảnh khó khăn đề nghị nhà trường trao quà, học bổng trong lễ khai giảng ngày 05/9/2026; cùng học sinh tham gia vệ sinh phong quang trường lớp chuẩn bị chu đáo cho ngày hội khai trường.", indent=True)
-    
-    add_section_h2(doc, "2. Kỷ luật lao động và ngày giờ công:")
-    add_paragraph_styled(doc, "- 100% giáo viên trong tổ chấp hành nghiêm túc quy định ngày giờ công, tham gia đầy đủ lễ khai giảng năm học mới ngày 05/9/2026 và các buổi hội họp của nhà trường; giảng dạy đúng thời khóa biểu chính thức bắt đầu từ ngày 07/9/2026.", indent=True)
-    
-    add_section_h2(doc, "3. Công tác chuyên môn:")
-    add_paragraph_styled(doc, "- Các nhóm bộ môn đã thống nhất cấu trúc soạn Kế hoạch bài dạy theo Công văn 5512/BGDĐT-GDTrH; bắt đầu đưa giáo án lên Cơ sở dữ liệu ngành để ký số tuần.", indent=True)
-    add_paragraph_styled(doc, "- Tổ chức dạy và học ổn định theo thời khóa biểu áp dụng từ 07/9/2026; thực hiện tốt kế hoạch dạy học 2 buổi/ngày theo Công văn 4567 của Bộ GD&ĐT.", indent=True)
-    add_paragraph_styled(doc, "- Tham gia đầy đủ các buổi tập huấn chuyên môn trực tuyến về chuyển đổi số, tập huấn dạy học và kiểm tra đánh giá trên nền tảng OLM.", indent=True)
-    
-    add_section_h2(doc, "4. Phòng bộ môn và thiết bị dạy học:")
-    add_paragraph_styled(doc, "- Đã kiểm tra nề nếp ra vào lớp học, phòng máy vi tính bộ môn; rà soát thiết bị dạy học và cơ sở vật chất 02 phòng máy sau đợt bảo dưỡng đầu năm của nhà trường.", indent=True)
-    
-    # ==================== PHẦN III ====================
-    add_section_h1(doc, "III. KẾ HOẠCH TRỌNG TÂM THỜI GIAN TỚI (THÁNG 9 & ĐẦU THÁNG 10/2026)")
-    
-    add_section_h2(doc, "1. Công tác chủ nhiệm:")
-    add_paragraph_styled(doc, "- Ổn định vững chắc nề nếp lớp chủ nhiệm, củng cố đội ngũ cán bộ lớp, tham gia họp GVCN; xây dựng Kế hoạch chủ nhiệm năm học 2026 – 2027.", indent=True)
-    add_paragraph_styled(doc, "- Đẩy mạnh tuyên truyền thực hiện Tháng An toàn giao thông, tổ chức cho 100% học sinh ký cam kết đội mũ bảo hiểm khi đi xe máy điện, xe đạp điện; tuyên truyền phòng chống tệ nạn xã hội và dịch bệnh.", indent=True)
-    add_paragraph_styled(doc, "- Cập nhật, rà soát hoàn thiện 100% thông tin học sinh lớp chủ nhiệm trên hệ thống Cơ sở dữ liệu ngành.", indent=True)
-    add_paragraph_styled(doc, "- Chuẩn bị chu đáo nội dung họp cha mẹ học sinh đầu năm; giữ gìn sổ đầu bài cẩn thận, nhắc nhở giáo viên bộ môn ghi chép đầy đủ các cột mục và GVCN tổng hợp ký tuần.", indent=True)
-    
-    add_section_h2(doc, "2. Kỷ luật ngày giờ công:")
-    add_paragraph_styled(doc, "- Giáo viên trong tổ phấn đấu bảo đảm ngày giờ công, chấp hành nghiêm túc thời khóa biểu, không đi trễ về sớm; thực hiện nghiêm túc quy định dạy thay, dạy bù khi có giáo viên đi công tác hoặc ốm đau.", indent=True)
-    
-    add_section_h2(doc, "3. Công tác chuyên môn:")
-    add_paragraph_styled(doc, "- **Hoàn thành các Phụ lục theo Công văn 5512:** Các nhóm bộ môn Toán, Tin học hoàn thiện Kế hoạch dạy học của tổ (Phụ lục 1), Kế hoạch tổ chức các hoạt động giáo dục (Phụ lục 2) và Kế hoạch giáo dục của giáo viên (Phụ lục 3), nộp phê duyệt trên CSDL ngành chậm nhất ngày 30/9/2026.", indent=True)
-    add_paragraph_styled(doc, "- **Tham gia Hội thi giáo dục phòng, chống ma túy:** Thầy Sáng, Cô Bình hoàn thành KHBD và bài giảng điện tử trước 20/9 để tổ góp ý hoàn thiện, nộp Ban Giám hiệu xét chọn gửi Sở GD&ĐT trước 25/9.", indent=True)
-    add_paragraph_styled(doc, "- **Phát động các phong trào thi trực tuyến:**", indent=True)
-    add_paragraph_styled(doc, "  + *Đấu trường VioEdu môn Toán:* Phân công giáo viên phụ trách hướng dẫn học sinh đăng nhập và luyện tập: Khối 6 (Cô Thảo), Khối 7 (Thầy Ánh), Khối 8 (Cô Bình), Khối 9 (Thầy Sáng).", indent=True)
-    add_paragraph_styled(doc, "  + *Cuộc thi IOE Tiếng Anh:* Phối hợp tổ Ngoại ngữ đôn đốc học sinh tham gia tự luyện các vòng điều kiện.", indent=True)
-    add_paragraph_styled(doc, "- **Góp ý SGK Toán – Tin theo GDPT 2018 (Khó khăn & Biện pháp khắc phục):**", indent=True)
-    add_paragraph_styled(doc, "  + *SGK Toán 8 (Bài 10: Tứ giác lồi & tổng các góc bằng 360°):* Khó khăn học sinh khó hình dung khái niệm hai đỉnh cùng phía đối với đường thẳng chứa cạnh còn lại; dễ nhầm lẫn các góc nhỏ bị chia cắt bởi đường chéo. Biện pháp: Cho học sinh dùng phần mềm GeoGebra kéo thả đỉnh tứ giác, đánh số góc 1, 2 trước khi cộng góc.", indent=True)
-    add_paragraph_styled(doc, "  + *SGK Toán 9 (Bài 11, 12: Tỉ số lượng giác & Hệ thức cạnh – góc trong tam giác vuông):* Khó khăn học sinh nhầm lẫn cạnh đối/kề, khó mô hình hóa bài toán thực tế. Biện pháp: Dùng câu vè quen thuộc \"Sao Đi Học, Cứ Khóc Hoài, Thôi Đi Tắm, Cùng Đi Tắm\", áp dụng phương pháp \"Xác định góc nhìn\" và tăng cường vẽ sơ đồ tam giác vuông từ tình huống thực tế (chiều cao cây, tòa nhà, bóng nắng).", indent=True)
-    
-    add_section_h2(doc, "4. Ngoại khóa và các hoạt động khác:")
-    add_paragraph_styled(doc, "- Thực hiện hoạt động ngoài giờ lên lớp theo chủ điểm \"Truyền thống nhà trường\"; tham gia tổ chức Tết Trung thu cho học sinh toàn trường.", indent=True)
-    add_paragraph_styled(doc, "- Chuẩn bị tốt hồ sơ sổ sách, kế hoạch bài dạy phục vụ công tác Kiểm tra nội bộ của nhà trường trong tháng 10/2026.", indent=True)
-    
-    # ==================== PHẦN IV ====================
-    add_section_h1(doc, "IV. THẢO LUẬN CHUYÊN MÔN VÀ Ý KIẾN CỦA CÁC THÀNH VIÊN TRONG TỔ")
-    add_paragraph_styled(doc, "Cuộc họp đã dành phần lớn thời gian để thảo luận chuyên sâu vào trọng tâm: **Phương pháp và giải pháp kỹ thuật tích hợp Khung Năng lực số (20%) và 12 tiết Khung AI vào Kế hoạch bài dạy 5512**, đồng thời tháo gỡ các vướng mắc thực tế khi triển khai tại trường THCS Trần Phú:", indent=True)
-    
-    # Thảo luận 1: Kỹ thuật tích hợp NLS và AI vào tiến trình 4 hoạt động của CV 5512
-    add_paragraph_styled(doc, "**1. Thảo luận về kỹ thuật tích hợp Khung Năng lực số (20%) và 12 tiết Khung AI vào KHBD theo CV 5512:**", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Hoàng Tấn Thiên (Tổ trưởng chuyên môn / Chủ trì):** Đặt vấn đề thảo luận: Theo hướng dẫn của Sở GD&ĐT tại Công văn 4200 và Công văn 5588 của Bộ GD&ĐT, năm học 2026 – 2027 bắt buộc phải thể hiện rõ việc tích hợp Khung Năng lực số (NLS) tối thiểu 20% tổng số tiết và 12 tiết Khung AI vào Kế hoạch bài dạy. Tuy nhiên, qua rà soát bước đầu, nhiều giáo viên còn lúng túng: Ghi mục tiêu NLS và AI ở vị trí nào trong giáo án 5512? Thiết kế hoạt động của học sinh ra sao để không biến tiết Toán thành tiết Tin học và không làm quá tải thời lượng 45 phút? Đề nghị các thầy cô đi thẳng vào giải pháp kỹ thuật cụ thể.", indent=True)
-    add_paragraph_styled(doc, "- **Cô Lê Thị Bình (GV môn Toán khối 7 & 8):** Phân tích quy trình biên soạn cụ thể: Trong giáo án 5512, tại mục I. MỤC TIÊU (phần Năng lực), giáo viên bổ sung thêm chỉ báo: `*Năng lực số (NLS)*` và `*Năng lực Trí tuệ nhân tạo (AI)*`. Trong tiến trình 4 hoạt động dạy học, vị trí thích hợp nhất để tích hợp là **Hoạt động 3 (Luyện tập)** hoặc **Hoạt động 4 (Vận dụng)**. Ví dụ: Trong bài Thống kê biểu đồ (Toán 7) hoặc bài Hàm số và đồ thị (Toán 8), giáo viên giao nhiệm vụ cho học sinh dùng máy tính hoặc điện thoại thông minh tra cứu bảng số liệu thực tế tại địa phương, hoặc dùng phần mềm vẽ đồ thị kiểm tra nghiệm. Phần mô tả hoạt động của giáo viên và học sinh có yếu tố số/AI bắt buộc phải **in đậm, in nghiêng** để làm căn cứ đánh giá duyệt giáo án ký số.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Trần Sáng (Phó Tổ trưởng, GV môn Toán 9):** Bổ sung kinh nghiệm môn Toán 9: Môn Toán 9 kiến thức rất nặng để ôn thi vào lớp 10, giáo viên không nên gượng ép tiết nào cũng đưa AI vào. Nhóm Toán 9 đã họp sơ bộ và thống nhất: Trong 12 tiết Khung AI, môn Toán 9 chỉ đăng ký tích hợp 03 tiết trọng điểm: (1) Tiết Luyện tập Tỉ số lượng giác (sử dụng công cụ mô phỏng AI / phần mềm đo đạc gián tiếp); (2) Tiết Đồ thị hàm số bậc nhất $y = ax + b$ (sử dụng phần mềm GeoGebra mô phỏng sự biến thiên của hệ số góc); (3) Tiết Bảng tần số và Biểu đồ tần số (sử dụng AI phân tích dữ liệu lớn). Các tiết còn lại, tích hợp NLS ở mức độ rèn luyện kỹ năng bấm máy tính cầm tay Casio FX-580VN/880BTG và làm bài tập trắc nghiệm số trên nền tảng OLM.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Hoàng Tấn Thiên (Tổ trưởng):** Kết luận thống nhất: Cách tiếp cận của cô Bình và thầy Sáng là rất thực tế. Tuyệt đối không \"khoác áo AI\" một cách hình thức. Giao Thầy Sáng và Cô Bình hoàn thành 02 bài soạn mẫu có tích hợp NLS và AI (01 bài Toán 8, 01 bài Toán 9) đưa lên nhóm Zalo tổ trước ngày 18/9 để toàn tổ cùng áp dụng đồng bộ.", indent=True)
-    
-    # Thảo luận 2: Môn Tin học chủ lực gánh vác 12 tiết AI
-    add_paragraph_styled(doc, "**2. Thảo luận về vai trò chủ lực của môn Tin học trong việc triển khai 12 tiết Khung AI cốt lõi:**", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Dương Quang Tùng (GV môn Tin học):** Khẳng định: Môn Tin học là môn học nòng cốt gánh vác 12 tiết AI cốt lõi theo hướng dẫn của Bộ GD&ĐT. Nhóm Tin học (thầy Tùng, thầy Danh, cô Thảo) đã đối chiếu chương trình SGK Tin học Cánh Diều cả 4 khối và xác định địa chỉ 12 tiết AI cụ thể: Khối 6 (Chủ đề E – Tìm kiếm thông tin và ứng dụng trợ lý số); Khối 7 (Chủ đề E – Thu thập, xử lý và trực quan hóa bảng tính); Khối 8 (Chủ đề F – Bước đầu làm quen với thuật toán học máy và phân loại dữ liệu); Khối 9 (Chủ đề D & F – Sử dụng AI tạo sinh có trách nhiệm, bảo mật dữ liệu và đạo đức số). Nhóm Tin học sẽ đưa toàn bộ 12 tiết này vào Kế hoạch dạy học (Phụ lục 1) môn Tin học nộp về nhà trường.", indent=True)
-    add_paragraph_styled(doc, "- **Cô Nguyễn Thị Thảo (GV môn Tin học):** Để học sinh thực hành tốt 12 tiết AI, phòng máy vi tính cần được cài đặt sẵn các tiện ích mô phỏng và bảo đảm đường truyền internet ổn định. Đề nghị trong các tiết học AI, giáo viên cho học sinh thực hành nhóm đôi, có sản phẩm cụ thể (bài trình chiếu, poster số, đoạn mã lập trình Scratch đơn giản ứng dụng nhận dạng hình ảnh) để học sinh hứng thú học tập.", indent=True)
-    
-    # Thảo luận 3: Quy trình hoàn thiện Phụ lục 1, 2, 3 và đưa lên CSDL ngành
-    add_paragraph_styled(doc, "**3. Thảo luận về quy trình hoàn thiện Phụ lục 1, 2, 3 theo Công văn 5512 và đưa lên CSDL ngành:**", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Hồ Đăng Danh (GV Tin học, phụ trách kỹ thuật CSDL ngành):** Lưu ý các thầy cô trong tổ: Năm học này Sở GD&ĐT kiểm tra hồ sơ giáo án hoàn toàn trên môi trường số. Khi các nhóm bộ môn hoàn thành Phụ lục 1 (Kế hoạch dạy học theo 35 tuần) và Phụ lục 2 (Kế hoạch hoạt động giáo dục), trưởng nhóm phải rà soát thật kỹ số tiết, tên bài học khớp 100% với thời khóa biểu và PPCT. Riêng Phụ lục 3 của từng giáo viên, phần \"Kế hoạch thực hiện chương trình\" phải thể hiện rõ các tuần kiểm tra giữa kỳ, cuối kỳ và các tiết tích hợp NLS/AI. Thầy Danh sẽ trực tiếp hỗ trợ các thầy cô tải tệp lên hệ thống và ký số phê duyệt đúng hạn trước ngày 30/9.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Đinh Văn Đông (Hiệu trưởng):** Quán triệt: Phụ lục 1, 2, 3 theo CV 5512 là \"xương sống\" pháp lý của toàn bộ hoạt động chuyên môn trong năm học. Sau khi Hiệu trưởng phê duyệt trên CSDL ngành, giáo viên phải thực hiện nghiêm túc theo đúng tiến độ, không tự ý đảo tiết hay cắt xén chương trình. Ban Giám hiệu sẽ kiểm tra ngẫu nhiên hồ sơ sổ sách và việc ký số hàng tuần của từng giáo viên.", indent=True)
-    
-    # Thảo luận 4: Phối hợp phát động VioEdu và kiểm tra thường xuyên qua OLM
-    add_paragraph_styled(doc, "**4. Thảo luận về phối hợp phát động Đấu trường VioEdu Toán và kiểm tra thường xuyên qua OLM:**", indent=True)
-    add_paragraph_styled(doc, "- **Cô Lê Thị Bình (GV môn Toán khối 7):** Đề nghị giáo viên dạy Toán các khối 6, 7, 8, 9 lập danh sách từ 5 đến 10 học sinh có học lực khá, giỏi môn Toán mỗi lớp chuyển cho quản trị trường để kích hoạt tài khoản VioEdu thi đấu vòng trường. Đồng thời, đề nghị Ban Giám hiệu và Tổng phụ trách Đội đưa phong trào VioEdu vào tiêu chí chấm điểm thi đua tuần giữa các lớp để tạo động lực cho học sinh tham gia đông đảo.", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Trần Long Hải (GV môn Toán, GVCN lớp 8/3):** Cần nhắc nhở giáo viên bộ môn khi giao bài tập rèn luyện trên VioEdu hoặc OLM phải hướng dẫn cụ thể cách đăng nhập cho học sinh, đặc biệt học sinh lớp 6 mới vào trường, tránh để phụ huynh phải phản ánh vì không biết cách thao tác.", indent=True)
-    
-    # Thảo luận 5: Chuẩn bị hồ sơ chuyên môn cho công tác Kiểm tra nội bộ tháng 10
-    add_paragraph_styled(doc, "**5. Thảo luận về chuẩn bị hồ sơ chuyên môn cho công tác Kiểm tra nội bộ tháng 10/2026:**", indent=True)
-    add_paragraph_styled(doc, "- **Thầy Hoàng Xuân Ánh & Thầy Nguyễn Văn Tính:** Tháng 10 tới nhà trường sẽ triển khai kiểm tra toàn diện và kiểm tra chuyên môn định kỳ theo kế hoạch kiểm tra nội bộ. Giáo viên trong tổ cần chủ động rà soát Kế hoạch bài dạy 4 hoạt động, sổ đầu bài, việc ghi nhận xét và vào điểm thường xuyên đợt 1 trên hệ thống SMAS/CSDL ngành, bảo đảm khớp tiến độ từng ngày, không để dồn việc vào cuối đợt kiểm tra.", indent=True)
-    
-    # ==================== PHẦN V ====================
-    add_section_h1(doc, "V. KẾT LUẬN VÀ BIỂU QUYẾT")
-    add_paragraph_styled(doc, "- Thầy Tổ trưởng Hoàng Tấn Thiên tổng hợp các ý kiến thảo luận và kết luận: Toàn thể giáo viên trong tổ phát huy tinh thần đoàn kết, trách nhiệm, tập trung hoàn thiện hệ thống hồ sơ Phụ lục 1, 2, 3 theo Công văn 5512 trước ngày 30/9; thực hiện nghiêm túc việc tích hợp Năng lực số và 12 tiết Khung AI vào KHBD; chuẩn bị tốt nhất các điều kiện chuyên môn phục vụ giảng dạy và kiểm tra nội bộ tháng 10.", indent=True)
-    add_paragraph_styled(doc, "- **Biểu quyết:** 10/10 thành viên có mặt tán thành 100% với các nội dung đánh giá công tác đầu tháng 9, kế hoạch trọng tâm và các giải pháp chuyên môn đã thống nhất.", indent=True)
-    add_paragraph_styled(doc, "Biên bản cuộc họp kết thúc vào lúc 10 giờ 00 phút cùng ngày, đã được đọc lại cho toàn thể các thành viên cùng nghe, nhất trí thông qua và ký xác nhận dưới đây; biên bản được lập thành 02 bản có giá trị như nhau, lưu hồ sơ tổ chuyên môn và gửi Ban Giám hiệu nhà trường./.", indent=True)
-    
-    # 5. Khung chữ ký chuẩn
-    add_bien_ban_signatures(
-        doc,
-        chu_tri="Hoàng Tấn Thiên",
-        thu_ky="Lê Thị Bình"
-    )
-    
-    # 6. Danh sách các thành viên khác của tổ ký xác nhận
-    p_tv = doc.add_paragraph()
-    p_tv.paragraph_format.space_before = Pt(12)
-    p_tv.paragraph_format.space_after = Pt(4)
-    r_tv = p_tv.add_run("CÁC THÀNH VIÊN KHÁC CỦA TỔ CHUYÊN MÔN KÝ XÁC NHẬN:\n")
-    r_tv.font.name = 'Times New Roman'
-    r_tv.font.size = Pt(13)
-    r_tv.bold = True
-    
-    table_tv = doc.add_table(rows=2, cols=4)
-    table_tv.alignment = WD_TABLE_ALIGNMENT.CENTER
-    table_tv.autofit = False
-    
-    for r in table_tv.rows:
-        for c in r.cells:
-            tcPr = c._tc.get_or_add_tcPr()
-            tcBorders = parse_xml(r'<w:tcBorders {}><w:top w:val="none"/><w:left w:val="none"/><w:bottom w:val="none"/><w:right w:val="none"/></w:tcBorders>'.format(nsdecls('w')))
-            tcPr.append(tcBorders)
-            
-    members_r1 = ["Đinh Văn Đông", "Trần Sáng", "Hồ Đăng Danh", "Hoàng Xuân Ánh"]
-    members_r2 = ["Trần Long Hải", "Nguyễn Thị Thảo", "Nguyễn Văn Tính", "Dương Quang Tùng"]
-    
-    for i, name in enumerate(members_r1):
-        cell = table_tv.rows[0].cells[i]
-        cell.width = Inches(1.7)
-        p = cell.paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.paragraph_format.space_before = Pt(25)
-        r = p.add_run(f"(Ký tên)\n\n\n**{name}**")
-        r.font.name = 'Times New Roman'
-        r.font.size = Pt(12)
-        
-    for i, name in enumerate(members_r2):
-        cell = table_tv.rows[1].cells[i]
-        cell.width = Inches(1.7)
-        p = cell.paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.paragraph_format.space_before = Pt(25)
-        r = p.add_run(f"(Ký tên)\n\n\n**{name}**")
-        r.font.name = 'Times New Roman'
-        r.font.size = Pt(12)
-        
-    os.makedirs(os.path.dirname(out_docx_path), exist_ok=True)
-    save_docx_robust(doc, out_docx_path)
-    print(f"Da xuat thanh cong file Word: {out_docx_path}")
-    
-    if out_md_path:
-        os.makedirs(os.path.dirname(out_md_path), exist_ok=True)
-        tao_bien_ban_hop_to_lan_1_thang_9_md(out_md_path)
-        print(f"Da xuat thanh cong file Markdown: {out_md_path}")
-
-def tao_bien_ban_hop_to_lan_1_thang_9_md(out_md_path):
-    """Xuất phiên bản Markdown cho Biên bản họp tổ Lần 1 Tháng 9/2026."""
-    md_content = """<div align="center">
-
-| **TRƯỜNG THCS TRẦN PHÚ**<br>**TỔ TOÁN - TIN HỌC**<br>Số: 02/BB-TCM | **CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM**<br>**Độc lập – Tự do – Hạnh phúc**<br>──────────────────<br>*Xuân Đông, ngày 12 tháng 9 năm 2026* |
-|:---:|:---:|
-
----
-
-# BIÊN BẢN HỌP TỔ CHUYÊN MÔN LẦN 1
-### SINH HOẠT CHUYÊN MÔN TỔ TOÁN – TIN THÁNG 9/2026 (LẦN 1)
-*(Năm học: 2026 – 2027)*
-──────────────────
-
-</div>
-
-Hôm nay, vào lúc 07 giờ 30 phút, ngày 12 tháng 9 năm 2026, tại Phòng sinh hoạt chuyên môn Trường THCS Trần Phú, Tổ Toán – Tin học đã tiến hành phiên họp chuyên môn định kỳ lần 1 tháng 9 năm học 2026 – 2027.
-
-- **Chủ trì cuộc họp:** Thầy **Hoàng Tấn Thiên** – Tổ trưởng chuyên môn.  
-- **Thư ký cuộc họp:** Cô **Lê Thị Bình** – Giáo viên môn Toán.  
-- **Thành viên tham dự:** 10/10 thành viên trong tổ (Có mặt: 10/10, Vắng: 0).  
-  + *Danh sách thành viên:* Thầy Hoàng Tấn Thiên, Thầy Trần Sáng, Thầy Đinh Văn Đông, Thầy Hồ Đăng Danh, Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Cô Lê Thị Bình, Cô Nguyễn Thị Thảo, Thầy Nguyễn Văn Tính, Thầy Dương Quang Tùng.
-
-<div align="center">
-
-### NỘI DUNG CUỘC HỌP
-
-</div>
-
-## I. TRIỂN KHAI VĂN BẢN CHỈ ĐẠO CỦA CẤP TRÊN
-
-Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt các văn bản chỉ đạo trọng tâm của Bộ Giáo dục và Đào tạo, Sở Giáo dục và Đào tạo và kế hoạch của nhà trường; nêu rõ các nội dung cốt lõi và tóm tắt tác động trực tiếp đến nhiệm vụ của tổ chuyên môn như sau:
-
-**1. Hướng dẫn xây dựng và tổ chức thực hiện kế hoạch giáo dục của nhà trường (Công văn số 5512/BGDĐT-GDTrH ngày 18/12/2020 của Bộ GD&ĐT):**
-- **Ý chính cốt lõi:** Quy định chuẩn hóa hệ thống hồ sơ kế hoạch giáo dục của tổ chuyên môn và giáo viên bao gồm: (1) **Phụ lục 1** – Khung kế hoạch dạy học môn học của tổ chuyên môn (phân phối chương trình 35 tuần, yêu cầu cần đạt, thiết bị dạy học, phòng học bộ môn); (2) **Phụ lục 2** – Khung kế hoạch tổ chức các hoạt động giáo dục của tổ chuyên môn (chuyên đề, chủ đề liên môn, bài học STEM); (3) **Phụ lục 3** – Khung kế hoạch giáo dục của giáo viên trong năm học (kế hoạch cá nhân theo phân công chuyên môn, chỉ tiêu, bồi dưỡng học sinh); (4) **Phụ lục 4** – Khung kế hoạch bài dạy (KHBD) cấu trúc 4 hoạt động: Mở đầu/Khởi động, Hình thành kiến thức mới, Luyện tập, Vận dụng.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Các nhóm bộ môn (Toán 6, 7, 8, 9; Tin học 6, 7, 8, 9) hoàn thiện Phụ lục 1, Phụ lục 2 và từng cá nhân hoàn thiện Phụ lục 3 nộp phê duyệt trên Cơ sở dữ liệu ngành chậm nhất ngày 30/9/2026; đặc biệt, bắt buộc tích hợp **Khung Năng lực số (20% số tiết)** và **12 tiết Khung AI** vào Phụ lục 1, Phụ lục 3 và thể hiện in đậm, in nghiêng rõ nét trong Kế hoạch bài dạy (Phụ lục 4) để phục vụ kiểm tra, duyệt giáo án ký số.
-
-**2. Kế hoạch tham gia Hội thi giáo dục phòng, chống ma túy năm học 2026 – 2027 (Kế hoạch số 81/KH-THCS.TP ngày 11/9/2026 của Trường THCS Trần Phú và Kế hoạch số 4777/KH-SGDĐT của Sở GD&ĐT):**
-- **Ý chính cốt lõi:** Mỗi sản phẩm dự thi gồm 01 Kế hoạch bài dạy (hoặc Kế hoạch tổ chức hoạt động giáo dục) + 01 Bài giảng điện tử tương ứng bám sát chủ đề phòng, chống ma túy trong học đường; toàn bộ sản phẩm được số hóa, đóng gói dưới dung lượng 1GB; sản phẩm có tính nguyên gốc do chính giáo viên xây dựng; được phép sử dụng công cụ số/AI hỗ trợ thiết kế nhưng không dùng AI thay thế phần sáng tạo và chuyên môn của tác giả; hạn nộp cấp trường ngày 20/9/2026 và nộp về Sở GD&ĐT trước ngày 25/9/2026.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ chuyên môn phân công **Thầy Trần Sáng** và **Cô Lê Thị Bình** trực tiếp biên soạn 02 sản phẩm đại diện tổ tham gia dự thi; Thầy Tổ trưởng theo dõi tiến độ, chủ trì phiên họp tổ góp ý chuyên môn và thẩm định sản phẩm trước khi nộp Ban Giám hiệu; các thành viên trong tổ hỗ trợ tư liệu, video học liệu và kỹ thuật công nghệ thông tin phục vụ đóng gói bài giảng điện tử.
-
-## II. ĐÁNH GIÁ CÔNG TÁC GIAI ĐOẠN ĐẦU THÁNG 9/2026
-
-### **1. Công tác chủ nhiệm:**
-- Giáo viên chủ nhiệm các khối lớp đã nhanh chóng ổn định tổ chức nề nếp lớp chủ nhiệm ngay từ ngày tựu trường; duy trì nghiêm túc sinh hoạt 15 phút đầu giờ trước buổi học; hoàn thành phổ biến nội quy trường lớp, kiện toàn ban cán sự lớp.
-- Đã lập danh sách học sinh có hoàn cảnh khó khăn đề nghị nhà trường trao quà, học bổng trong lễ khai giảng ngày 05/9/2026; cùng học sinh tham gia vệ sinh phong quang trường lớp chuẩn bị chu đáo cho ngày hội khai trường.
-
-### **2. Kỷ luật lao động và ngày giờ công:**
-- 100% giáo viên trong tổ chấp hành nghiêm túc quy định ngày giờ công, tham gia đầy đủ lễ khai giảng năm học mới ngày 05/9/2026 và các buổi hội họp của nhà trường; giảng dạy đúng thời khóa biểu chính thức bắt đầu từ ngày 07/9/2026.
-
-### **3. Công tác chuyên môn:**
-- Các nhóm bộ môn đã thống nhất cấu trúc soạn Kế hoạch bài dạy theo Công văn 5512/BGDĐT-GDTrH; bắt đầu đưa giáo án lên Cơ sở dữ liệu ngành để ký số tuần.
-- Tổ chức dạy và học ổn định theo thời khóa biểu áp dụng từ 07/9/2026; thực hiện tốt kế hoạch dạy học 2 buổi/ngày theo Công văn 4567 của Bộ GD&ĐT.
-- Tham gia đầy đủ các buổi tập huấn chuyên môn trực tuyến về chuyển đổi số, tập huấn dạy học và kiểm tra đánh giá trên nền tảng OLM.
-
-### **4. Phòng bộ môn và thiết bị dạy học:**
-- Đã kiểm tra nề nếp ra vào lớp học, phòng máy vi tính bộ môn; rà soát thiết bị dạy học và cơ sở vật chất 02 phòng máy sau đợt bảo dưỡng đầu năm của nhà trường.
-
-## III. KẾ HOẠCH TRỌNG TÂM THỜI GIAN TỚI (THÁNG 9 & ĐẦU THÁNG 10/2026)
-
-### **1. Công tác chủ nhiệm:**
-- Ổn định vững chắc nề nếp lớp chủ nhiệm, củng cố đội ngũ cán bộ lớp, tham gia họp GVCN; xây dựng Kế hoạch chủ nhiệm năm học 2026 – 2027.
-- Đẩy mạnh tuyên truyền thực hiện Tháng An toàn giao thông, tổ chức cho 100% học sinh ký cam kết đội mũ bảo hiểm khi đi xe máy điện, xe đạp điện; tuyên truyền phòng chống tệ nạn xã hội và dịch bệnh.
-- Cập nhật, rà soát hoàn thiện 100% thông tin học sinh lớp chủ nhiệm trên hệ thống Cơ sở dữ liệu ngành.
-- Chuẩn bị chu đáo nội dung họp cha mẹ học sinh đầu năm; giữ gìn sổ đầu bài cẩn thận, nhắc nhở giáo viên bộ môn ghi chép đầy đủ các cột mục và GVCN tổng hợp ký tuần.
-
-### **2. Kỷ luật ngày giờ công:**
-- Giáo viên trong tổ phấn đấu bảo đảm ngày giờ công, chấp hành nghiêm túc thời khóa biểu, không đi trễ về sớm; thực hiện nghiêm túc quy định dạy thay, dạy bù khi có giáo viên đi công tác hoặc ốm đau.
-
-### **3. Công tác chuyên môn:**
-- **Hoàn thành các Phụ lục theo Công văn 5512:** Các nhóm bộ môn Toán, Tin học hoàn thiện Kế hoạch dạy học của tổ (Phụ lục 1), Kế hoạch tổ chức các hoạt động giáo dục (Phụ lục 2) và Kế hoạch giáo dục của giáo viên (Phụ lục 3), nộp phê duyệt trên CSDL ngành chậm nhất ngày 30/9/2026.
-- **Tham gia Hội thi giáo dục phòng, chống ma túy:** Thầy Sáng, Cô Bình hoàn thành KHBD và bài giảng điện tử trước 20/9 để tổ góp ý hoàn thiện, nộp Ban Giám hiệu xét chọn gửi Sở GD&ĐT trước 25/9.
-- **Phát động các phong trào thi trực tuyến:**
-  + *Đấu trường VioEdu môn Toán:* Phân công giáo viên phụ trách hướng dẫn học sinh đăng nhập và luyện tập: Khối 6 (Cô Thảo), Khối 7 (Thầy Ánh), Khối 8 (Cô Bình), Khối 9 (Thầy Sáng).
-  + *Cuộc thi IOE Tiếng Anh:* Phối hợp tổ Ngoại ngữ đôn đốc học sinh tham gia tự luyện các vòng điều kiện.
-- **Góp ý SGK Toán – Tin theo GDPT 2018 (Khó khăn & Biện pháp khắc phục):**
-  + *SGK Toán 8 (Bài 10: Tứ giác lồi & tổng các góc bằng 360°):* Khó khăn học sinh khó hình dung khái niệm hai đỉnh cùng phía đối với đường thẳng chứa cạnh còn lại; dễ nhầm lẫn các góc nhỏ bị chia cắt bởi đường chéo. Biện pháp: Cho học sinh dùng phần mềm GeoGebra kéo thả đỉnh tứ giác, đánh số góc 1, 2 trước khi cộng góc.
-  + *SGK Toán 9 (Bài 11, 12: Tỉ số lượng giác & Hệ thức cạnh – góc trong tam giác vuông):* Khó khăn học sinh nhầm lẫn cạnh đối/kề, khó mô hình hóa bài toán thực tế. Biện pháp: Dùng câu vè quen thuộc "Sao Đi Học, Cứ Khóc Hoài, Thôi Đi Tắm, Cùng Đi Tắm", áp dụng phương pháp "Xác định góc nhìn" và tăng cường vẽ sơ đồ tam giác vuông từ tình huống thực tế (chiều cao cây, tòa nhà, bóng nắng).
-
-### **4. Ngoại khóa và các hoạt động khác:**
-- Thực hiện hoạt động ngoài giờ lên lớp theo chủ điểm "Truyền thống nhà trường"; tham gia tổ chức Tết Trung thu cho học sinh toàn trường.
-- Chuẩn bị tốt hồ sơ sổ sách, kế hoạch bài dạy phục vụ công tác Kiểm tra nội bộ của nhà trường trong tháng 10/2026.
-
-## IV. THẢO LUẬN CHUYÊN MÔN VÀ Ý KIẾN CỦA CÁC THÀNH VIÊN TRONG TỔ
-
-Cuộc họp đã dành phần lớn thời gian để thảo luận chuyên sâu vào trọng tâm: **Phương pháp và giải pháp kỹ thuật tích hợp Khung Năng lực số (20%) và 12 tiết Khung AI vào Kế hoạch bài dạy 5512**, đồng thời tháo gỡ các vướng mắc thực tế khi triển khai tại trường THCS Trần Phú:
-
-**1. Thảo luận về kỹ thuật tích hợp Khung Năng lực số (20%) và 12 tiết Khung AI vào KHBD theo CV 5512:**
-- **Thầy Hoàng Tấn Thiên (Tổ trưởng chuyên môn / Chủ trì):** Đặt vấn đề thảo luận: Theo hướng dẫn của Sở GD&ĐT tại Công văn 4200 và Công văn 5588 của Bộ GD&ĐT, năm học 2026 – 2027 bắt buộc phải thể hiện rõ việc tích hợp Khung Năng lực số (NLS) tối thiểu 20% tổng số tiết và 12 tiết Khung AI vào Kế hoạch bài dạy. Tuy nhiên, qua rà soát bước đầu, nhiều giáo viên còn lúng túng: Ghi mục tiêu NLS và AI ở vị trí nào trong giáo án 5512? Thiết kế hoạt động của học sinh ra sao để không biến tiết Toán thành tiết Tin học và không làm quá tải thời lượng 45 phút? Đề nghị các thầy cô đi thẳng vào giải pháp kỹ thuật cụ thể.
-- **Cô Lê Thị Bình (GV môn Toán khối 7 & 8):** Phân tích quy trình biên soạn cụ thể: Trong giáo án 5512, tại mục I. MỤC TIÊU (phần Năng lực), giáo viên bổ sung thêm chỉ báo: `*Năng lực số (NLS)*` và `*Năng lực Trí tuệ nhân tạo (AI)*`. Trong tiến trình 4 hoạt động dạy học, vị trí thích hợp nhất để tích hợp là **Hoạt động 3 (Luyện tập)** hoặc **Hoạt động 4 (Vận dụng)**. Ví dụ: Trong bài Thống kê biểu đồ (Toán 7) hoặc bài Hàm số và đồ thị (Toán 8), giáo viên giao nhiệm vụ cho học sinh dùng máy tính hoặc điện thoại thông minh tra cứu bảng số liệu thực tế tại địa phương, hoặc dùng phần mềm vẽ đồ thị kiểm tra nghiệm. Phần mô tả hoạt động của giáo viên và học sinh có yếu tố số/AI bắt buộc phải **in đậm, in nghiêng** để làm căn cứ đánh giá duyệt giáo án ký số.
-- **Thầy Trần Sáng (Phó Tổ trưởng, GV môn Toán 9):** Bổ sung kinh nghiệm môn Toán 9: Môn Toán 9 kiến thức rất nặng để ôn thi vào lớp 10, giáo viên không nên gượng ép tiết nào cũng đưa AI vào. Nhóm Toán 9 đã họp sơ bộ và thống nhất: Trong 12 tiết Khung AI, môn Toán 9 chỉ đăng ký tích hợp 03 tiết trọng điểm: (1) Tiết Luyện tập Tỉ số lượng giác (sử dụng công cụ mô phỏng AI / phần mềm đo đạc gián tiếp); (2) Tiết Đồ thị hàm số bậc nhất $y = ax + b$ (sử dụng phần mềm GeoGebra mô phỏng sự biến thiên của hệ số góc); (3) Tiết Bảng tần số và Biểu đồ tần số (sử dụng AI phân tích dữ liệu lớn). Các tiết còn lại, tích hợp NLS ở mức độ rèn luyện kỹ năng bấm máy tính cầm tay Casio FX-580VN/880BTG và làm bài tập trắc nghiệm số trên nền tảng OLM.
-- **Thầy Hoàng Tấn Thiên (Tổ trưởng):** Kết luận thống nhất: Cách tiếp cận của cô Bình và thầy Sáng là rất thực tế. Tuyệt đối không "khoác áo AI" một cách hình thức. Giao Thầy Sáng và Cô Bình hoàn thành 02 bài soạn mẫu có tích hợp NLS và AI (01 bài Toán 8, 01 bài Toán 9) đưa lên nhóm Zalo tổ trước ngày 18/9 để toàn tổ cùng áp dụng đồng bộ.
-
-**2. Thảo luận về vai trò chủ lực của môn Tin học trong việc triển khai 12 tiết Khung AI cốt lõi:**
-- **Thầy Dương Quang Tùng (GV môn Tin học):** Khẳng định: Môn Tin học là môn học nòng cốt gánh vác 12 tiết AI cốt lõi theo hướng dẫn của Bộ GD&ĐT. Nhóm Tin học (thầy Tùng, thầy Danh, cô Thảo) đã đối chiếu chương trình SGK Tin học Cánh Diều cả 4 khối và xác định địa chỉ 12 tiết AI cụ thể: Khối 6 (Chủ đề E – Tìm kiếm thông tin và ứng dụng trợ lý số); Khối 7 (Chủ đề E – Thu thập, xử lý và trực quan hóa bảng tính); Khối 8 (Chủ đề F – Bước đầu làm quen với thuật toán học máy và phân loại dữ liệu); Khối 9 (Chủ đề D & F – Sử dụng AI tạo sinh có trách nhiệm, bảo mật dữ liệu và đạo đức số). Nhóm Tin học sẽ đưa toàn bộ 12 tiết này vào Kế hoạch dạy học (Phụ lục 1) môn Tin học nộp về nhà trường.
-- **Cô Nguyễn Thị Thảo (GV môn Tin học):** Để học sinh thực hành tốt 12 tiết AI, phòng máy vi tính cần được cài đặt sẵn các tiện ích mô phỏng và bảo đảm đường truyền internet ổn định. Đề nghị trong các tiết học AI, giáo viên cho học sinh thực hành nhóm đôi, có sản phẩm cụ thể (bài trình chiếu, poster số, đoạn mã lập trình Scratch đơn giản ứng dụng nhận dạng hình ảnh) để học sinh hứng thú học tập.
-
-**3. Thảo luận về quy trình hoàn thiện Phụ lục 1, 2, 3 theo Công văn 5512 và đưa lên CSDL ngành:**
-- **Thầy Hồ Đăng Danh (GV Tin học, phụ trách kỹ thuật CSDL ngành):** Lưu ý các thầy cô trong tổ: Năm học này Sở GD&ĐT kiểm tra hồ sơ giáo án hoàn toàn trên môi trường số. Khi các nhóm bộ môn hoàn thành Phụ lục 1 (Kế hoạch dạy học theo 35 tuần) và Phụ lục 2 (Kế hoạch hoạt động giáo dục), trưởng nhóm phải rà soát thật kỹ số tiết, tên bài học khớp 100% với thời khóa biểu và PPCT. Riêng Phụ lục 3 của từng giáo viên, phần "Kế hoạch thực hiện chương trình" phải thể hiện rõ các tuần kiểm tra giữa kỳ, cuối kỳ và các tiết tích hợp NLS/AI. Thầy Danh sẽ trực tiếp hỗ trợ các thầy cô tải tệp lên hệ thống và ký số phê duyệt đúng hạn trước ngày 30/9.
-- **Thầy Đinh Văn Đông (Hiệu trưởng):** Quán triệt: Phụ lục 1, 2, 3 theo CV 5512 là "xương sống" pháp lý của toàn bộ hoạt động chuyên môn trong năm học. Sau khi Hiệu trưởng phê duyệt trên CSDL ngành, giáo viên phải thực hiện nghiêm túc theo đúng tiến độ, không tự ý đảo tiết hay cắt xén chương trình. Ban Giám hiệu sẽ kiểm tra ngẫu nhiên hồ sơ sổ sách và việc ký số hàng tuần của từng giáo viên.
-
-**4. Thảo luận về phối hợp phát động Đấu trường VioEdu Toán và kiểm tra thường xuyên qua OLM:**
-- **Cô Lê Thị Bình (GV môn Toán khối 7):** Đề nghị giáo viên dạy Toán các khối 6, 7, 8, 9 lập danh sách từ 5 đến 10 học sinh có học lực khá, giỏi môn Toán mỗi lớp chuyển cho quản trị trường để kích hoạt tài khoản VioEdu thi đấu vòng trường. Đồng thời, đề nghị Ban Giám hiệu và Tổng phụ trách Đội đưa phong trào VioEdu vào tiêu chí chấm điểm thi đua tuần giữa các lớp để tạo động lực cho học sinh tham gia đông đảo.
-- **Thầy Trần Long Hải (GV môn Toán, GVCN lớp 8/3):** Cần nhắc nhở giáo viên bộ môn khi giao bài tập rèn luyện trên VioEdu hoặc OLM phải hướng dẫn cụ thể cách đăng nhập cho học sinh, đặc biệt học sinh lớp 6 mới vào trường, tránh để phụ huynh phải phản ánh vì không biết cách thao tác.
-
-**5. Thảo luận về chuẩn bị hồ sơ chuyên môn cho công tác Kiểm tra nội bộ tháng 10/2026:**
-- **Thầy Hoàng Xuân Ánh & Thầy Nguyễn Văn Tính:** Tháng 10 tới nhà trường sẽ triển khai kiểm tra toàn diện và kiểm tra chuyên môn định kỳ theo kế hoạch kiểm tra nội bộ. Giáo viên trong tổ cần chủ động rà soát Kế hoạch bài dạy 4 hoạt động, sổ đầu bài, việc ghi nhận xét và vào điểm thường xuyên đợt 1 trên hệ thống SMAS/CSDL ngành, bảo đảm khớp tiến độ từng ngày, không để dồn việc vào cuối đợt kiểm tra.
-
-## V. KẾT LUẬN VÀ BIỂU QUYẾT
-
-- Thầy Tổ trưởng Hoàng Tấn Thiên tổng hợp các ý kiến thảo luận và kết luận: Toàn thể giáo viên trong tổ phát huy tinh thần đoàn kết, trách nhiệm, tập trung hoàn thiện hệ thống hồ sơ Phụ lục 1, 2, 3 theo Công văn 5512 trước ngày 30/9; thực hiện nghiêm túc việc tích hợp Năng lực số và 12 tiết Khung AI vào KHBD; chuẩn bị tốt nhất các điều kiện chuyên môn phục vụ giảng dạy và kiểm tra nội bộ tháng 10.
-- **Biểu quyết:** 10/10 thành viên có mặt tán thành 100% với các nội dung đánh giá công tác đầu tháng 9, kế hoạch trọng tâm và các giải pháp chuyên môn đã thống nhất.
-
-Biên bản cuộc họp kết thúc vào lúc 10 giờ 00 phút cùng ngày, đã được đọc lại cho toàn thể các thành viên cùng nghe, nhất trí thông qua và ký xác nhận dưới đây; biên bản được lập thành 02 bản có giá trị như nhau, lưu hồ sơ tổ chuyên môn và gửi Ban Giám hiệu nhà trường./.
-
----
-
-| **THƯ KÝ CUỘC HỌP**<br>*(Ký, ghi rõ họ tên)*<br><br><br><br>**Lê Thị Bình** | **TỔ TRƯỞNG CHUYÊN MÔN**<br>*(Ký, ghi rõ họ tên)*<br><br><br><br>**Hoàng Tấn Thiên** |
-|:---:|:---:|
-
-**CÁC THÀNH VIÊN KHÁC CỦA TỔ CHUYÊN MÔN KÝ XÁC NHẬN:**
-
-| Đinh Văn Đông | Trần Sáng | Hồ Đăng Danh | Hoàng Xuân Ánh |
-|:---:|:---:|:---:|:---:|
-| *(Ký tên)* | *(Ký tên)* | *(Ký tên)* | *(Ký tên)* |
-
-| Trần Long Hải | Nguyễn Thị Thảo | Nguyễn Văn Tính | Dương Quang Tùng |
-|:---:|:---:|:---:|:---:|
-| *(Ký tên)* | *(Ký tên)* | *(Ký tên)* | *(Ký tên)* |
-"""
-    with open(out_md_path, 'w', encoding='utf-8') as f:
-        f.write(md_content)
-
-
-def tao_bien_ban_hop_to_lan_2_thang_9(out_docx_path, out_md_path=None):
-    """
-    Soạn thảo hoàn chỉnh Biên bản họp Tổ chuyên môn Lần 2 Tháng 9/2026.
-    Chuẩn Nghị định 30/2020/NĐ-CP và đặc thù Trường THCS Trần Phú.
-    """
-    doc = create_nd30_document()
-    
-    # Header chuẩn
-    add_header_thcs_tran_phu(
-        doc,
-        so_hieu="03/BB-TCM",
-        ngay_thang_str="Xuân Đông, ngày 18 tháng 9 năm 2026"
-    )
-    
-    # Tiêu đề
-    add_doc_title(
-        doc,
-        "BIÊN BẢN HỌP TỔ CHUYÊN MÔN LẦN 2",
-        "SINH HOẠT CHUYÊN MÔN TỔ TOÁN – TIN THÁNG 9/2026 (LẦN 2)\nNăm học: 2026 - 2027"
-    )
-    
-    # Thời gian, địa điểm, thành phần
-    add_paragraph_styled(doc, "Hôm nay, vào lúc 13 giờ 30 phút, ngày 18 tháng 9 năm 2026, tại Phòng sinh hoạt chuyên môn Trường THCS Trần Phú, Tổ Toán – Tin học đã tiến hành phiên họp chuyên môn định kỳ lần 2 tháng 9 năm học 2026 - 2027.", indent=True)
-    add_paragraph_styled(doc, "Thầy **Hoàng Tấn Thiên** – Tổ trưởng chuyên môn.", bold_prefix="- Chủ trì cuộc họp:", indent=True)
-    add_paragraph_styled(doc, "Cô **Lê Thị Bình** – Giáo viên môn Toán.", bold_prefix="- Thư ký cuộc họp:", indent=True)
-    add_paragraph_styled(doc, "10/10 thành viên trong tổ (Có mặt: 10/10, Vắng: 0).", bold_prefix="- Thành viên tham dự:", indent=True)
-    add_paragraph_styled(doc, "Thầy Hoàng Tấn Thiên, Thầy Trần Sáng, Thầy Đinh Văn Đông, Thầy Hồ Đăng Danh, Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Cô Lê Thị Bình, Cô Nguyễn Thị Thảo, Thầy Nguyễn Văn Tính, Thầy Dương Quang Tùng.", bold_prefix="  + Danh sách thành viên:", indent=True)
-    
-    # NỘI DUNG CUỘC HỌP
-    add_doc_title(doc, "NỘI DUNG CUỘC HỌP", "")
-    
-    # ==================== PHẦN I ====================
-    add_section_h1(doc, "I. TRIỂN KHAI VĂN BẢN CHỈ ĐẠO CỦA CẤP TRÊN")
-    add_paragraph_styled(doc, "Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt sâu sắc các văn bản chỉ đạo của Sở Giáo dục và Đào tạo thành phố Đồng Nai, các cấp quản lý và kế hoạch của nhà trường; nêu rõ các nội dung cốt lõi và tóm tắt tác động trực tiếp đến nhiệm vụ của tổ chuyên môn như sau:", indent=True)
-    
-    # 1. Hướng dẫn 5351
-    add_paragraph_styled(doc, "**1. Hướng dẫn một số giải pháp hạn chế việc sử dụng điện thoại di động, thiết bị thông minh, mạng xã hội của học sinh trong trường học (Hướng dẫn số 5351/HD-SGDĐT ngày 15/9/2026 của Sở GDĐT thành phố Đồng Nai):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Căn cứ Thông tư 15/2026/TT-BGDĐT và Công văn 3147/BGDĐT-HSSV của Bộ GD&ĐT. Nhằm giảm thiểu sự phụ thuộc quá mức vào thiết bị công nghệ, tạo không gian học tập tập trung, cải thiện khả năng tư duy độc lập và bảo vệ sức khỏe học đường (thị lực, cột sống, sức khỏe tâm thần) cho học sinh. Học sinh phấn đấu thực hiện bốn tiêu chuẩn “Tự”: *Tự giác* (tắt thiết bị hoặc để chế độ im lặng và cất vào nơi quy định ngay khi bước vào trường/lớp); *Tự quản* (thành lập tổ tự quản nhắc nhở nhau); *Tự rèn* (làm chủ hành vi, không để bị cuốn vào mạng xã hội); *Tự chủ* (sử dụng công nghệ đúng lúc, đúng chỗ phục vụ học tập). Triển khai đồng bộ 03 mô hình vận dụng linh hoạt: (1) Mô hình *“Hộp lưu trữ niềm tin”* (bố trí tủ/khay/túi chuyên dụng tại lớp, học sinh cất thiết bị đầu buổi và nhận lại sau buổi học); (2) Mô hình *“Giờ ra chơi không màn hình”* (tổ chức cờ vua, trò chơi dân gian, góc đọc sách xanh); (3) Mô hình *“Tích hợp giáo dục kỹ năng số”* (hướng dẫn lọc thông tin, bảo mật cá nhân, ứng xử văn minh trên không gian mạng).", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Giáo viên bộ môn Toán và Tin học làm gương, tuyệt đối không sử dụng điện thoại làm việc riêng trong giờ lên lớp. Phân định rõ ràng: Trong giờ học lý thuyết Toán và Tin học, học sinh tuyệt đối không dùng điện thoại; chỉ khi có yêu cầu nghiệp vụ bài dạy rõ ràng (tra cứu phần mềm GeoGebra, làm bài kiểm tra trực tuyến OLM/VioEdu tại phòng máy hoặc theo nhóm có kiểm soát) thì giáo viên mới cho phép mở thiết bị. Giáo viên chủ nhiệm phối hợp chặt chẽ với cha mẹ học sinh để thống nhất quản lý, phòng ngừa bắt nạt mạng và xao nhãng học tập.", indent=True)
-    
-    # 2. Kế hoạch 5264
-    add_paragraph_styled(doc, "**2. Kế hoạch thực hiện nhiệm vụ ứng dụng công nghệ thông tin, chuyển đổi số và thống kê giáo dục năm học 2026 – 2027 (Kế hoạch số 5264/KH-SGDĐT ngày 22/9/2026 của Sở GDĐT thành phố Đồng Nai):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Bám sát Công văn 6020/BGDĐT-KHCNTT của Bộ GD&ĐT, Nghị quyết 57-NQ/TW của Bộ Chính trị, Luật Chuyển đổi số số 148/2025/QH15, Luật Dữ liệu số 60/2024/QH15, Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 và Luật Trí tuệ nhân tạo số 134/2025/QH15. Chỉ đạo xuyên suốt theo tinh thần **“6 rõ”** (*rõ người, rõ việc, rõ thời gian, rõ trách nhiệm, rõ sản phẩm, rõ thẩm quyền*). Dữ liệu giáo dục phải bảo đảm *“đúng, đủ, sạch, sống, thống nhất, dùng chung”*; thực hiện nghiêm nguyên tắc *“dữ liệu cập nhật một lần, sử dụng nhiều lần”*, cắt giảm thủ tục hành chính. Đẩy mạnh phong trào *“Bình dân học vụ số”* và hưởng ứng Ngày Chuyển đổi số Quốc gia (10/10). Định hướng rõ việc thúc đẩy ứng dụng Trí tuệ nhân tạo (AI) an toàn, có kiểm soát và có trách nhiệm: Khuyến khích ứng dụng AI hỗ trợ soạn bài, xây dựng học liệu, thiết kế đề kiểm tra; tuy nhiên *kết quả do AI tạo ra phải được giáo viên kiểm chứng về tính chính xác và phù hợp sư phạm; AI tuyệt đối không thay thế trách nhiệm chuyên môn và quyền ra quyết định của nhà giáo*.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ Toán - Tin là đơn vị nòng cốt triển khai chuyển đổi số trong nhà trường; 100% giáo viên hoàn thành phê duyệt Kế hoạch bài dạy (KHBD) trên hệ thống số CSDL ngành đúng thời hạn; đảm bảo an toàn dữ liệu học bạ số và thông tin cá nhân học sinh; giáo viên Tin học chủ động tham mưu nâng cấp đường truyền và bảo đảm an ninh mạng cho hệ thống phòng máy.", indent=True)
-    
-    # 3. Công văn 946
-    add_paragraph_styled(doc, "**3. Hướng dẫn việc trả và lưu trữ đề, bài kiểm tra, đánh giá định kỳ của học sinh (Công văn số 946/SGDĐT-GDPT&GDTX ngày 06/02/2026 của Sở GDĐT thành phố Đồng Nai):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Hướng dẫn thực hiện thống nhất quy trình trả bài và lưu trữ hồ sơ, ma trận, đặc tả, đề kiểm tra cùng bài kiểm tra, đánh giá định kỳ của học sinh bảo đảm tính chính xác, công bằng, minh bạch và đúng quy định quản lý hồ sơ chuyên môn trong nhà trường.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ chuyên môn thẩm định kỹ lưỡng ma trận và đề kiểm tra định kỳ các khối 6, 7, 8, 9; giáo viên thực hiện nghiêm túc quy trình chấm, trả bài có lời nhận xét cụ thể, vào điểm đúng tiến độ trên hệ thống quản lý điểm số và lưu trữ hồ sơ kiểm tra đầy đủ phục vụ kiểm tra chuyên môn.", indent=True)
-    
-    # 4. Công văn 4794
-    add_paragraph_styled(doc, "**4. Hướng dẫn công tác kiểm tra nội bộ trường học năm học 2026 - 2027 (Công văn số 4794/SGD ngày 09/9/2026 của Sở GD&ĐT):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Xác định mục đích, yêu cầu và quy trình tổ chức kiểm tra nhằm nâng cao hiệu quả quản trị, phòng ngừa và chấn chỉnh kịp thời các sai phạm; triển khai 06 cuộc kiểm tra chuyên đề định kỳ cùng các đợt kiểm tra đột xuất đối với toàn thể cán bộ, giáo viên, nhân viên; tập trung quy chế chuyên môn, hoạt động sư phạm, quản lý dạy thêm - học thêm, thu chi tài chính, an toàn trường học và đánh giá xếp loại học sinh.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Giáo viên trong tổ chấp hành nghiêm chỉnh quy định về dạy thêm - học thêm (tuyệt đối không dạy thêm sai quy định); thực hiện đúng kế hoạch kiểm tra nội bộ của trường; Thầy Trần Sáng tham gia tổ kiểm tra nội bộ thực hiện đúng nhiệm vụ được giao.", indent=True)
-    
-    # 5. Kế hoạch VioEdu
-    add_paragraph_styled(doc, "**5. Kế hoạch tổ chức sân chơi “Đấu trường VioEdu” năm học 2026 - 2027 (Kế hoạch số 01/KH-TCM ngày 15/9/2026 của Tổ Toán - Tin học Trường THCS Trần Phú):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi & Quy chế thi:** Mục tiêu thúc đẩy chuyển đổi số, ứng dụng AI và khơi dậy đam mê Toán học, Toán tiếng Anh cho học sinh từ khối 6 đến khối 9 trên tinh thần tự nguyện 100%, hoàn toàn miễn phí. Học sinh thi trực tuyến trên website vio.edu.vn hoặc app VioEdu bằng 01 tài khoản định danh do nhà trường cấp. Mỗi vòng thi gồm 30 câu hỏi (20 câu Toán + 10 câu Toán tiếng Anh), thời gian làm bài cố định 20 phút.", indent=True)
-    add_paragraph_styled(doc, "- **Lộ trình thời gian thực hiện:** (1) Ngày 15/9 – 20/9/2026: Khởi tạo và cấp tài khoản đồng loạt; (2) Ngày 28/9 – 13/12/2026: Vòng sơ loại trực tuyến (8 vòng sơ loại và 2 vòng định kỳ, mở từ 00h00 thứ Hai đến 23h59 Chủ nhật hàng tuần); (3) Ngày 11/01 – 15/01/2027: Vòng cấp Trường (thi tập trung tại phòng máy); (4) Ngày 23/02 – 24/02/2027: Vòng cấp Xã; (5) Ngày 30/03 – 31/03/2027: Vòng cấp Tỉnh (dành cho thí sinh đạt từ 20 điểm trở lên và nằm trong Top 30% cấp Xã).", indent=True)
-    add_paragraph_styled(doc, "- **Phân công phụ trách khối:** Cô Nguyễn Thị Thảo (Khối 6), Thầy Hoàng Xuân Ánh (Khối 7), Cô Lê Thị Bình (Khối 8), Thầy Trần Sáng (Khối 9), Thầy Dương Quang Tùng (Phụ trách phòng máy và đường truyền mạng). Giáo viên phụ trách khối định kỳ báo cáo kết quả tham gia cho Tổ trưởng chuyên môn vào ngày 25 hàng tháng.", indent=True)
-    
-    # ==================== PHẦN II ====================
-    add_section_h1(doc, "II. ĐÁNH GIÁ TÌNH HÌNH CÔNG TÁC THỜI GIAN QUA")
-    
-    add_section_h2(doc, "1. Công tác chủ nhiệm:")
-    add_paragraph_styled(doc, "- Các giáo viên chủ nhiệm trong tổ đã nhanh chóng ổn định nề nếp lớp chủ nhiệm, tích cực duy trì sinh hoạt 15 phút đầu giờ trước buổi học, hướng dẫn học sinh học tập nội quy, củng cố đội ngũ cán bộ lớp, tham gia họp GVCN và xây dựng kế hoạch chủ nhiệm năm học 2026 - 2027.", indent=True)
-    add_paragraph_styled(doc, "- Phát động sôi nổi các phong trào thi đua chào mừng ngày Quốc khánh 2/9, Tháng An toàn giao thông; cho học sinh và cha mẹ học sinh ký cam kết: Không thử, không tàng trữ, không sử dụng và buôn bán các chất ma túy, thuốc lá điện tử và chấp hành nghiêm chỉnh luật giao thông.", indent=True)
-    add_paragraph_styled(doc, "- GVCN tăng cường bám sát lớp, theo dõi chuyên cần, quản lý sổ đầu bài cẩn thận, yêu cầu GVBM ghi chép đầy đủ các cột mục và GVCN tổng hợp ký duyệt hàng tuần. Hoàn thành điều tra thông tin học sinh lớp chủ nhiệm trên hệ thống CSDL ngành. Tổ chức họp cha mẹ học sinh đầu năm học vào ngày 13/9/2026 đạt kết quả tốt, thông báo các khoản thu BHYT, BHTN và triển khai đăng ký môn Tiếng Anh tăng cường.", indent=True)
-    
-    add_section_h2(doc, "2. Ngày giờ công và kỷ luật lao động:")
-    add_paragraph_styled(doc, "- 100% giáo viên trong tổ đảm bảo nghiêm túc ngày giờ công, tham gia đầy đủ các hoạt động của nhà trường, dạy đủ các tiết theo phân công chuyên môn, thực hiện nghiêm túc việc dạy bù, dạy thay khi có giáo viên đi công tác hoặc nghỉ ốm.", indent=True)
-    
-    add_section_h2(doc, "3. Công tác chuyên môn:")
-    add_paragraph_styled(doc, "- Duy trì nền nếp dạy và học ổn định theo thời khóa biểu. Thực hiện chương trình theo kế hoạch nhà trường, thực hiện dạy học 2 buổi/ngày theo Công văn 4567 của Bộ GD&ĐT, thực hiện giáo dục địa phương và hoạt động trải nghiệm hướng nghiệp đúng định hướng. Giáo viên trong tổ khai thác tốt trang thiết bị dạy học và phòng bộ môn.", indent=True)
-    add_paragraph_styled(doc, "- Tổ đã phân công phụ trách khối, đóng góp ý kiến xây dựng Kế hoạch giáo dục của tổ và nhà trường. Thực hiện nghiêm túc các quy chế chuyên môn.", indent=True)
-    add_paragraph_styled(doc, "- 100% giáo viên trong tổ hoàn thành đợt tập huấn chuyển đổi số ngày 11/9/2026 về CSDL ngành, eNetViet, OLM, phương pháp tích hợp Năng lực số (NLS 20%) và Khung 12 tiết AI vào bài giảng.", indent=True)
-    
-    add_section_h2(doc, "4. Công tác chuyên đề, thao giảng:")
-    add_paragraph_styled(doc, "- Tham gia đầy đủ các buổi tập huấn chuyên đề do các cấp tổ chức và phổ biến lại các nội dung thống nhất để thực hiện. Giáo viên trong tổ đã tiến hành đăng ký chuyên đề nghiên cứu bài học cho năm học.", indent=True)
-    
-    add_section_h2(doc, "5. Công tác kiểm tra nội bộ:")
-    add_paragraph_styled(doc, "- Thường xuyên kiểm tra việc giáo viên thực hiện quy chế chuyên môn, nền nếp ra vào lớp, chất lượng soạn giảng Kế hoạch bài dạy theo đúng khung hướng dẫn.", indent=True)
-    
-    add_section_h2(doc, "6. Sử dụng đồ dùng dạy học và phòng chức năng:")
-    add_paragraph_styled(doc, "- Khai thác có hiệu quả phòng máy tính, phòng học bộ môn. Giáo viên tiếp tục rà soát, đề xuất mua sắm bổ sung thiết bị dạy học, sách tham khảo phục vụ nhu cầu giảng dạy.", indent=True)
-    
-    add_section_h2(doc, "7. Công tác khác:")
-    add_paragraph_styled(doc, "- Phối hợp tốt trong công tác phòng chống các loại tội phạm, phòng chống đuối nước; tham gia tích cực các hoạt động Đoàn – Đội và hoàn thành tốt nhiệm vụ điều tra phổ cập giáo dục theo phân công.", indent=True)
-    
-    # ==================== PHẦN III ====================
-    add_section_h1(doc, "III. KẾ HOẠCH TRỌNG TÂM TRONG THỜI GIAN TỚI")
-    
-    add_section_h2(doc, "1. Công tác chủ nhiệm:")
-    add_paragraph_styled(doc, "- Tiếp tục ổn định nền nếp lớp chủ nhiệm, tích cực sinh hoạt 15 phút đầu giờ. Phát động đợt thi đua cao điểm chào mừng các ngày lễ lớn trong tháng 10: Ngày Quốc tế Người cao tuổi (01/10), Ngày Khuyến học Việt Nam (02/10), Ngày Bác Hồ gửi bức thư cuối cùng cho ngành Giáo dục (15/10) và Ngày Phụ nữ Việt Nam (20/10). Đẩy mạnh tuyên truyền phòng chống ma túy, ATGT, PCCC và phòng tránh tai nạn thương tích.", indent=True)
-    add_paragraph_styled(doc, "- Thực hiện hiệu quả Tuần lễ hưởng ứng học tập suốt đời năm 2026. Hoàn thành hồ sơ sổ sách GVCN đúng quy định; tiếp tục rà soát, thống kê học sinh có hoàn cảnh khó khăn để kịp thời hỗ trợ; đôn đốc thu nộp BHYT, BHTN; thông tin thường xuyên với phụ huynh qua Zalo lớp và sổ liên lạc điện tử.", indent=True)
-    add_paragraph_styled(doc, "- Giáo viên chủ nhiệm vận động 100% học sinh đăng ký tham gia Đấu trường VioEdu theo kế hoạch; triển khai khai thác thư viện số của trường và đăng ký học Tiếng Anh tăng cường theo chủ trương.", indent=True)
-    
-    add_section_h2(doc, "2. Đảm bảo ngày giờ công và nền nếp chuyên môn:")
-    add_paragraph_styled(doc, "- Giáo viên trong tổ phấn đấu đảm bảo nghiêm túc ngày giờ công, tham gia đầy đủ các hoạt động của trường, dạy đúng, dạy đủ các tiết theo phân công; thực hiện nghiêm túc việc dạy bù, dạy thay kịp thời.", indent=True)
-    
-    add_section_h2(doc, "3. Hoạt động chuyên môn trọng tâm:")
-    add_paragraph_styled(doc, "- Thực hiện nghiêm túc việc soạn Kế hoạch bài dạy (KHBD) từ tuần 1 đến tuần 4 và hoàn thành phê duyệt, đẩy lên hệ thống CSDL ngành trong khoảng thời gian từ ngày 20/9 đến ngày 24/9/2026. Lưu ý thể hiện rõ nét nội dung giáo dục học sinh hòa nhập, tích hợp Năng lực số (NLS 20%), ứng dụng AI có kiểm soát và bài học STEM.", indent=True)
-    add_paragraph_styled(doc, "- Phân công nhiệm vụ cụ thể hướng dẫn học sinh tham gia các vòng thi VioEdu đạt hiệu quả: Cô Nguyễn Thị Thảo (Khối 6), Thầy Hoàng Xuân Ánh (Khối 7), Cô Lê Thị Bình (Khối 8), Thầy Trần Sáng (Khối 9), Thầy Dương Quang Tùng (Phòng máy & đường truyền).", indent=True)
-    add_paragraph_styled(doc, "- Thầy Trần Sáng tiếp tục hoàn thành bài dự thi về Chuyên môn, nghiệp vụ giáo dục phòng, chống ma túy đạt chất lượng cao.", indent=True)
-    add_paragraph_styled(doc, "- **Tập trung góp ý chuyên sâu chương trình Sách giáo khoa GDPT 2018 môn Toán - Tin, nhận diện các khó khăn sư phạm và thống nhất hướng khắc phục:**", indent=True)
-    add_paragraph_styled(doc, "  + *Đối với sách giáo khoa Toán lớp 8 (Bài 12: Hình thang cân):*", indent=True)
-    add_paragraph_styled(doc, "    • Khó khăn thực tế: Học sinh rất dễ ngụy biện và mặc định sai lầm rằng “Hình thang có 2 cạnh bên bằng nhau là hình thang cân” (trong khi nếu 2 cạnh bên bằng nhau và song song thì đó lại là hình bình hành). Việc chứng minh Định lý 3 (Ví dụ 2 trang 54) đòi hỏi kẻ thêm đường phụ khá phức tạp so với trình độ đầu năm lớp 8.", indent=True)
-    add_paragraph_styled(doc, "    • Hướng khắc phục: Khai thác triệt để phần “Tranh luận” (trang 59) và “Luyện tập chung” (trang 56) để cho học sinh vẽ cả 2 trường hợp (hai cạnh bên không song song -> hình thang cân; hai cạnh bên song song -> hình bình hành). Chuẩn hóa quy trình kẻ đường song song phụ qua một đỉnh để đưa bài toán về tam giác cân quen thuộc.", indent=True)
-    add_paragraph_styled(doc, "  + *Đối với sách giáo khoa Toán lớp 6 (Bài 18 và Bài 19 về các hình phẳng trong thực tiễn):*", indent=True)
-    add_paragraph_styled(doc, "    • Khó khăn thực tế: Học sinh gặp khó khăn lớn khi sử dụng compa và êke để vẽ các hình đòi hỏi kỹ thuật cao như hình lục giác đều hay hình thoi. Bên cạnh đó, học sinh rất dễ nhầm lẫn thuộc tính đường chéo giữa các hình (ví dụ: nhầm đường chéo bằng nhau của hình chữ nhật/hình thang cân với đường chéo vuông góc của hình thoi/hình vuông).", indent=True)
-    add_paragraph_styled(doc, "    • Hướng khắc phục: Xây dựng Quy trình vẽ hình từng bước: Chuẩn bị phiếu học tập có hình ảnh minh họa rõ ràng các bước đặt thước, quay compa để vẽ hình thoi và hình lục giác đều. Cho học sinh lập Bảng so sánh các yếu tố Cạnh - Góc - Đường chéo của 7 hình phẳng đã học để rèn luyện tư duy phân loại thị giác.", indent=True)
-    add_paragraph_styled(doc, "- Hoàn thành toàn bộ hồ sơ tổ chuyên môn theo kế hoạch năm học của nhà trường.", indent=True)
-    
-    add_section_h2(doc, "4. Công tác chuyên đề và nghiên cứu bài học:")
-    add_paragraph_styled(doc, "- Các nhóm bộ môn lên kế hoạch thực hiện chuyên đề theo nghiên cứu bài học. Tổ thống nhất và đăng ký phổ biến chuyên đề cấp trường/tổ: Học kỳ I do Thầy Hoàng Tấn Thiên chủ trì (môn Toán); Học kỳ II do Thầy Hoàng Tấn Thiên và Thầy Trần Sáng phối hợp triển khai (môn Toán). Tham gia đầy đủ các buổi tập huấn chuyên đề do các cấp tổ chức.", indent=True)
-    
-    add_section_h2(doc, "5. Công tác ngoại khóa và phong trào:")
-    add_paragraph_styled(doc, "- Tuyên truyền học sinh chấp hành tốt nội quy trường, lớp, tích cực tham gia các cuộc thi do Nhà trường, Đoàn, Đội tổ chức; duy trì phong trào vệ sinh “Sạch trường, đẹp lớp”.", indent=True)
-    
-    add_section_h2(doc, "6. Công tác kiểm tra:")
-    add_paragraph_styled(doc, "- Kiểm tra nền nếp ra vào lớp, duyệt ma trận và đề kiểm tra định kỳ của tổ; kiểm tra việc soạn giảng, ra đề theo chuẩn KT-KN chương trình GDPT 2018 và kiểm tra việc thực hiện quy chế chuyên môn, sử dụng phòng CNTT.", indent=True)
-    
-    add_section_h2(doc, "7. Sử dụng đồ dùng dạy học và phòng CNTT:")
-    add_paragraph_styled(doc, "- Sử dụng có hiệu quả phòng chức năng, phòng CNTT, khai thác triệt để các phần mềm trong giảng dạy; khuyến khích giáo viên và học sinh ươm mầm các ý tưởng sản phẩm dự thi KHKT.", indent=True)
-    
-    add_section_h2(doc, "8. Công tác khác:")
-    add_paragraph_styled(doc, "- Vệ sinh trường lớp, trang trí lớp Xanh – Sạch – Đẹp; tham gia hoạt động Đoàn – Đội và các hoạt động do nhà trường, công đoàn phát động chào mừng các ngày lễ lớn trong tháng.", indent=True)
-    
-    # ==================== PHẦN IV ====================
-    add_section_h1(doc, "IV. Ý KIẾN THẢO LUẬN VÀ GIẢI PHÁP CHUYÊN MÔN THỰC CHIẾN")
-    add_paragraph_styled(doc, "Phiên họp diễn ra thẳng thắn, dân chủ, tập trung sâu sắc vào các vấn đề chuyên môn, phản ánh đúng thực tế lớp học và đề xuất các giải pháp kỹ thuật cụ thể:", indent=True)
-    
-    add_paragraph_styled(doc, "- **Cô Lê Thị Bình (Giáo viên môn Toán 8, Thư ký):** Đánh giá cao tính cấp thiết của Hướng dẫn số 5351/HD-SGDĐT về hạn chế điện thoại trong trường học. Thực tế học sinh lớp 8 rất tò mò và dễ bị phân tâm bởi tin nhắn, mạng xã hội nếu mang điện thoại vào lớp. Đề xuất giải pháp: Mỗi lớp học bố trí 01 khay/túi vải có đánh số thứ tự treo tại góc bảng lớp (Mô hình Hộp lưu trữ niềm tin). Đầu buổi học, ban cán sự lớp đôn đốc học sinh tự giác tắt nguồn hoặc bật chế độ im lặng rồi cất điện thoại vào đúng ô số của mình. Trong giờ học Toán, giáo viên yêu cầu học sinh sử dụng máy tính cầm tay Casio khoa học, tuyệt đối cấm dùng phần mềm giả lập trên điện thoại để tránh việc lén lút chuyển sang ứng dụng mạng xã hội. Giáo viên chủ nhiệm cần thống nhất chặt chẽ với cha mẹ học sinh ngay từ đầu năm.", indent=True)
-    
-    add_paragraph_styled(doc, "- **Thầy Hoàng Xuân Ánh (Giáo viên môn Toán 7, Phụ trách VioEdu Khối 7):** Đề nghị Liên đội tăng cường kiểm tra và ghi tên những học sinh không đội nón bảo hiểm khi tham gia giao thông bằng xe đạp điện, xe máy điện ở cổng trường lúc tan học. Về chuyên môn hình học: Đồng tình với giải pháp khắc phục khó khăn vẽ hình lớp 6 và hình thang cân lớp 8. Đối với thao tác vẽ hình phức tạp như lục giác đều, giáo viên nên chiếu video mô phỏng thao tác dựng hình chuẩn bằng phần mềm GeoGebra trước 2 phút, sau đó yêu cầu học sinh thực hành trên phiếu in sẵn lưới ô vuông để định hình tỷ lệ chuẩn trước khi vẽ vào vở.", indent=True)
-    
-    add_paragraph_styled(doc, "- **Thầy Dương Quang Tùng (Giáo viên Tin học, Phụ trách phòng máy & hạ tầng CNTT):** Báo cáo hạ tầng CNTT: 2 phòng máy tính (45 máy) hiện hoạt động ổn định. Để triển khai tốt Kế hoạch số 5264/KH-SGDĐT và sân chơi VioEdu, Thầy Tùng đề xuất mở cửa phòng máy từ 16h30 đến 17h15 vào các ngày thứ Ba và thứ Năm hàng tuần để tạo điều kiện cho các em học sinh có hoàn cảnh khó khăn (không có máy tính/điện thoại ở nhà) được tham gia thi đấu vòng sơ loại VioEdu miễn phí dưới sự hướng dẫn của giáo viên trực phòng máy. Về việc ứng dụng AI có kiểm soát: Khuyến nghị các thầy cô trong tổ có thể sử dụng các trợ lý AI (như ChatGPT, Claude) để gợi ý các bài toán thực tế, tạo câu hỏi trắc nghiệm khách quan; tuy nhiên phải tuân thủ nghiêm ngặt nguyên tắc kiểm chứng: Giáo viên phải tự tay giải lại, thẩm định lời giải và ma trận đề, tuyệt đối không sao chép nguyên văn sản phẩm của AI đưa vào đề thi hay giáo án.", indent=True)
-    
-    add_paragraph_styled(doc, "- **Thầy Hồ Đăng Danh (Giáo viên môn Toán):** Thống nhất bài làm kiểm tra thường xuyên (KTTX) cần thực hiện nhiều hình thức phong phú: vấn đáp, bài viết phiếu học tập, sản phẩm STEM (mô hình tam giác, hình thang cân bằng giấy carton) và đánh giá hoạt động nhóm... nhằm tạo động lực và khích lệ học sinh yếu kém tiến bộ, tránh gây áp lực điểm số đơn thuần bằng bài kiểm tra giấy truyền thống.", indent=True)
-    
-    add_paragraph_styled(doc, "- **Cô Nguyễn Thị Thảo (Giáo viên môn Toán 6, Phụ trách VioEdu Khối 6):** Phản ánh ý kiến của phụ huynh học sinh về môn Tiếng Anh tăng cường: Cần khảo sát phân loại học sinh theo trình độ để xếp lớp phù hợp, tránh để học sinh trung bình bị quá tải. Đối với 10 câu hỏi Toán tiếng Anh trong mỗi vòng thi VioEdu, Cô Thảo đề xuất giáo viên giảng dạy khối 6 và khối 7 dành 5 phút cuối tiết luyện tập để hướng dẫn học sinh làm quen với các thuật ngữ Toán học tiếng Anh cốt lõi (như *prime number, common divisor, right triangle, angle, perimeter, area*) giúp học sinh tự tin làm bài mà không bị rào cản ngôn ngữ.", indent=True)
-    
-    add_paragraph_styled(doc, "- **Thầy Trần Sáng (Giáo viên môn Toán 9, KTNB):** Đề nghị thiết thực về cơ sở vật chất: Nhà trường cần sớm làm khung giá đỡ hoặc hạ thấp ti vi tại các lớp học ở cơ sở 2. Lý do ti vi hiện nay treo quá cao sát trần nhà khiến học sinh ngồi các dãy giữa và cuối phải ngửa cổ liên tục gây mỏi mắt, không quan sát rõ nét chữ và hình vẽ. Về xử lý sai lầm Hình thang cân lớp 8: Thống nhất giáo viên phải đưa ra phản ví dụ cụ thể ngay trên bảng (vẽ một hình thang có 2 cạnh bên bằng nhau và song song để học sinh tự kết luận đó là hình bình hành, từ đó khắc cốt ghi tâm điều kiện 2 cạnh bên phải *không song song* mới là hình thang cân).", indent=True)
-    
-    add_paragraph_styled(doc, "- **Thầy Đinh Văn Đông & Thầy Trần Long Hải:** Đề xuất nhà trường trang cấp bổ sung cho tổ bộ môn 02 bộ compa bảng compozit khổ lớn và thước đo góc có tay cầm chuyên dụng để phục vụ trực quan cho giáo viên dạy hình học các khối 6, 7. Thống nhất mốc thời gian hoàn thành Kế hoạch bài dạy (KHBD) tuần 1 đến tuần 4: 100% giáo viên nộp bài lên hệ thống CSDL ngành trước 17h00 ngày 23/9/2026 để Tổ trưởng chuyên môn kịp thời thẩm định và phê duyệt trước hạn chót 24/9/2026.", indent=True)
-    
-    # ==================== PHẦN V ====================
-    add_section_h1(doc, "V. KẾT LUẬN CỦA CHỦ TỌA VÀ NGHỊ QUYẾT CUỘC HỌP")
-    add_paragraph_styled(doc, "Thầy Tổ trưởng chuyên môn Hoàng Tấn Thiên kết luận toàn diện phiên họp và chỉ đạo thực hiện các nhiệm vụ trọng tâm sau:", indent=True)
-    add_paragraph_styled(doc, "1. Toàn thể giáo viên quán triệt và thực hiện nghiêm túc Hướng dẫn số 5351/HD-SGDĐT: Triển khai hiệu quả Mô hình “Hộp lưu trữ niềm tin” tại lớp chủ nhiệm và phòng bộ môn; tuyệt đối không để học sinh lạm dụng điện thoại trong giờ học; giáo viên làm gương không sử dụng thiết bị cá nhân làm việc riêng trong tiết giảng.", indent=True)
-    add_paragraph_styled(doc, "2. Bám sát tinh thần Kế hoạch số 5264/KH-SGDĐT: Thực hiện nghiêm túc nguyên tắc “6 rõ”, chuẩn hóa dữ liệu CSDL ngành theo phương châm “đúng, đủ, sạch, sống”; hoàn thành việc phê duyệt và nộp KHBD tuần 1 đến tuần 4 lên CSDL ngành đúng thời hạn (hạn chót hoàn thành của giáo viên là ngày 23/9/2026); ứng dụng AI một cách thông minh, có trách nhiệm và luôn kiểm chứng tính chính xác chuyên môn.", indent=True)
-    add_paragraph_styled(doc, "3. Triển khai sâu rộng và đồng bộ sân chơi Đấu trường VioEdu theo Kế hoạch 01/KH-TCM; giáo viên phụ trách khối chủ động cấp tài khoản, đôn đốc học sinh tham gia vòng sơ loại từ ngày 28/9/2026; Thầy Dương Quang Tùng quản lý tốt phòng máy mở cửa ngoài giờ hỗ trợ học sinh có hoàn cảnh khó khăn.", indent=True)
-    add_paragraph_styled(doc, "4. Áp dụng đồng bộ giải pháp tháo gỡ điểm nghẽn SGK Toán 6 và Toán 8 đã được tổ thống nhất (phiếu hướng dẫn vẽ hình từng bước, bảng so sánh 7 hình phẳng, khai thác phản ví dụ tránh ngụy biện hình thang cân).", indent=True)
-    add_paragraph_styled(doc, "5. Tổ trưởng chuyên môn tổng hợp các kiến nghị chính đáng của tổ (hạ thấp tivi cơ sở 2, mua sắm compa bảng, rà soát phân lớp tiếng Anh tăng cường) để trực tiếp đề xuất với Ban Giám hiệu nhà trường trong cuộc họp giao ban đầu tuần tới.", indent=True)
-    
-    add_paragraph_styled(doc, "**Biểu quyết:** 10/10 thành viên trong tổ (100%) giáo viên nhất trí hoàn toàn với nội dung cuộc họp.", indent=True)
-    add_paragraph_styled(doc, "Biên bản được thông qua trước tập thể và kết thúc vào lúc 16 giờ 00 phút cùng ngày./.", indent=True)
-    
-    # Chữ ký 2 bên
-    add_signatures(
-        doc,
-        left_title="THƯ KÝ CUỘC HỌP",
-        left_name="Lê Thị Bình",
-        right_title="TỔ TRƯỞNG CHUYÊN MÔN",
-        right_name="Hoàng Tấn Thiên"
-    )
-    
-    # Bảng ký xác nhận của các thành viên khác
-    p_mem_head = doc.add_paragraph()
-    p_mem_head.paragraph_format.space_before = Pt(12)
-    p_mem_head.paragraph_format.space_after = Pt(4)
-    r_mh = p_mem_head.add_run("CÁC THÀNH VIÊN TRONG TỔ KÝ TÊN XÁC NHẬN")
-    r_mh.font.name = 'Times New Roman'
-    r_mh.font.size = Pt(13)
-    r_mh.bold = True
-    p_mem_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    
-    tbl_ack = doc.add_table(rows=3, cols=4)
-    tbl_ack.alignment = WD_TABLE_ALIGNMENT.CENTER
-    format_table_borders_closed(tbl_ack)
-    
-    ack_names = [
-        ["Đinh Văn Đông", "Hồ Đăng Danh", "Hoàng Xuân Ánh", "Trần Long Hải"],
-        ["Nguyễn Văn Tính", "Dương Quang Tùng", "Trần Sáng", "Nguyễn Thị Thảo"]
-    ]
-    
-    # Hàng 1
-    for c_idx in range(4):
-        cell = tbl_ack.cell(0, c_idx)
-        p = cell.paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r = p.add_run(f"**{ack_names[0][c_idx]}**\n\n*(Ký tên)*")
-        r.font.name = 'Times New Roman'
-        r.font.size = Pt(12)
-        r.bold = True
-        
-    # Hàng 2
-    for c_idx in range(4):
-        cell = tbl_ack.cell(1, c_idx)
-        p = cell.paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r = p.add_run(f"**{ack_names[1][c_idx]}**\n\n*(Ký tên)*")
-        r.font.name = 'Times New Roman'
-        r.font.size = Pt(12)
-        r.bold = True
-        
-    save_docx_robust(doc, out_docx_path)
-    
-    if out_md_path:
-        tao_bien_ban_hop_to_lan_2_thang_9_md(out_md_path)
-
-
-def tao_bien_ban_hop_to_lan_2_thang_9_md(out_md_path):
-    md_content = """# BIÊN BẢN SINH HOẠT CHUYÊN MÔN TỔ TOÁN – TIN THÁNG 9/2026 (LẦN 2)
-**Trường THCS Trần Phú – Tổ Toán - Tin**  
-**Số: 03/BB-TCM**  
-*Xuân Đông, ngày 18 tháng 9 năm 2026*
-
----
-
-Hôm nay, vào lúc 13 giờ 30 phút, ngày 18 tháng 9 năm 2026, tại Phòng sinh hoạt chuyên môn Trường THCS Trần Phú, Tổ Toán – Tin học đã tiến hành phiên họp chuyên môn định kỳ lần 2 tháng 9 năm học 2026 - 2027.
-
-- **Chủ trì cuộc họp:** Thầy **Hoàng Tấn Thiên** – Tổ trưởng chuyên môn.
-- **Thư ký cuộc họp:** Cô **Lê Thị Bình** – Giáo viên môn Toán.
-- **Thành viên tham dự:** 10/10 thành viên trong tổ (Có mặt: 10/10, Vắng: 0).
-  + *Danh sách thành viên:* Thầy Hoàng Tấn Thiên, Thầy Trần Sáng, Thầy Đinh Văn Đông, Thầy Hồ Đăng Danh, Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Cô Lê Thị Bình, Cô Nguyễn Thị Thảo, Thầy Nguyễn Văn Tính, Thầy Dương Quang Tùng.
-
-### NỘI DUNG CUỘC HỌP
-
-## I. TRIỂN KHAI VĂN BẢN CHỈ ĐẠO CỦA CẤP TRÊN
-
-Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt sâu sắc các văn bản chỉ đạo của Sở Giáo dục và Đào tạo thành phố Đồng Nai, các cấp quản lý và kế hoạch của nhà trường; nêu rõ các nội dung cốt lõi và tóm tắt tác động trực tiếp đến nhiệm vụ của tổ chuyên môn như sau:
-
-**1. Hướng dẫn một số giải pháp hạn chế việc sử dụng điện thoại di động, thiết bị thông minh, mạng xã hội của học sinh trong trường học (Hướng dẫn số 5351/HD-SGDĐT ngày 15/9/2026 của Sở GDĐT thành phố Đồng Nai):**
-- **Ý chính cốt lõi:** Căn cứ Thông tư 15/2026/TT-BGDĐT và Công văn 3147/BGDĐT-HSSV của Bộ GD&ĐT. Nhằm giảm thiểu sự phụ thuộc quá mức vào thiết bị công nghệ, tạo không gian học tập tập trung, cải thiện khả năng tư duy độc lập và bảo vệ sức khỏe học đường (thị lực, cột sống, sức khỏe tâm thần) cho học sinh. Học sinh phấn đấu thực hiện bốn tiêu chuẩn “Tự”: *Tự giác* (tắt thiết bị hoặc để chế độ im lặng và cất vào nơi quy định ngay khi bước vào trường/lớp); *Tự quản* (thành lập tổ tự quản nhắc nhở nhau); *Tự rèn* (làm chủ hành vi, không để bị cuốn vào mạng xã hội); *Tự chủ* (sử dụng công nghệ đúng lúc, đúng chỗ phục vụ học tập). Triển khai đồng bộ 03 mô hình vận dụng linh hoạt: (1) Mô hình *“Hộp lưu trữ niềm tin”* (bố trí tủ/khay/túi chuyên dụng tại lớp, học sinh cất thiết bị đầu buổi và nhận lại sau buổi học); (2) Mô hình *“Giờ ra chơi không màn hình”* (tổ chức cờ vua, trò chơi dân gian, góc đọc sách xanh); (3) Mô hình *“Tích hợp giáo dục kỹ năng số”* (hướng dẫn lọc thông tin, bảo mật cá nhân, ứng xử văn minh trên không gian mạng).
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Giáo viên bộ môn Toán và Tin học làm gương, tuyệt đối không sử dụng điện thoại làm việc riêng trong giờ lên lớp. Phân định rõ ràng: Trong giờ học lý thuyết Toán và Tin học, học sinh tuyệt đối không dùng điện thoại; chỉ khi có yêu cầu nghiệp vụ bài dạy rõ ràng (tra cứu phần mềm GeoGebra, làm bài kiểm tra trực tuyến OLM/VioEdu tại phòng máy hoặc theo nhóm có kiểm soát) thì giáo viên mới cho phép mở thiết bị. Giáo viên chủ nhiệm phối hợp chặt chẽ với cha mẹ học sinh để thống nhất quản lý, phòng ngừa bắt nạt mạng và xao nhãng học tập.
-
-**2. Kế hoạch thực hiện nhiệm vụ ứng dụng công nghệ thông tin, chuyển đổi số và thống kê giáo dục năm học 2026 – 2027 (Kế hoạch số 5264/KH-SGDĐT ngày 22/9/2026 của Sở GDĐT thành phố Đồng Nai):**
-- **Ý chính cốt lõi:** Bám sát Công văn 6020/BGDĐT-KHCNTT của Bộ GD&ĐT, Nghị quyết 57-NQ/TW của Bộ Chính trị, Luật Chuyển đổi số số 148/2025/QH15, Luật Dữ liệu số 60/2024/QH15, Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 và Luật Trí tuệ nhân tạo số 134/2025/QH15. Chỉ đạo xuyên suốt theo tinh thần **“6 rõ”** (*rõ người, rõ việc, rõ thời gian, rõ trách nhiệm, rõ sản phẩm, rõ thẩm quyền*). Dữ liệu giáo dục phải bảo đảm *“đúng, đủ, sạch, sống, thống nhất, dùng chung”*; thực hiện nghiêm nguyên tắc *“dữ liệu cập nhật một lần, sử dụng nhiều lần”*, cắt giảm thủ tục hành chính. Đẩy mạnh phong trào *“Bình dân học vụ số”* và hưởng ứng Ngày Chuyển đổi số Quốc gia (10/10). Định hướng rõ việc thúc đẩy ứng dụng Trí tuệ nhân tạo (AI) an toàn, có kiểm soát và có trách nhiệm: Khuyến khích ứng dụng AI hỗ trợ soạn bài, xây dựng học liệu, thiết kế đề kiểm tra; tuy nhiên *kết quả do AI tạo ra phải được giáo viên kiểm chứng về tính chính xác và phù hợp sư phạm; AI tuyệt đối không thay thế trách nhiệm chuyên môn và quyền ra quyết định của nhà giáo*.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ Toán - Tin là đơn vị nòng cốt triển khai chuyển đổi số trong nhà trường; 100% giáo viên hoàn thành phê duyệt Kế hoạch bài dạy (KHBD) trên hệ thống số CSDL ngành đúng thời hạn; đảm bảo an toàn dữ liệu học bạ số và thông tin cá nhân học sinh; giáo viên Tin học chủ động tham mưu nâng cấp đường truyền và bảo đảm an ninh mạng cho hệ thống phòng máy.
-
-**3. Hướng dẫn việc trả và lưu trữ đề, bài kiểm tra, đánh giá định kỳ của học sinh (Công văn số 946/SGDĐT-GDPT&GDTX ngày 06/02/2026 của Sở GDĐT thành phố Đồng Nai):**
-- **Ý chính cốt lõi:** Hướng dẫn thực hiện thống nhất quy trình trả bài và lưu trữ hồ sơ, ma trận, đặc tả, đề kiểm tra cùng bài kiểm tra, đánh giá định kỳ của học sinh bảo đảm tính chính xác, công bằng, minh bạch và đúng quy định quản lý hồ sơ chuyên môn trong nhà trường.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ chuyên môn thẩm định kỹ lưỡng ma trận và đề kiểm tra định kỳ các khối 6, 7, 8, 9; giáo viên thực hiện nghiêm túc quy trình chấm, trả bài có lời nhận xét cụ thể, vào điểm đúng tiến độ trên hệ thống quản lý điểm số và lưu trữ hồ sơ kiểm tra đầy đủ phục vụ kiểm tra chuyên môn.
-
-**4. Hướng dẫn công tác kiểm tra nội bộ trường học năm học 2026 - 2027 (Công văn số 4794/SGD ngày 09/9/2026 của Sở GD&ĐT):**
-- **Ý chính cốt lõi:** Xác định mục đích, yêu cầu và quy trình tổ chức kiểm tra nhằm nâng cao hiệu quả quản trị, phòng ngừa và chấn chỉnh kịp thời các sai phạm; triển khai 06 cuộc kiểm tra chuyên đề định kỳ cùng các đợt kiểm tra đột xuất đối với toàn thể cán bộ, giáo viên, nhân viên; tập trung quy chế chuyên môn, hoạt động sư phạm, quản lý dạy thêm - học thêm, thu chi tài chính, an toàn trường học và đánh giá xếp loại học sinh.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Giáo viên trong tổ chấp hành nghiêm chỉnh quy định về dạy thêm - học thêm (tuyệt đối không dạy thêm sai quy định); thực hiện đúng kế hoạch kiểm tra nội bộ của trường; Thầy Trần Sáng tham gia tổ kiểm tra nội bộ thực hiện đúng nhiệm vụ được giao.
-
-**5. Kế hoạch tổ chức sân chơi “Đấu trường VioEdu” năm học 2026 - 2027 (Kế hoạch số 01/KH-TCM ngày 15/9/2026 của Tổ Toán - Tin học Trường THCS Trần Phú):**
-- **Ý chính cốt lõi & Quy chế thi:** Mục tiêu thúc đẩy chuyển đổi số, ứng dụng AI và khơi dậy đam mê Toán học, Toán tiếng Anh cho học sinh từ khối 6 đến khối 9 trên tinh thần tự nguyện 100%, hoàn toàn miễn phí. Học sinh thi trực tuyến trên website vio.edu.vn hoặc app VioEdu bằng 01 tài khoản định danh do nhà trường cấp. Mỗi vòng thi gồm 30 câu hỏi (20 câu Toán + 10 câu Toán tiếng Anh), thời gian làm bài cố định 20 phút.
-- **Lộ trình thời gian thực hiện:** (1) Ngày 15/9 – 20/9/2026: Khởi tạo và cấp tài khoản đồng loạt; (2) Ngày 28/9 – 13/12/2026: Vòng sơ loại trực tuyến (8 vòng sơ loại và 2 vòng định kỳ, mở từ 00h00 thứ Hai đến 23h59 Chủ nhật hàng tuần); (3) Ngày 11/01 – 15/01/2027: Vòng cấp Trường (thi tập trung tại phòng máy); (4) Ngày 23/02 – 24/02/2027: Vòng cấp Xã; (5) Ngày 30/03 – 31/03/2027: Vòng cấp Tỉnh (dành cho thí sinh đạt từ 20 điểm trở lên và nằm trong Top 30% cấp Xã).
-- **Phân công phụ trách khối:** Cô Nguyễn Thị Thảo (Khối 6), Thầy Hoàng Xuân Ánh (Khối 7), Cô Lê Thị Bình (Khối 8), Thầy Trần Sáng (Khối 9), Thầy Dương Quang Tùng (Phụ trách phòng máy và đường truyền mạng). Giáo viên phụ trách khối định kỳ báo cáo kết quả tham gia cho Tổ trưởng chuyên môn vào ngày 25 hàng tháng.
-
-## II. ĐÁNH GIÁ TÌNH HÌNH CÔNG TÁC THỜI GIAN QUA
-
-### **1. Công tác chủ nhiệm:**
-- Các giáo viên chủ nhiệm trong tổ đã nhanh chóng ổn định nề nếp lớp chủ nhiệm, tích cực duy trì sinh hoạt 15 phút đầu giờ trước buổi học, hướng dẫn học sinh học tập nội quy, củng cố đội ngũ cán bộ lớp, tham gia họp GVCN và xây dựng kế hoạch chủ nhiệm năm học 2026 - 2027.
-- Phát động sôi nổi các phong trào thi đua chào mừng ngày Quốc khánh 2/9, Tháng An toàn giao thông; cho học sinh và cha mẹ học sinh ký cam kết: Không thử, không tàng trữ, không sử dụng và buôn bán các chất ma túy, thuốc lá điện tử và chấp hành nghiêm chỉnh luật giao thông.
-- GVCN tăng cường bám sát lớp, theo dõi chuyên cần, quản lý sổ đầu bài cẩn thận, yêu cầu GVBM ghi chép đầy đủ các cột mục và GVCN tổng hợp ký duyệt hàng tuần. Hoàn thành điều tra thông tin học sinh lớp chủ nhiệm trên hệ thống CSDL ngành. Tổ chức họp cha mẹ học sinh đầu năm học vào ngày 13/9/2026 đạt kết quả tốt, thông báo các khoản thu BHYT, BHTN và triển khai đăng ký môn Tiếng Anh tăng cường.
-
-### **2. Ngày giờ công và kỷ luật lao động:**
-- 100% giáo viên trong tổ đảm bảo nghiêm túc ngày giờ công, tham gia đầy đủ các hoạt động của nhà trường, dạy đủ các tiết theo phân công chuyên môn, thực hiện nghiêm túc việc dạy bù, dạy thay khi có giáo viên đi công tác hoặc nghỉ ốm.
-
-### **3. Công tác chuyên môn:**
-- Duy trì nền nếp dạy và học ổn định theo thời khóa biểu. Thực hiện chương trình theo kế hoạch nhà trường, thực hiện dạy học 2 buổi/ngày theo Công văn 4567 của Bộ GD&ĐT, thực hiện giáo dục địa phương và hoạt động trải nghiệm hướng nghiệp đúng định hướng. Giáo viên trong tổ khai thác tốt trang thiết bị dạy học và phòng bộ môn.
-- Tổ đã phân công phụ trách khối, đóng góp ý kiến xây dựng Kế hoạch giáo dục của tổ và nhà trường. Thực hiện nghiêm túc các quy chế chuyên môn.
-- 100% giáo viên trong tổ hoàn thành đợt tập huấn chuyển đổi số ngày 11/9/2026 về CSDL ngành, eNetViet, OLM, phương pháp tích hợp Năng lực số (NLS 20%) và Khung 12 tiết AI vào bài giảng.
-
-### **4. Công tác chuyên đề, thao giảng:**
-- Tham gia đầy đủ các buổi tập huấn chuyên đề do các cấp tổ chức và phổ biến lại các nội dung thống nhất để thực hiện. Giáo viên trong tổ đã tiến hành đăng ký chuyên đề nghiên cứu bài học cho năm học.
-
-### **5. Công tác kiểm tra nội bộ:**
-- Thường xuyên kiểm tra việc giáo viên thực hiện quy chế chuyên môn, nền nếp ra vào lớp, chất lượng soạn giảng Kế hoạch bài dạy theo đúng khung hướng dẫn.
-
-### **6. Sử dụng đồ dùng dạy học và phòng chức năng:**
-- Khai thác có hiệu quả phòng máy tính, phòng học bộ môn. Giáo viên tiếp tục rà soát, đề xuất mua sắm bổ sung thiết bị dạy học, sách tham khảo phục vụ nhu cầu giảng dạy.
-
-### **7. Công tác khác:**
-- Phối hợp tốt trong công tác phòng chống các loại tội phạm, phòng chống đuối nước; tham gia tích cực các hoạt động Đoàn – Đội và hoàn thành tốt nhiệm vụ điều tra phổ cập giáo dục theo phân công.
-
-## III. KẾ HOẠCH TRỌNG TÂM TRONG THỜI GIAN TỚI
-
-### **1. Công tác chủ nhiệm:**
-- Tiếp tục ổn định nền nếp lớp chủ nhiệm, tích cực sinh hoạt 15 phút đầu giờ. Phát động đợt thi đua cao điểm chào mừng các ngày lễ lớn trong tháng 10: Ngày Quốc tế Người cao tuổi (01/10), Ngày Khuyến học Việt Nam (02/10), Ngày Bác Hồ gửi bức thư cuối cùng cho ngành Giáo dục (15/10) và Ngày Phụ nữ Việt Nam (20/10). Đẩy mạnh tuyên truyền phòng chống ma túy, ATGT, PCCC và phòng tránh tai nạn thương tích.
-- Thực hiện hiệu quả Tuần lễ hưởng ứng học tập suốt đời năm 2026. Hoàn thành hồ sơ sổ sách GVCN đúng quy định; tiếp tục rà soát, thống kê học sinh có hoàn cảnh khó khăn để kịp thời hỗ trợ; đôn đốc thu nộp BHYT, BHTN; thông tin thường xuyên với phụ huynh qua Zalo lớp và sổ liên lạc điện tử.
-- Giáo viên chủ nhiệm vận động 100% học sinh đăng ký tham gia Đấu trường VioEdu theo kế hoạch; triển khai khai thác thư viện số của trường và đăng ký học Tiếng Anh tăng cường theo chủ trương.
-
-### **2. Đảm bảo ngày giờ công và nền nếp chuyên môn:**
-- Giáo viên trong tổ phấn đấu đảm bảo nghiêm túc ngày giờ công, tham gia đầy đủ các hoạt động của trường, dạy đúng, dạy đủ các tiết theo phân công; thực hiện nghiêm túc việc dạy bù, dạy thay kịp thời.
-
-### **3. Hoạt động chuyên môn trọng tâm:**
-- Thực hiện nghiêm túc việc soạn Kế hoạch bài dạy (KHBD) từ tuần 1 đến tuần 4 và hoàn thành phê duyệt, đẩy lên hệ thống CSDL ngành trong khoảng thời gian từ ngày 20/9 đến ngày 24/9/2026. Lưu ý thể hiện rõ nét nội dung giáo dục học sinh hòa nhập, tích hợp Năng lực số (NLS 20%), ứng dụng AI có kiểm soát và bài học STEM.
-- Phân công nhiệm vụ cụ thể hướng dẫn học sinh tham gia các vòng thi VioEdu đạt hiệu quả: Cô Nguyễn Thị Thảo (Khối 6), Thầy Hoàng Xuân Ánh (Khối 7), Cô Lê Thị Bình (Khối 8), Thầy Trần Sáng (Khối 9), Thầy Dương Quang Tùng (Phòng máy & đường truyền).
-- Thầy Trần Sáng tiếp tục hoàn thành bài dự thi về Chuyên môn, nghiệp vụ giáo dục phòng, chống ma túy đạt chất lượng cao.
-- **Tập trung góp ý chuyên sâu chương trình Sách giáo khoa GDPT 2018 môn Toán - Tin, nhận diện các khó khăn sư phạm và thống nhất hướng khắc phục:**
-  - *Đối với sách giáo khoa Toán lớp 8 (Bài 12: Hình thang cân):*
-    - **Khó khăn thực tế:** Học sinh rất dễ ngụy biện và mặc định sai lầm rằng “Hình thang có 2 cạnh bên bằng nhau là hình thang cân” (trong khi nếu 2 cạnh bên bằng nhau và song song thì đó lại là hình bình hành). Việc chứng minh Định lý 3 (Ví dụ 2 trang 54) đòi hỏi kẻ thêm đường phụ khá phức tạp so với trình độ đầu năm lớp 8.
-    - **Hướng khắc phục:** Khai thác triệt để phần “Tranh luận” (trang 59) và “Luyện tập chung” (trang 56) để cho học sinh vẽ cả 2 trường hợp (hai cạnh bên không song song -> hình thang cân; hai cạnh bên song song -> hình bình hành). Chuẩn hóa quy trình kẻ đường song song phụ qua một đỉnh để đưa bài toán về tam giác cân quen thuộc.
-  - *Đối với sách giáo khoa Toán lớp 6 (Bài 18 và Bài 19 về các hình phẳng trong thực tiễn):*
-    - **Khó khăn thực tế:** Học sinh gặp khó khăn lớn khi sử dụng compa và êke để vẽ các hình đòi hỏi kỹ thuật cao như hình lục giác đều hay hình thoi. Bên cạnh đó, học sinh rất dễ nhầm lẫn thuộc tính đường chéo giữa các hình (ví dụ: nhầm đường chéo bằng nhau của hình chữ nhật/hình thang cân với đường chéo vuông góc của hình thoi/hình vuông).
-    - **Hướng khắc phục:** Xây dựng Quy trình vẽ hình từng bước: Chuẩn bị phiếu học tập có hình ảnh minh họa rõ ràng các bước đặt thước, quay compa để vẽ hình thoi và hình lục giác đều. Cho học sinh lập Bảng so sánh các yếu tố Cạnh - Góc - Đường chéo của 7 hình phẳng đã học để rèn luyện tư duy phân loại thị giác.
-- Hoàn thành toàn bộ hồ sơ tổ chuyên môn theo kế hoạch năm học của nhà trường.
-
-### **4. Công tác chuyên đề và nghiên cứu bài học:**
-- Các nhóm bộ môn lên kế hoạch thực hiện chuyên đề theo nghiên cứu bài học. Tổ thống nhất và đăng ký phổ biến chuyên đề cấp trường/tổ: Học kỳ I do Thầy Hoàng Tấn Thiên chủ trì (môn Toán); Học kỳ II do Thầy Hoàng Tấn Thiên và Thầy Trần Sáng phối hợp triển khai (môn Toán). Tham gia đầy đủ các buổi tập huấn chuyên đề do các cấp tổ chức.
-
-### **5. Công tác ngoại khóa và phong trào:**
-- Tuyên truyền học sinh chấp hành tốt nội quy trường, lớp, tích cực tham gia các cuộc thi do Nhà trường, Đoàn, Đội tổ chức; duy trì phong trào vệ sinh “Sạch trường, đẹp lớp”.
-
-### **6. Công tác kiểm tra:**
-- Kiểm tra nền nếp ra vào lớp, duyệt ma trận và đề kiểm tra định kỳ của tổ; kiểm tra việc soạn giảng, ra đề theo chuẩn KT-KN chương trình GDPT 2018 và kiểm tra việc thực hiện quy chế chuyên môn, sử dụng phòng CNTT.
-
-### **7. Sử dụng đồ dùng dạy học và phòng CNTT:**
-- Sử dụng có hiệu quả phòng chức năng, phòng CNTT, khai thác triệt để các phần mềm trong giảng dạy; khuyến khích giáo viên và học sinh ươm mầm các ý tưởng sản phẩm dự thi KHKT.
-
-### **8. Công tác khác:**
-- Vệ sinh trường lớp, trang trí lớp Xanh – Sạch – Đẹp; tham gia hoạt động Đoàn – Đội và các hoạt động do nhà trường, công đoàn phát động chào mừng các ngày lễ lớn trong tháng.
-
-## IV. Ý KIẾN THẢO LUẬN VÀ GIẢI PHÁP CHUYÊN MÔN THỰC CHIẾN
-
-Phiên họp diễn ra thẳng thắn, dân chủ, tập trung sâu sắc vào các vấn đề chuyên môn, phản ánh đúng thực tế lớp học và đề xuất các giải pháp kỹ thuật cụ thể:
-
-- **Cô Lê Thị Bình (Giáo viên môn Toán 8, Thư ký):** Đánh giá cao tính cấp thiết của Hướng dẫn số 5351/HD-SGDĐT về hạn chế điện thoại trong trường học. Thực tế học sinh lớp 8 rất tò mò và dễ bị phân tâm bởi tin nhắn, mạng xã hội nếu mang điện thoại vào lớp. Đề xuất giải pháp: Mỗi lớp học bố trí 01 khay/túi vải có đánh số thứ tự treo tại góc bảng lớp (Mô hình Hộp lưu trữ niềm tin). Đầu buổi học, ban cán sự lớp đôn đốc học sinh tự giác tắt nguồn hoặc bật chế độ im lặng rồi cất điện thoại vào đúng ô số của mình. Trong giờ học Toán, giáo viên yêu cầu học sinh sử dụng máy tính cầm tay Casio khoa học, tuyệt đối cấm dùng phần mềm giả lập trên điện thoại để tránh việc lén lút chuyển sang ứng dụng mạng xã hội. Giáo viên chủ nhiệm cần thống nhất chặt chẽ với cha mẹ học sinh ngay từ đầu năm.
-
-- **Thầy Hoàng Xuân Ánh (Giáo viên môn Toán 7, Phụ trách VioEdu Khối 7):** Đề nghị Liên đội tăng cường kiểm tra và ghi tên những học sinh không đội nón bảo hiểm khi tham gia giao thông bằng xe đạp điện, xe máy điện ở cổng trường lúc tan học. Về chuyên môn hình học: Đồng tình với giải pháp khắc phục khó khăn vẽ hình lớp 6 và hình thang cân lớp 8. Đối với thao tác vẽ hình phức tạp như lục giác đều, giáo viên nên chiếu video mô phỏng thao tác dựng hình chuẩn bằng phần mềm GeoGebra trước 2 phút, sau đó yêu cầu học sinh thực hành trên phiếu in sẵn lưới ô vuông để định hình tỷ lệ chuẩn trước khi vẽ vào vở.
-
-- **Thầy Dương Quang Tùng (Giáo viên Tin học, Phụ trách phòng máy & hạ tầng CNTT):** Báo cáo hạ tầng CNTT: 2 phòng máy tính (45 máy) hiện hoạt động ổn định. Để triển khai tốt Kế hoạch số 5264/KH-SGDĐT và sân chơi VioEdu, Thầy Tùng đề xuất mở cửa phòng máy từ 16h30 đến 17h15 vào các ngày thứ Ba và thứ Năm hàng tuần để tạo điều kiện cho các em học sinh có hoàn cảnh khó khăn (không có máy tính/điện thoại ở nhà) được tham gia thi đấu vòng sơ loại VioEdu miễn phí dưới sự hướng dẫn của giáo viên trực phòng máy. Về việc ứng dụng AI có kiểm soát: Khuyến nghị các thầy cô trong tổ có thể sử dụng các trợ lý AI (như ChatGPT, Claude) để gợi ý các bài toán thực tế, tạo câu hỏi trắc nghiệm khách quan; tuy nhiên phải tuân thủ nghiêm ngặt nguyên tắc kiểm chứng: Giáo viên phải tự tay giải lại, thẩm định lời giải và ma trận đề, tuyệt đối không sao chép nguyên văn sản phẩm của AI đưa vào đề thi hay giáo án.
-
-- **Thầy Hồ Đăng Danh (Giáo viên môn Toán):** Thống nhất bài làm kiểm tra thường xuyên (KTTX) cần thực hiện nhiều hình thức phong phú: vấn đáp, bài viết phiếu học tập, sản phẩm STEM (mô hình tam giác, hình thang cân bằng giấy carton) và đánh giá hoạt động nhóm... nhằm tạo động lực và khích lệ học sinh yếu kém tiến bộ, tránh gây áp lực điểm số đơn thuần bằng bài kiểm tra giấy truyền thống.
-
-- **Cô Nguyễn Thị Thảo (Giáo viên môn Toán 6, Phụ trách VioEdu Khối 6):** Phản ánh ý kiến của phụ huynh học sinh về môn Tiếng Anh tăng cường: Cần khảo sát phân loại học sinh theo trình độ để xếp lớp phù hợp, tránh để học sinh trung bình bị quá tải. Đối với 10 câu hỏi Toán tiếng Anh trong mỗi vòng thi VioEdu, Cô Thảo đề xuất giáo viên giảng dạy khối 6 và khối 7 dành 5 phút cuối tiết luyện tập để hướng dẫn học sinh làm quen với các thuật ngữ Toán học tiếng Anh cốt lõi (như *prime number, common divisor, right triangle, angle, perimeter, area*) giúp học sinh tự tin làm bài mà không bị rào cản ngôn ngữ.
-
-- **Thầy Trần Sáng (Giáo viên môn Toán 9, KTNB):** Đề nghị thiết thực về cơ sở vật chất: Nhà trường cần sớm làm khung giá đỡ hoặc hạ thấp ti vi tại các lớp học ở cơ sở 2. Lý do ti vi hiện nay treo quá cao sát trần nhà khiến học sinh ngồi các dãy giữa và cuối phải ngửa cổ liên tục gây mỏi mắt, không quan sát rõ nét chữ và hình vẽ. Về xử lý sai lầm Hình thang cân lớp 8: Thống nhất giáo viên phải đưa ra phản ví dụ cụ thể ngay trên bảng (vẽ một hình thang có 2 cạnh bên bằng nhau và song song để học sinh tự kết luận đó là hình bình hành, từ đó khắc cốt ghi tâm điều kiện 2 cạnh bên phải *không song song* mới là hình thang cân).
-
-- **Thầy Đinh Văn Đông & Thầy Trần Long Hải:** Đề xuất nhà trường trang cấp bổ sung cho tổ bộ môn 02 bộ compa bảng compozit khổ lớn và thước đo góc có tay cầm chuyên dụng để phục vụ trực quan cho giáo viên dạy hình học các khối 6, 7. Thống nhất mốc thời gian hoàn thành Kế hoạch bài dạy (KHBD) tuần 1 đến tuần 4: 100% giáo viên nộp bài lên hệ thống CSDL ngành trước 17h00 ngày 23/9/2026 để Tổ trưởng chuyên môn kịp thời thẩm định và phê duyệt trước hạn chót 24/9/2026.
-
-## V. KẾT LUẬN CỦA CHỦ TỌA VÀ NGHỊ QUYẾT CUỘC HỌP
-
-Thầy Tổ trưởng chuyên môn Hoàng Tấn Thiên kết luận toàn diện phiên họp và chỉ đạo thực hiện các nhiệm vụ trọng tâm sau:
-
-1. Toàn thể giáo viên quán triệt và thực hiện nghiêm túc Hướng dẫn số 5351/HD-SGDĐT: Triển khai hiệu quả Mô hình “Hộp lưu trữ niềm tin” tại lớp chủ nhiệm và phòng bộ môn; tuyệt đối không để học sinh lạm dụng điện thoại trong giờ học; giáo viên làm gương không sử dụng thiết bị cá nhân làm việc riêng trong tiết giảng.
-2. Bám sát tinh thần Kế hoạch số 5264/KH-SGDĐT: Thực hiện nghiêm túc nguyên tắc “6 rõ”, chuẩn hóa dữ liệu CSDL ngành theo phương châm “đúng, đủ, sạch, sống”; hoàn thành việc phê duyệt và nộp KHBD tuần 1 đến tuần 4 lên CSDL ngành đúng thời hạn (hạn chót hoàn thành của giáo viên là ngày 23/9/2026); ứng dụng AI một cách thông minh, có trách nhiệm và luôn kiểm chứng tính chính xác chuyên môn.
-3. Triển khai sâu rộng và đồng bộ sân chơi Đấu trường VioEdu theo Kế hoạch 01/KH-TCM; giáo viên phụ trách khối chủ động cấp tài khoản, đôn đốc học sinh tham gia vòng sơ loại từ ngày 28/9/2026; Thầy Dương Quang Tùng quản lý tốt phòng máy mở cửa ngoài giờ hỗ trợ học sinh có hoàn cảnh khó khăn.
-4. Áp dụng đồng bộ giải pháp tháo gỡ điểm nghẽn SGK Toán 6 và Toán 8 đã được tổ thống nhất (phiếu hướng dẫn vẽ hình từng bước, bảng so sánh 7 hình phẳng, khai thác phản ví dụ tránh ngụy biện hình thang cân).
-5. Tổ trưởng chuyên môn tổng hợp các kiến nghị chính đáng của tổ (hạ thấp tivi cơ sở 2, mua sắm compa bảng, rà soát phân lớp tiếng Anh tăng cường) để trực tiếp đề xuất với Ban Giám hiệu nhà trường trong cuộc họp giao ban đầu tuần tới.
-
-- **Biểu quyết:** 10/10 thành viên trong tổ (100%) giáo viên nhất trí hoàn toàn với nội dung cuộc họp.
-- Biên bản được thông qua trước tập thể và kết thúc vào lúc 16 giờ 00 phút cùng ngày./.
-
----
-
-<table style="width: 100%; border: none;">
-<tr>
-<td style="width: 50%; text-align: center; vertical-align: top;">
-<strong>THƯ KÝ CUỘC HỌP</strong><br>
-<em>(Ký và ghi rõ họ tên)</em><br><br><br><br>
-<strong>Lê Thị Bình</strong>
-</td>
-<td style="width: 50%; text-align: center; vertical-align: top;">
-<strong>TỔ TRƯỞNG CHUYÊN MÔN</strong><br>
-<em>(Ký và ghi rõ họ tên)</em><br><br><br><br>
-<strong>Hoàng Tấn Thiên</strong>
-</td>
-</tr>
-</table>
-
-<div align="center">
-
-### CÁC THÀNH VIÊN TRONG TỔ KÝ TÊN XÁC NHẬN
-
-</div>
-
-| Đinh Văn Đông | Hồ Đăng Danh | Hoàng Xuân Ánh | Trần Long Hải |
-|:---:|:---:|:---:|:---:|
-| *(Ký tên)* | *(Ký tên)* | *(Ký tên)* | *(Ký tên)* |
-
-| Nguyễn Văn Tính | Dương Quang Tùng | Trần Sáng | Nguyễn Thị Thảo |
-|:---:|:---:|:---:|:---:|
-| *(Ký tên)* | *(Ký tên)* | *(Ký tên)* | *(Ký tên)* |
-"""
-    with open(out_md_path, 'w', encoding='utf-8') as f:
-        f.write(md_content)
-    print(f"Da xuat thanh cong file Markdown: {out_md_path}")
-
-
-def tao_bien_ban_hop_to_lan_1_thang_10(out_docx_path, out_md_path=None):
-    """
-    Soạn thảo hoàn chỉnh Biên bản họp Tổ chuyên môn Lần 1 Tháng 10/2026.
-    Chuẩn Nghị định 30/2020/NĐ-CP và đặc thù Trường THCS Trần Phú.
-    """
-    doc = create_nd30_document()
-    
-    # 1. Header chuẩn
-    add_header_thcs_tran_phu(
-        doc,
-        so_hieu="04/BB-TCM",
-        ngay_thang_str="Xuân Đông, ngày 03 tháng 10 năm 2026"
-    )
-    
-    # 2. Tiêu đề
-    add_doc_title(
-        doc,
-        "BIÊN BẢN HỌP TỔ CHUYÊN MÔN LẦN 1",
-        "SINH HOẠT CHUYÊN MÔN TỔ TOÁN – TIN THÁNG 10/2026 (LẦN 1)\nNăm học: 2026 - 2027"
-    )
-    
-    # 3. Thời gian, địa điểm, thành phần
-    add_paragraph_styled(doc, "Hôm nay, vào lúc 07 giờ 30 phút, ngày 03 tháng 10 năm 2026, tại Phòng sinh hoạt chuyên môn Trường THCS Trần Phú, Tổ Toán – Tin học đã tiến hành phiên họp chuyên môn định kỳ lần 1 tháng 10 năm học 2026 - 2027.", indent=True)
-    add_paragraph_styled(doc, "Thầy **Hoàng Tấn Thiên** – Tổ trưởng chuyên môn.", bold_prefix="- Chủ trì cuộc họp:", indent=True)
-    add_paragraph_styled(doc, "Cô **Lê Thị Bình** – Giáo viên môn Toán.", bold_prefix="- Thư ký cuộc họp:", indent=True)
-    add_paragraph_styled(doc, "10/10 thành viên trong tổ (Có mặt: 10/10, Vắng: 0).", bold_prefix="- Thành viên tham dự:", indent=True)
-    add_paragraph_styled(doc, "Thầy Hoàng Tấn Thiên, Thầy Trần Sáng, Thầy Đinh Văn Đông, Thầy Hồ Đăng Danh, Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Cô Lê Thị Bình, Cô Nguyễn Thị Thảo, Thầy Nguyễn Văn Tính, Thầy Dương Quang Tùng.", bold_prefix="  + Danh sách thành viên:", indent=True)
-    
-    # 4. NỘI DUNG CUỘC HỌP
-    add_doc_title(doc, "NỘI DUNG CUỘC HỌP", "")
-    
-    # ==================== PHẦN I ====================
-    add_section_h1(doc, "I. TRIỂN KHAI VĂN BẢN CHỈ ĐẠO CỦA CẤP TRÊN")
-    add_paragraph_styled(doc, "Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt sâu sắc các văn bản chỉ đạo của Sở Giáo dục và Đào tạo thành phố Đồng Nai, các cấp quản lý và kế hoạch của nhà trường; nêu rõ các nội dung cốt lõi và tóm tắt tác động trực tiếp đến nhiệm vụ của tổ chuyên môn như sau:", indent=True)
-    
-    # 1. Công văn 5529
-    add_paragraph_styled(doc, "**1. Hướng dẫn tổ chức kiểm tra, đánh giá học sinh phổ thông và học viên giáo dục thường xuyên năm học 2026 - 2027 (Công văn số 5529/SGDĐT-GDPT&GDTX ngày 28/9/2026 của Sở GDĐT thành phố Đồng Nai):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Quán triệt thực hiện nghiêm túc quy định đổi mới phương pháp kiểm tra, đánh giá định kỳ và thường xuyên theo định hướng phát triển phẩm chất, năng lực học sinh. Xây dựng ma trận, bản đặc tả chi tiết bảo đảm đúng tỷ lệ 4 mức độ nhận thức (Nhận biết 40%, Thông hiểu 30%, Vận dụng 20%, Vận dụng cao 10%); đề kiểm tra bám sát chuẩn kiến thức, kỹ năng chương trình GDPT 2018, bảo đảm tính khách quan, công bằng và phân hóa tốt đối tượng học sinh; đa dạng hóa hình thức đánh giá (trên giấy kết hợp trực tuyến).", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ chuyên môn phân công cụ thể giáo viên ra đề cương, ma trận, bản đặc tả và đề kiểm tra giữa kỳ 1 môn Toán (khối 6, 7, 8, 9) và môn Tin học; thực hiện nghiêm túc quy trình phản biện chéo và nộp đề đúng hạn quy định.", indent=True)
-    
-    # 2. Công văn 3939
-    add_paragraph_styled(doc, "**2. Thực hiện Đề án “Tăng cường giảng dạy Tiếng Anh trong các trường phổ thông trên địa bàn tỉnh Đồng Nai” (Công văn số 3939/SGDĐT-NV1 ngày 26/9/2023 của Sở GD&ĐT):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Tăng cường lồng ghép các thuật ngữ Tiếng Anh chuyên ngành vào bài giảng chính khóa môn Toán và môn Tin học; khích lệ giáo viên tổ chức các hoạt động ngoại khóa, câu lạc bộ học thuật và sân chơi trí tuệ có yếu tố Tiếng Anh.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tích hợp các câu hỏi Tiếng Anh Toán học vào Chuyên đề Ngoại khóa “Rung chuông vàng” khối 6; hướng dẫn học sinh tiếp cận phần thi Toán Tiếng Anh trong Đấu trường VioEdu; phối hợp quản lý tốt các lớp Tiếng Anh giao tiếp do giáo viên nước ngoài trực tiếp giảng dạy 2 tiết/tuần.", indent=True)
-    
-    # 3. Quy định dạy thêm, học thêm
-    add_paragraph_styled(doc, "**3. Quy định về quản lý dạy thêm, học thêm (Quyết định số 25/2025/QĐ-UBND ngày 14/8/2025; Quyết định sửa đổi số 59/2026/QĐ-UBND ngày 16/7/2026 của UBND thành phố Đồng Nai; Văn bản hợp nhất số 01/2026/VBHN-QĐ-UBND ngày 22/8/2026 và Công văn số 5473/SGDĐT-GDPT&GDTX ngày 25/9/2026 của Sở GD&ĐT):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Quán triệt tinh thần chấn chỉnh, tăng cường kỷ cương quản lý dạy thêm, học thêm trên địa bàn thành phố. Tuyệt đối không tổ chức dạy thêm, học thêm trái quy định dưới bất kỳ hình thức nào; không ép buộc, gợi ý phụ huynh và học sinh tham gia học thêm; nghiêm cấm việc cắt giảm nội dung bài học chính khóa để đưa vào dạy thêm; toàn thể giáo viên ký cam kết chấp hành nghiêm túc quy định pháp luật và giữ gìn đạo đức nhà giáo.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** 100% giáo viên trong tổ Toán – Tin ký cam kết không vi phạm quy định dạy thêm, học thêm; tập trung nâng cao chất lượng từng giờ dạy chính khóa trên lớp và phụ đạo học sinh còn hổng kiến thức miễn phí theo kế hoạch giáo dục của nhà trường.", indent=True)
-    
-    # 4. Kế hoạch thi HSG
-    add_paragraph_styled(doc, "**4. Kế hoạch Tổ chức Kỳ thi chọn học sinh giỏi cấp thành phố năm học 2026 - 2027 (Kế hoạch số 4706/KH-SGDĐT ngày 08/9/2026 của Sở GDĐT thành phố Đồng Nai):**", indent=True)
-    add_paragraph_styled(doc, "- **Ý chính cốt lõi:** Kế hoạch tuyển chọn và tổ chức kỳ thi học sinh giỏi THCS cấp thành phố nhằm phát hiện, bồi dưỡng các tài năng trẻ môn Toán và Tin học.", indent=True)
-    add_paragraph_styled(doc, "- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ chuyên môn chủ động rà soát, tuyển chọn các nhân tố xuất sắc khối 8 và khối 9, phân công giáo viên có kinh nghiệm phụ trách bồi dưỡng đội tuyển Toán 9 và Tin học 9 nhằm nâng cao chất lượng mũi nhọn của trường.", indent=True)
-    
-    # ==================== PHẦN II ====================
-    add_section_h1(doc, "II. ĐÁNH GIÁ CÔNG TÁC CHUYÊN MÔN CUỐI THÁNG 9/2026")
-    
-    add_section_h2(doc, "1. Công tác chủ nhiệm:")
-    add_paragraph_styled(doc, "- Giáo viên chủ nhiệm đã ổn định vững chắc nề nếp lớp, duy trì nghiêm túc sinh hoạt 15 phút đầu giờ trước buổi học, quản lý tốt chuyên cần và nền nếp trật tự.", indent=True)
-    add_paragraph_styled(doc, "- Bám sát lớp, thực hiện các loại báo cáo kịp thời; hoàn thành thu nộp BHYT, BHTN đợt 1; triển khai chương trình Tiếng Anh tăng cường đến phụ huynh; hoàn thành 100% cập nhật thông tin học sinh lớp chủ nhiệm trên hệ thống CSDL ngành.", indent=True)
-    add_paragraph_styled(doc, "- Tích cực vận động học sinh tham gia Đấu trường VioEdu, triển khai thư viện số; phối hợp trợ giảng trong các tiết Tiếng Anh giao tiếp với giáo viên nước ngoài (2 tiết/tuần theo năng lực) bảo đảm hiệu quả.", indent=True)
-    
-    add_section_h2(doc, "2. Ngày giờ công và kỷ luật lao động:")
-    add_paragraph_styled(doc, "- Giáo viên trong tổ đảm bảo ngày giờ công nghiêm túc, tham gia đầy đủ các hoạt động hội họp của nhà trường, dạy đủ số tiết theo phân công chuyên môn; thực hiện chu đáo việc dạy bù, dạy thay khi có giáo viên đi công tác hoặc nghỉ ốm.", indent=True)
-    
-    add_section_h2(doc, "3. Công tác chuyên môn và thực hiện quy chế:")
-    add_paragraph_styled(doc, "- Ổn định nền nếp dạy và học theo đúng thời khóa biểu; thực hiện chương trình theo kế hoạch giáo dục nhà trường, dạy học 2 buổi/ngày theo Công văn 4567 của Bộ GD&ĐT, dạy học giáo dục địa phương, GDNGLL và HĐTN đúng định hướng.", indent=True)
-    add_paragraph_styled(doc, "- **Về hồ sơ sổ sách và Kế hoạch bài dạy (KHBD):**", indent=True)
-    add_paragraph_styled(doc, "  + *Ưu điểm:* Đa số giáo viên trong tổ đã có ý thức chuẩn bị hồ sơ bài dạy đầy đủ theo phân phối chương trình, bảo đảm cấu trúc 4 hoạt động theo tinh thần Công văn 5512/BGDĐT-GDTrH.", indent=True)
-    add_paragraph_styled(doc, "  + *Tồn tại, hạn chế cần khắc phục ngay:* Qua đợt kiểm tra hồ sơ bài dạy tháng 9, một số giáo viên thực hiện chưa đúng biểu mẫu quy định. Cụ thể: Kế hoạch bài dạy còn mắc lỗi định dạng công thức toán học, biến dạng ký hiệu góc hình học; các chỉ báo năng lực số (NLS) và trí tuệ nhân tạo (AI) chưa được định dạng in đậm, in nghiêng theo quy định; một số bài soạn chưa đồng bộ Header/Footer theo mẫu chung của nhà trường. Yêu cầu các thầy cô khẩn trương rà soát, chỉnh sửa hoàn thiện trước đợt kiểm tra tiếp theo.", indent=True)
-    add_paragraph_styled(doc, "- **Về nền nếp giảng dạy và thực hiện quy chế chuyên môn:**", indent=True)
-    add_paragraph_styled(doc, "  + Chấp hành nghiêm túc quy chế chuyên môn, lên lớp đúng giờ, quản lý học sinh tốt trong các tiết học; tuyệt đối không tự ý đổi tiết, bỏ tiết khi chưa có sự phê duyệt của Tổ trưởng và Ban Giám hiệu.", indent=True)
-    add_paragraph_styled(doc, "  + Thực hiện ghi chép Sổ đầu bài đầy đủ, sạch sẽ, khớp 100% với tiến độ phân phối chương trình và Kế hoạch giáo dục của tổ (Phụ lục 3).", indent=True)
-    add_paragraph_styled(doc, "  + Công tác kiểm tra đánh giá thường xuyên: Giáo viên các bộ môn đã chủ động kiểm tra theo tiến độ, vào điểm và cập nhật kịp thời trên phần mềm quản lý điểm của trường.", indent=True)
-    add_paragraph_styled(doc, "  + Nền nếp phòng học bộ môn: Giáo viên Tin học duy trì nền nếp phòng máy vi tính nghiêm túc, hướng dẫn học sinh thực hiện đúng nội quy phòng máy, bảo đảm an toàn thiết bị điện và bảo quản máy móc phục vụ giảng dạy.", indent=True)
-    
-    # Bảng xếp loại hồ sơ chuyên môn tháng 9
-    add_paragraph_styled(doc, "- **Kết quả xếp loại hồ sơ chuyên môn tháng 9/2026:**", indent=True)
-    
-    ratings_data = [
-        ("STT", "Họ và tên giáo viên", "Môn giảng dạy", "Số tiết nộp", "Xếp loại tháng 9"),
-        ("1", "Hoàng Tấn Thiên", "Toán 9, Tin học 6", "Đầy đủ", "Tốt"),
-        ("2", "Hồ Đăng Danh", "Toán 6, Toán 9", "Đầy đủ", "Tốt"),
-        ("3", "Trần Sáng", "Toán 6, Toán 9", "Đầy đủ", "Tốt"),
-        ("4", "Trần Long Hải", "Toán 8", "Đầy đủ", "Khá"),
-        ("5", "Nguyễn Thị Thảo", "Toán 6, Toán 7", "Đầy đủ", "Khá"),
-        ("6", "Lê Thị Bình", "Toán 7, Toán 8, HĐTN", "Đầy đủ", "Khá"),
-        ("7", "Hoàng Xuân Ánh", "Toán 7, HĐTN 6", "Đầy đủ", "Khá"),
-        ("8", "Nguyễn Văn Tính", "HĐTN 7", "Đầy đủ", "Khá"),
-        ("9", "Đinh Văn Đông", "Toán 8", "Đầy đủ", "Khá"),
-        ("10", "Dương Quang Tùng", "Tin học 6, 7, 8, 9", "Đầy đủ", "Tốt")
-    ]
-    
-    tbl_rate = doc.add_table(rows=len(ratings_data), cols=5)
-    tbl_rate.alignment = WD_TABLE_ALIGNMENT.CENTER
-    format_table_borders_closed(tbl_rate)
-    r_widths = [Inches(0.6), Inches(2.2), Inches(2.0), Inches(1.1), Inches(1.19)]
-    
-    for r_idx, row in enumerate(tbl_rate.rows):
-        for c_idx, cell in enumerate(row.cells):
-            cell.width = r_widths[c_idx]
-            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-            p = cell.paragraphs[0]
-            p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after = Pt(0)
-            p.paragraph_format.line_spacing = 1.0
-            p.paragraph_format.first_line_indent = Inches(0)
-            
-            val = ratings_data[r_idx][c_idx]
-            run = p.add_run(val)
-            run.font.name = 'Times New Roman'
-            
-            if r_idx == 0:
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                run.font.size = Pt(13)
-                run.font.bold = True
-            else:
-                run.font.size = Pt(13)
-                if c_idx in (0, 3, 4):
-                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                else:
-                    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                    
-    # Kết quả VioEdu vòng 1
-    add_paragraph_styled(doc, "- **Tổng hợp số lượng học sinh tham gia thi Đấu trường VioEdu vòng sơ loại 1:** Toàn trường có **107 học sinh** tham gia dự thi. Cụ thể từng khối: Khối 6 đạt 30 học sinh; Khối 7 đạt 24 học sinh; Khối 8 đạt 31 học sinh; Khối 9 đạt 22 học sinh.", indent=True)
-    
-    add_section_h2(doc, "4. Công tác chuyên đề, thao giảng:")
-    add_paragraph_styled(doc, "- Tham gia đầy đủ các buổi tập huấn chuyên môn, chuyên đề do Sở GD&ĐT tổ chức; phổ biến lại trong nhóm bộ môn để triển khai thống nhất.", indent=True)
-    
-    add_section_h2(doc, "5. Công tác ngoại khóa và phong trào:")
-    add_paragraph_styled(doc, "- Đã thực hiện tốt hoạt động GDNGLL theo chủ điểm: Tổ chức Tết Trung thu vui tươi, an toàn cho học sinh; tuyên truyền học sinh chấp hành tốt nội quy trường lớp, tham gia các cuộc thi do Nhà trường và Đoàn - Đội phát động.", indent=True)
-    
-    add_section_h2(doc, "6. Công tác kiểm tra nội bộ:")
-    add_paragraph_styled(doc, "- Kiểm tra nền nếp ra vào lớp, việc thực hiện quy chế chuyên môn, chất lượng soạn giảng và tiến độ thực hiện chương trình.", indent=True)
-    
-    add_section_h2(doc, "7. Sử dụng thiết bị dạy học và phòng bộ môn:")
-    add_paragraph_styled(doc, "- Giáo viên trong tổ sử dụng có hiệu quả phòng thực hành Tin học, phòng học chức năng, khai thác triệt để các phần mềm dạy học phục vụ bài giảng.", indent=True)
-    
-    add_section_h2(doc, "8. Công tác khác:")
-    add_paragraph_styled(doc, "- Tích cực tham gia các phong trào thi đua của Đoàn – Đội, tham gia đầy đủ công tác điều tra phổ cập giáo dục theo phân công của xã.", indent=True)
-    
-    # ==================== PHẦN III ====================
-    add_section_h1(doc, "III. KẾ HOẠCH HOẠT ĐỘNG CHUYÊN MÔN THÁNG 10/2026")
-    
-    add_section_h2(doc, "1. Công tác chủ nhiệm:")
-    add_paragraph_styled(doc, "- Ổn định nền nếp lớp chủ nhiệm, tích cực sinh hoạt 15 phút đầu giờ. Phát động đợt thi đua cao điểm chào mừng các ngày lễ lớn trong tháng: Ngày Quốc tế Người cao tuổi (01/10), Ngày Khuyến học Việt Nam (02/10), Ngày Bác Hồ gửi bức thư cuối cùng cho ngành Giáo dục (15/10) và Ngày Phụ nữ Việt Nam (20/10). Tuyên truyền phòng chống ma túy, tội phạm, ATGT, PCCC và phòng tránh tai nạn thương tích.", indent=True)
-    add_paragraph_styled(doc, "- Thực hiện hiệu quả Tuần lễ học tập suốt đời năm 2026; hoàn thành hồ sơ sổ sách GVCN đúng quy định; tiếp tục rà soát học sinh khó khăn; đôn đốc thu nộp BHYT, BHTN; thông tin thường xuyên qua Zalo lớp.", indent=True)
-    add_paragraph_styled(doc, "- Vận động học sinh đăng ký thi VioEdu các vòng tiếp theo; triển khai thư viện số và tiết học thư viện theo thời khóa biểu. Giáo viên bộ môn tích hợp bài dạy STEM (Phụ lục 2) vào Kế hoạch bài dạy theo thời điểm, hướng dẫn học sinh nộp sản phẩm tại phòng STEM.", indent=True)
-    
-    add_section_h2(doc, "2. Đảm bảo ngày giờ công và nền nếp chuyên môn:")
-    add_paragraph_styled(doc, "- Giáo viên phấn đấu đảm bảo nghiêm túc ngày giờ công, tham gia đầy đủ hoạt động của trường; dạy đúng, dạy đủ số tiết theo phân công chuyên môn; thực hiện kịp thời việc dạy bù, dạy thay khi có phân công.", indent=True)
-    
-    add_section_h2(doc, "3. Công tác chuyên môn trọng tâm:")
-    
-    # 3.1. Chuẩn bị kiểm tra nội bộ
-    add_paragraph_styled(doc, "*- Chuẩn bị công tác kiểm tra nội bộ nhà trường (Thanh tra toàn diện):*", indent=True)
-    add_paragraph_styled(doc, "  + Đối tượng kiểm tra: Thầy **Trần Sáng** (thực hiện theo Kế hoạch kiểm tra nội bộ năm học 2026 - 2027 của Trường THCS Trần Phú).", indent=True)
-    add_paragraph_styled(doc, "  + Yêu cầu chuẩn bị: Thầy Sáng chuẩn bị chu đáo toàn bộ hồ sơ chuyên môn cá nhân (Kế hoạch bài dạy chuẩn CV 5512, sổ theo dõi và đánh giá học sinh, kế hoạch dạy học cá nhân, thiết bị và đồ dùng dạy học).", indent=True)
-    add_paragraph_styled(doc, "  + Phân công phối hợp: Thầy Sáng chủ động gửi Thời khóa biểu và lịch dạy trong tuần cho Tổ trưởng để tổ sắp xếp báo cáo Ban Giám hiệu, đồng thời phân công giáo viên trong tổ bố trí dự giờ, đóng góp ý kiến mang tính xây dựng chuyên môn.", indent=True)
-    
-    # 3.2. Kế hoạch Rung chuông vàng
-    add_paragraph_styled(doc, "*- Kế hoạch Chuyên đề Ngoại khóa “Rung chuông vàng” môn Toán khối 6:*", indent=True)
-    add_paragraph_styled(doc, "Nhằm tạo sân chơi học tập bổ ích, khơi dậy niềm đam mê học Toán và nâng cao kỹ năng vận dụng kiến thức thực tế cho học sinh khối 6, Tổ Toán – Tin thống nhất thành lập Ban Tổ chức và xây dựng tiến độ triển khai chuyên đề ngoại khóa như sau:", indent=True)
-    add_paragraph_styled(doc, "• **Thành lập Ban Tổ chức chuyên đề:**", indent=True)
-    add_paragraph_styled(doc, "  + Nhóm biên soạn nội dung và ngân hàng đề: Cô Nguyễn Thị Thảo (Chủ đạo, phụ trách khối 6); Cô Lê Thị Bình (Hỗ trợ xây dựng và rà soát câu hỏi).", indent=True)
-    add_paragraph_styled(doc, "  + Nhóm tư vấn và thẩm định chuyên môn: Thầy Hoàng Tấn Thiên (Trưởng ban), Thầy Hồ Đăng Danh, Thầy Nguyễn Văn Tính, Thầy Đinh Văn Đông.", indent=True)
-    add_paragraph_styled(doc, "  + Nhóm hỗ trợ tổ chức và kỹ thuật - hậu cần: Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Thầy Dương Quang Tùng, Thầy Trần Sáng (chuẩn bị âm thanh, máy chiếu, bảng con, sân bãi).", indent=True)
-    add_paragraph_styled(doc, "  + Phân công Cô Nguyễn Thị Thảo rà soát, xây dựng kịch bản chi tiết phù hợp với thực tế nhà trường.", indent=True)
-    
-    # Bảng tiến độ Rung chuông vàng
-    add_paragraph_styled(doc, "• **Lịch trình và tiến độ thực hiện chi tiết (Thực hiện trong tháng 11/2026):**", indent=True)
-    
-    rcv_data = [
-        ("Thời gian", "Nội dung công việc", "Người phụ trách", "Ghi chú / Sản phẩm"),
-        ("08/10 – 15/10/2026", "Xây dựng khung thể lệ; biên soạn bộ ngân hàng 35 câu hỏi Toán 6 (30 câu chính, 5 câu phụ; tích hợp câu hỏi thực tiễn và Tiếng Anh Toán học).", "Cô Thảo, Cô Bình", "Bản thảo đề & đáp án"),
-        ("16/10 – 22/10/2026", "Họp nhóm tư vấn thẩm định câu hỏi; Tổ trưởng hoàn thiện kế hoạch chi tiết trình BGH phê duyệt; Cô Thảo xem lịch chọn ngày cụ thể.", "Thầy Thiên, Thầy Danh, Thầy Tính, Thầy Đông, Cô Thảo", "Kế hoạch được BGH duyệt"),
-        ("23/10 – 31/10/2026", "Thông báo thể lệ đến các lớp khối 6; các lớp lập danh sách học sinh tham gia (15 HS/lớp); nhóm hỗ trợ chuẩn bị bảng con, phấn, chuông, sân bãi.", "Cô Thảo, Thầy Ánh, Thầy Hải, Thầy Tùng, Thầy Sáng", "Danh sách thí sinh & CSVC"),
-        ("01/11 – 07/11/2026", "Chạy thử chương trình, kiểm tra hệ thống âm thanh, máy chiếu trình chiếu câu hỏi; phân công dẫn chương trình (MC) và cứu trợ.", "Toàn thể thành viên Ban Tổ chức", "Hoàn tất chuẩn bị"),
-        ("Tuần 2 Tháng 11/2026\n(Dự kiến 14/11/2026)", "Tổ chức chính thức Chuyên đề Ngoại khóa “Rung chuông vàng môn Toán khối 6” chào mừng kỷ niệm Ngày Nhà giáo Việt Nam 20/11.", "Tổ Toán – Tin phối hợp Đoàn - Đội", "Tổng kết, trao thưởng")
-    ]
-    
-    tbl_rcv = doc.add_table(rows=len(rcv_data), cols=4)
-    tbl_rcv.alignment = WD_TABLE_ALIGNMENT.CENTER
-    format_table_borders_closed(tbl_rcv)
-    rcv_widths = [Inches(1.8), Inches(2.6), Inches(1.5), Inches(1.19)]
-    
-    for r_idx, row in enumerate(tbl_rcv.rows):
-        for c_idx, cell in enumerate(row.cells):
-            cell.width = rcv_widths[c_idx]
-            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-            p = cell.paragraphs[0]
-            p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after = Pt(0)
-            p.paragraph_format.line_spacing = 1.0
-            p.paragraph_format.first_line_indent = Inches(0)
-            
-            val = rcv_data[r_idx][c_idx]
-            run = p.add_run(val)
-            run.font.name = 'Times New Roman'
-            
-            if r_idx == 0:
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                run.font.size = Pt(13)
-                run.font.bold = True
-            else:
-                run.font.size = Pt(12)
-                if c_idx in (0, 2, 3):
-                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                else:
-                    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
-                    
-    # 3.3. Ma trận, bản đặc tả, đề kiểm tra Giữa HKI
-    add_paragraph_styled(doc, "*- Công tác xây dựng Ma trận, Bản đặc tả, Đề cương và Đề kiểm tra giữa học kỳ 1:*", indent=True)
-    add_paragraph_styled(doc, "  + Toàn tổ thực hiện nghiêm túc Công văn số 5529/SGDĐT-GDPT&GDTX của Sở GD&ĐT thành phố Đồng Nai về tổ chức kiểm tra, đánh giá định kỳ.", indent=True)
-    add_paragraph_styled(doc, "  + **Yêu cầu chuyên môn:** Ma trận và bản đặc tả phải bám sát nội dung chương trình GDPT 2018, bảo đảm đúng tỉ lệ 4 mức độ nhận thức (Nhận biết 40%, Thông hiểu 30%, Vận dụng 20%, Vận dụng cao 10%). Đề kiểm tra phải bám sát ma trận và đề cương ôn tập, có tính phân hóa phù hợp với đối tượng học sinh.", indent=True)
-    add_paragraph_styled(doc, "  + **Phân công phụ trách xây dựng đề cương, ma trận và đề kiểm tra:** Môn Toán khối 6 do Cô Nguyễn Thị Thảo phụ trách; Môn Toán khối 7 do Thầy Hoàng Xuân Ánh phụ trách; Môn Toán khối 8 do Cô Lê Thị Bình phụ trách; Môn Toán khối 9 do Thầy Trần Sáng phụ trách; Môn Tin học (Khối 6, 7, 8, 9) do Thầy Dương Quang Tùng phụ trách.", indent=True)
-    add_paragraph_styled(doc, "  + **Hình thức và thời lượng kiểm tra thống nhất toàn tổ:**", indent=True)
-    add_paragraph_styled(doc, "    • Môn Toán (Khối 6, 7, 8, 9): Thời gian làm bài 60 phút; hình thức: 100% Tự luận làm trên giấy thi theo đúng hướng dẫn kiểm tra định kỳ.", indent=True)
-    add_paragraph_styled(doc, "    • Môn Tin học (Khối 6, 7, 8, 9): Thời gian làm bài 45 phút; hình thức: Kiểm tra trực tuyến trên phòng máy vi tính thông qua nền tảng OLM (đảm bảo tính khách quan, tự động trộn đề và chấm điểm).", indent=True)
-    add_paragraph_styled(doc, "  + **Tiến độ và các mốc thời gian thực hiện bắt buộc:**", indent=True)
-    add_paragraph_styled(doc, "    • **Ngày 15/10/2026:** Hạn chót nộp Ma trận, Bản đặc tả và Đề cương ôn tập về Tổ trưởng chuyên môn thẩm định và duyệt.", indent=True)
-    add_paragraph_styled(doc, "    • **Ngày 24/10/2026:** Hạn chót nộp Đề kiểm tra giữa kỳ (kèm hướng dẫn chấm/thang điểm) và hoàn thành công tác phản biện chéo giữa các giáo viên trong nhóm bộ môn.", indent=True)
-    add_paragraph_styled(doc, "    • **Ngày 28/10/2026:** Tổ trưởng chuyên môn tổng hợp, thẩm định lần cuối và chính thức nộp toàn bộ Đề thi giữa kỳ về bộ phận Chuyên môn nhà trường (Ban Giám hiệu) để chuẩn bị công tác in sao và tổ chức kiểm tra theo kế hoạch.", indent=True)
-    
-    # 3.4. Nghiên cứu bài học
-    add_paragraph_styled(doc, "*- Kế hoạch Sinh hoạt chuyên môn theo Nghiên cứu bài học (NCBH) trong tháng 11/2026:*", indent=True)
-    add_paragraph_styled(doc, "Nhằm bảo đảm tính liên tục và nâng cao chất lượng dạy học ở các khối lớp trọng tâm, Tổ chuyên môn thống nhất không tổ chức nghiên cứu bài học ở khối 6 (do khối 6 đang tập trung cho Chuyên đề Ngoại khóa Rung chuông vàng) mà chuyển trọng tâm sang khối 8 và khối 9 trong tháng 11/2026 (sau kỳ kiểm tra giữa học kỳ 1) với định hướng chi tiết như sau:", indent=True)
-    add_paragraph_styled(doc, "  + **Bài học trọng tâm được lựa chọn:** Môn Toán lớp 8 – Bài “Định lí Thalès trong tam giác” (Chương Định lí Thalès, bộ sách GDPT 2018; phân phối chương trình dạy vào trung tuần tháng 11).", indent=True)
-    add_paragraph_styled(doc, "  + **Chuyên đề định hướng nâng cao lớp 9:** Nhóm giáo viên dạy Toán 9 (Thầy Thiên, Thầy Danh, Thầy Sáng) đồng thời chuẩn bị chuyên đề sinh hoạt chuyên môn “Đổi mới phương pháp dạy học Hàm số bậc nhất và Rèn kỹ năng giải toán thực tế cho học sinh lớp 9 ôn thi Tuyển sinh 10”.", indent=True)
-    add_paragraph_styled(doc, "  + **Lý do lựa chọn bài “Định lí Thalès trong tam giác” (Lớp 8):** (1) Bài học mang tính nền tảng và bước ngoặt của hình học lớp 8, giúp học sinh chuyển từ hình học trực quan sang tư duy suy luận tỉ số đoạn thẳng tỉ lệ; (2) Khả năng ứng dụng thực tế và giáo dục STEM rất cao (học sinh thực hành đo bóng mặt trời để xác định chiều cao cột cờ, cây xanh; đo khoảng cách giữa hai điểm qua chướng ngại vật); (3) Rất thuận lợi ứng dụng Năng lực số (sử dụng phần mềm hình học động GeoGebra để trực quan quan sát các tỉ số đoạn thẳng tỉ lệ không đổi).", indent=True)
-    add_paragraph_styled(doc, "  + **Tiến độ và phân công thực hiện:** Cô Lê Thị Bình (phụ trách chính khối 8) chủ trì xây dựng Kế hoạch bài dạy minh họa; Thầy Trần Long Hải và Thầy Nguyễn Văn Tính phối hợp hỗ trợ thiết kế phiếu học tập, chuẩn bị dụng cụ đo đạc thực hành (thước dây, giác kế mini). Thời gian dạy thể nghiệm dự kiến vào Tuần 1 hoặc Tuần 2 Tháng 11/2026.", indent=True)
-    
-    # 3.5. Góp ý SGK
-    add_paragraph_styled(doc, "*- Góp ý chuyên sâu chương trình Sách giáo khoa GDPT 2018 môn Toán - Tin:*", indent=True)
-    add_paragraph_styled(doc, "  + **Đại số 9:** Trong bài kiểm tra, phần giải bài toán bằng cách lập hệ phương trình, trong quá trình làm bài học sinh được phép sử dụng máy tính cầm tay để bấm nghiệm kiểm tra kết quả và ghi bước kết luận theo đúng tinh thần giảm tải tính toán cơ học.", indent=True)
-    add_paragraph_styled(doc, "  + **Hình học 9:** Các hệ thức lượng trong tam giác vuông (như trong SGK cũ) không được áp dụng trực tiếp như định lý sẵn có để làm bài tập; nếu học sinh sử dụng trong bài thi thì bắt buộc phải chứng minh lại bằng tam giác đồng dạng, tuân thủ đúng kết luận thống nhất của Hội đồng bộ môn cấp tỉnh.", indent=True)
-    
-    add_section_h2(doc, "4. Công tác chuyên đề và bồi dưỡng:")
-    add_paragraph_styled(doc, "- Phát động phong trào thi đua chào mừng ngày Phụ nữ Việt Nam 20/10: Mỗi giáo viên trong tổ đăng ký ít nhất 01 tiết dạy tốt, tăng cường ứng dụng công nghệ thông tin và chuyển đổi số trong giảng dạy.", indent=True)
-    add_paragraph_styled(doc, "- Chuẩn bị chu đáo công tác bồi dưỡng học sinh giỏi khối 8, 9 theo đúng tinh thần Kế hoạch số 4706/KH-SGDĐT của Sở GD&ĐT; lập danh sách học sinh cần hỗ trợ để phụ đạo kịp thời.", indent=True)
-    add_paragraph_styled(doc, "- Tiếp tục quán triệt thực hiện nghiêm túc quy định về dạy thêm, học thêm (Quyết định số 25/2025/QĐ-UBND, Quyết định số 59/2026/QĐ-UBND, Văn bản hợp nhất số 01/2026/VBHN-QĐ-UBND và Công văn 5473/SGDĐT-GDPT&GDTX); tuyệt đối không vi phạm đạo đức nhà giáo.", indent=True)
-    
-    # ==================== PHẦN IV ====================
-    add_section_h1(doc, "IV. Ý KIẾN THẢO LUẬN VÀ GIẢI PHÁP CHUYÊN MÔN THỰC CHIẾN")
-    add_paragraph_styled(doc, "Phiên họp diễn ra sôi nổi, thẳng thắn, phản ánh đúng thực tế lớp học và đề xuất các giải pháp kỹ thuật cụ thể:", indent=True)
-    
-    add_paragraph_styled(doc, "- **Cô Lê Thị Bình (Giáo viên môn Toán 8, Thư ký):** Qua theo dõi vòng 1 Đấu trường VioEdu, còn một số học sinh ở các lớp bỏ thi hoặc điểm đạt được chưa cao. Đề nghị các thầy cô giáo viên phụ trách khối cần chủ động phối hợp chặt chẽ với giáo viên chủ nhiệm để nhắc nhở các em vào thi trước khi hệ thống tự động khóa vòng vào 23h59 Chủ nhật hàng tuần. Về nhiệm vụ dạy minh họa Nghiên cứu bài học bài “Định lí Thalès trong tam giác”, tôi nhất trí nhận nhiệm vụ và sẽ kết hợp hoạt động đo đạc thực tế ngoài sân trường với mô phỏng GeoGebra; cam kết nộp đề cương Toán 8 giữa kỳ đúng hạn 15/10/2026.", indent=True)
-    
-    add_paragraph_styled(doc, "- **Thầy Trần Long Hải (Giáo viên môn Toán 8):** Đề nghị Ban Thi đua nhà trường phổ biến rõ ràng, cụ thể tiêu chí chấm điểm thi đua cho đội cờ đỏ/sao đỏ các lớp để bảo đảm chấm điểm đồng đều, khách quan giữa các lớp (hiện nay đang có sự chênh lệch cách chấm giữa học sinh học ở Cơ sở 1 và Cơ sở 2). Đồng thời, Thầy Hải cam kết sẽ phối hợp cùng Thầy Tính hỗ trợ cô Bình thiết kế phiếu học tập và chuẩn bị dụng cụ đo đạc thực hành cho tiết dạy minh họa Thalès.", indent=True)
-    
-    add_paragraph_styled(doc, "- **Thầy Hoàng Xuân Ánh (Giáo viên môn Toán 7, Phụ trách VioEdu K7):** Hoàn toàn nhất trí với phần đánh giá và kế hoạch hoạt động của tổ chuyên môn. Nhóm Toán 7 sẽ tập trung bám sát chuẩn kiến thức kỹ năng để xây dựng ma trận và đề cương kiểm tra giữa kỳ 1 có tính phân hóa phù hợp với học sinh khối 7, bảo đảm nộp đúng hạn 15/10/2026.", indent=True)
-    
-    add_paragraph_styled(doc, "- **Cô Nguyễn Thị Thảo (Giáo viên môn Toán 6, Phụ trách VioEdu K6):** Cảm ơn tổ chuyên môn đã đồng thuận chuyển nhiệm vụ Nghiên cứu bài học sang khối 8, tạo điều kiện thuận lợi cho nhóm Toán 6 tập trung toàn lực xây dựng bộ ngân hàng 35 câu hỏi và kịch bản chi tiết cho Chuyên đề Ngoại khóa “Rung chuông vàng môn Toán khối 6” chào mừng ngày 20/11; cam kết hoàn thành dự thảo ngân hàng câu hỏi trước ngày 15/10/2026.", indent=True)
-    
-    add_paragraph_styled(doc, "- **Thầy Trần Sáng (Giáo viên môn Toán 9, KTNB):** Tiếp thu toàn diện kế hoạch kiểm tra nội bộ của nhà trường; Thầy Sáng cam kết hoàn thiện hồ sơ Kế hoạch bài dạy chuẩn Công văn 5512, tích hợp chỉ báo Năng lực số và AI in đậm, in nghiêng rõ nét theo đúng kết luận rút kinh nghiệm của tổ; chủ động gửi lịch dạy trong tuần cho Tổ trưởng để tổ sắp xếp dự giờ. Về ma trận và đề kiểm tra Toán 9, Thầy Sáng đảm bảo bám sát cấu trúc đề thi tuyển sinh 10, nộp đúng tiến độ (ma trận ngày 15/10, đề kiểm tra ngày 24/10) để tổ phản biện chéo.", indent=True)
-    
-    add_paragraph_styled(doc, "- **Thầy Dương Quang Tùng (Giáo viên Tin học, Phụ trách phòng máy):** Báo cáo tình hình chuẩn bị cho kỳ kiểm tra giữa kỳ môn Tin học: 2 phòng máy tính (45 máy) đã được kiểm tra đường truyền và cài đặt ổn định; sẵn sàng tổ chức cho học sinh làm bài kiểm tra trực tuyến 100% trên nền tảng OLM theo đúng thời lượng 45 phút. Thầy Tùng cũng sẽ hỗ trợ kỹ thuật âm thanh, máy chiếu và trình chiếu câu hỏi cho sân chơi Rung chuông vàng khối 6.", indent=True)
-    
-    # ==================== PHẦN V ====================
-    add_section_h1(doc, "V. KẾT LUẬN CỦA CHỦ TỌA VÀ NGHỊ QUYẾT CUỘC HỌP")
-    add_paragraph_styled(doc, "Thầy Tổ trưởng chuyên môn Hoàng Tấn Thiên kết luận toàn diện phiên họp và chỉ đạo thực hiện các nhiệm vụ trọng tâm sau:", indent=True)
-    add_paragraph_styled(doc, "1. Toàn thể giáo viên trong tổ thực hiện chuẩn xác 03 mốc thời gian kiểm tra giữa kỳ 1: (1) Ngày 15/10/2026: Nộp Ma trận, Bản đặc tả và Đề cương ôn tập về Tổ trưởng duyệt; (2) Ngày 24/10/2026: Nộp Đề kiểm tra giữa kỳ và hoàn tất phản biện chéo trong nhóm; (3) Ngày 28/10/2026: Tổ trưởng chính thức nộp toàn bộ đề thi về Ban Giám hiệu để in sao.", indent=True)
-    add_paragraph_styled(doc, "2. Yêu cầu 100% giáo viên khẩn trương rà soát, chỉnh sửa ngay các tồn tại về hồ sơ bài dạy: Khắc phục lỗi công thức toán, sửa ký hiệu góc hình học, định dạng in đậm và in nghiêng các chỉ báo Năng lực số (NLS), AI, đồng bộ Header/Footer theo mẫu chung.", indent=True)
-    add_paragraph_styled(doc, "3. Phối hợp chuẩn bị chu đáo công tác kiểm tra nội bộ toàn diện đối với Thầy Trần Sáng; đẩy mạnh xây dựng ngân hàng đề Rung chuông vàng khối 6; nhóm Toán 8 khẩn trương hoàn thiện Kế hoạch bài dạy minh họa bài “Định lí Thalès trong tam giác” tích hợp GeoGebra và thực hành STEM.", indent=True)
-    add_paragraph_styled(doc, "4. Giáo viên phụ trách các khối tiếp tục đôn đốc học sinh tham gia đầy đủ các vòng thi Đấu trường VioEdu; GVCN phối hợp quản lý tốt các tiết Tiếng Anh giao tiếp với giáo viên nước ngoài.", indent=True)
-    add_paragraph_styled(doc, "5. Chấp hành nghiêm túc quy định pháp luật về dạy thêm, học thêm; tuyệt đối không vi phạm đạo đức nhà giáo.", indent=True)
-    
-    add_paragraph_styled(doc, "**Biểu quyết:** 10/10 thành viên trong tổ (100% giáo viên) nhất trí hoàn toàn với nội dung cuộc họp.", indent=True)
-    add_paragraph_styled(doc, "Biên bản kết thúc vào lúc 10 giờ 00 phút cùng ngày./.", indent=True)
-    
-    # Chữ ký 2 bên
-    add_signatures(
-        doc,
-        left_title="THƯ KÝ CUỘC HỌP",
-        left_name="Lê Thị Bình",
-        right_title="TỔ TRƯỞNG CHUYÊN MÔN",
-        right_name="Hoàng Tấn Thiên"
-    )
-    
-    # Bảng ký xác nhận của các thành viên khác
-    p_mem_head = doc.add_paragraph()
-    p_mem_head.paragraph_format.space_before = Pt(12)
-    p_mem_head.paragraph_format.space_after = Pt(4)
-    r_mh = p_mem_head.add_run("CÁC THÀNH VIÊN TRONG TỔ KÝ TÊN XÁC NHẬN")
-    r_mh.font.name = 'Times New Roman'
-    r_mh.font.size = Pt(13)
-    r_mh.bold = True
-    p_mem_head.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    
-    tbl_ack = doc.add_table(rows=3, cols=4)
-    tbl_ack.alignment = WD_TABLE_ALIGNMENT.CENTER
-    format_table_borders_closed(tbl_ack)
-    
-    ack_names = [
-        ["Đinh Văn Đông", "Hồ Đăng Danh", "Hoàng Xuân Ánh", "Trần Long Hải"],
-        ["Nguyễn Văn Tính", "Dương Quang Tùng", "Trần Sáng", "Nguyễn Thị Thảo"]
-    ]
-    
-    # Hàng 1
-    for c_idx in range(4):
-        cell = tbl_ack.cell(0, c_idx)
-        p = cell.paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r = p.add_run(f"**{ack_names[0][c_idx]}**\n\n*(Ký tên)*")
-        r.font.name = 'Times New Roman'
-        r.font.size = Pt(12)
-        r.bold = True
-        
-    # Hàng 2
-    for c_idx in range(4):
-        cell = tbl_ack.cell(1, c_idx)
-        p = cell.paragraphs[0]
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r = p.add_run(f"**{ack_names[1][c_idx]}**\n\n*(Ký tên)*")
-        r.font.name = 'Times New Roman'
-        r.font.size = Pt(12)
-        r.bold = True
-        
-    save_docx_robust(doc, out_docx_path)
-    
-    if out_md_path:
-        tao_bien_ban_hop_to_lan_1_thang_10_md(out_md_path)
-
-
-def tao_bien_ban_hop_to_lan_1_thang_10_md(out_md_path):
-    md_content = """# BIÊN BẢN SINH HOẠT CHUYÊN MÔN TỔ TOÁN – TIN THÁNG 10/2026 (LẦN 1)
-**Trường THCS Trần Phú – Tổ Toán - Tin**  
-**Số: 04/BB-TCM**  
-*Xuân Đông, ngày 03 tháng 10 năm 2026*
-
----
-
-Hôm nay, vào lúc 07 giờ 30 phút, ngày 03 tháng 10 năm 2026, tại Phòng sinh hoạt chuyên môn Trường THCS Trần Phú, Tổ Toán – Tin học đã tiến hành phiên họp chuyên môn định kỳ lần 1 tháng 10 năm học 2026 - 2027.
-
-- **Chủ trì cuộc họp:** Thầy **Hoàng Tấn Thiên** – Tổ trưởng chuyên môn.
-- **Thư ký cuộc họp:** Cô **Lê Thị Bình** – Giáo viên môn Toán.
-- **Thành viên tham dự:** 10/10 thành viên trong tổ (Có mặt: 10/10, Vắng: 0).
-  + *Danh sách thành viên:* Thầy Hoàng Tấn Thiên, Thầy Trần Sáng, Thầy Đinh Văn Đông, Thầy Hồ Đăng Danh, Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Cô Lê Thị Bình, Cô Nguyễn Thị Thảo, Thầy Nguyễn Văn Tính, Thầy Dương Quang Tùng.
-
-### NỘI DUNG CUỘC HỌP
-
-## I. TRIỂN KHAI VĂN BẢN CHỈ ĐẠO CỦA CẤP TRÊN
-
-Thầy Tổ trưởng Hoàng Tấn Thiên phổ biến, quán triệt sâu sắc các văn bản chỉ đạo của Sở Giáo dục và Đào tạo thành phố Đồng Nai, các cấp quản lý và kế hoạch của nhà trường; nêu rõ các nội dung cốt lõi và tóm tắt tác động trực tiếp đến nhiệm vụ của tổ chuyên môn như sau:
-
-**1. Hướng dẫn tổ chức kiểm tra, đánh giá học sinh phổ thông và học viên giáo dục thường xuyên năm học 2026 - 2027 (Công văn số 5529/SGDĐT-GDPT&GDTX ngày 28/9/2026 của Sở GDĐT thành phố Đồng Nai):**
-- **Ý chính cốt lõi:** Quán triệt thực hiện nghiêm túc quy định đổi mới phương pháp kiểm tra, đánh giá định kỳ và thường xuyên theo định hướng phát triển phẩm chất, năng lực học sinh. Xây dựng ma trận, bản đặc tả chi tiết bảo đảm đúng tỷ lệ 4 mức độ nhận thức (Nhận biết 40%, Thông hiểu 30%, Vận dụng 20%, Vận dụng cao 10%); đề kiểm tra bám sát chuẩn kiến thức, kỹ năng chương trình GDPT 2018, bảo đảm tính khách quan, công bằng và phân hóa tốt đối tượng học sinh; đa dạng hóa hình thức đánh giá (trên giấy kết hợp trực tuyến).
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ chuyên môn phân công cụ thể giáo viên ra đề cương, ma trận, bản đặc tả và đề kiểm tra giữa kỳ 1 môn Toán (khối 6, 7, 8, 9) và môn Tin học; thực hiện nghiêm túc quy trình phản biện chéo và nộp đề đúng hạn quy định.
-
-**2. Thực hiện Đề án “Tăng cường giảng dạy Tiếng Anh trong các trường phổ thông trên địa bàn tỉnh Đồng Nai” (Công văn số 3939/SGDĐT-NV1 ngày 26/9/2023 của Sở GD&ĐT):**
-- **Ý chính cốt lõi:** Tăng cường lồng ghép các thuật ngữ Tiếng Anh chuyên ngành vào bài giảng chính khóa môn Toán và môn Tin học; khích lệ giáo viên tổ chức các hoạt động ngoại khóa, câu lạc bộ học thuật và sân chơi trí tuệ có yếu tố Tiếng Anh.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tích hợp các câu hỏi Tiếng Anh Toán học vào Chuyên đề Ngoại khóa “Rung chuông vàng” khối 6; hướng dẫn học sinh tiếp cận phần thi Toán Tiếng Anh trong Đấu trường VioEdu; phối hợp quản lý tốt các lớp Tiếng Anh giao tiếp do giáo viên nước ngoài trực tiếp giảng dạy 2 tiết/tuần.
-
-**3. Quy định về quản lý dạy thêm, học thêm (Quyết định số 25/2025/QĐ-UBND ngày 14/8/2025; Quyết định sửa đổi số 59/2026/QĐ-UBND ngày 16/7/2026 của UBND thành phố Đồng Nai; Văn bản hợp nhất số 01/2026/VBHN-QĐ-UBND ngày 22/8/2026 và Công văn số 5473/SGDĐT-GDPT&GDTX ngày 25/9/2026 của Sở GD&ĐT):**
-- **Ý chính cốt lõi:** Quán triệt tinh thần chấn chỉnh, tăng cường kỷ cương quản lý dạy thêm, học thêm trên địa bàn thành phố. Tuyệt đối không tổ chức dạy thêm, học thêm trái quy định dưới bất kỳ hình thức nào; không ép buộc, gợi ý phụ huynh và học sinh tham gia học thêm; nghiêm cấm việc cắt giảm nội dung bài học chính khóa để đưa vào dạy thêm; toàn thể giáo viên ký cam kết chấp hành nghiêm túc quy định pháp luật và giữ gìn đạo đức nhà giáo.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** 100% giáo viên trong tổ Toán – Tin ký cam kết không vi phạm quy định dạy thêm, học thêm; tập trung nâng cao chất lượng từng giờ dạy chính khóa trên lớp và phụ đạo học sinh còn hổng kiến thức miễn phí theo kế hoạch giáo dục của nhà trường.
-
-**4. Kế hoạch Tổ chức Kỳ thi chọn học sinh giỏi cấp thành phố năm học 2026 - 2027 (Kế hoạch số 4706/KH-SGDĐT ngày 08/9/2026 của Sở GDĐT thành phố Đồng Nai):**
-- **Ý chính cốt lõi:** Kế hoạch tuyển chọn và tổ chức kỳ thi học sinh giỏi THCS cấp thành phố nhằm phát hiện, bồi dưỡng các tài năng trẻ môn Toán và Tin học.
-- **Vấn đề liên quan trực tiếp đến nhà trường và tổ chuyên môn khi thực hiện:** Tổ chuyên môn chủ động rà soát, tuyển chọn các nhân tố xuất sắc khối 8 và khối 9, phân công giáo viên có kinh nghiệm phụ trách bồi dưỡng đội tuyển Toán 9 và Tin học 9 nhằm nâng cao chất lượng mũi nhọn của trường.
-
----
-
-## II. ĐÁNH GIÁ CÔNG TÁC CHUYÊN MÔN CUỐI THÁNG 9/2026
-
-### **1. Công tác chủ nhiệm:**
-- Giáo viên chủ nhiệm đã ổn định vững chắc nề nếp lớp, duy trì nghiêm túc sinh hoạt 15 phút đầu giờ trước buổi học, quản lý tốt chuyên cần và nền nếp trật tự.
-- Bám sát lớp, thực hiện các loại báo cáo kịp thời; hoàn thành thu nộp BHYT, BHTN đợt 1; triển khai chương trình Tiếng Anh tăng cường đến phụ huynh; hoàn thành 100% cập nhật thông tin học sinh lớp chủ nhiệm trên hệ thống CSDL ngành.
-- Tích cực vận động học sinh tham gia Đấu trường VioEdu, triển khai thư viện số; phối hợp trợ giảng trong các tiết Tiếng Anh giao tiếp với giáo viên nước ngoài (2 tiết/tuần theo năng lực) bảo đảm hiệu quả.
-
-### **2. Ngày giờ công và kỷ luật lao động:**
-- Giáo viên trong tổ đảm bảo ngày giờ công nghiêm túc, tham gia đầy đủ các hoạt động hội họp của nhà trường, dạy đủ số tiết theo phân công chuyên môn; thực hiện chu đáo việc dạy bù, dạy thay khi có giáo viên đi công tác hoặc nghỉ ốm.
-
-### **3. Công tác chuyên môn và thực hiện quy chế:**
-- Ổn định nền nếp dạy và học theo đúng thời khóa biểu; thực hiện chương trình theo kế hoạch giáo dục nhà trường, dạy học 2 buổi/ngày theo Công văn 4567 của Bộ GD&ĐT, dạy học giáo dục địa phương, GDNGLL và HĐTN đúng định hướng.
-- **Về hồ sơ sổ sách và Kế hoạch bài dạy (KHBD):**
-  - *Ưu điểm:* Đa số giáo viên trong tổ đã có ý thức chuẩn bị hồ sơ bài dạy đầy đủ theo phân phối chương trình, bảo đảm cấu trúc 4 hoạt động theo tinh thần Công văn 5512/BGDĐT-GDTrH.
-  - *Tồn tại, hạn chế cần khắc phục ngay:* Qua đợt kiểm tra hồ sơ bài dạy tháng 9, một số giáo viên thực hiện chưa đúng biểu mẫu quy định. Cụ thể: Kế hoạch bài dạy còn mắc lỗi định dạng công thức toán học, biến dạng ký hiệu góc hình học; các chỉ báo năng lực số (NLS) và trí tuệ nhân tạo (AI) chưa được định dạng in đậm, in nghiêng theo quy định; một số bài soạn chưa đồng bộ Header/Footer theo mẫu chung của nhà trường. Yêu cầu các thầy cô khẩn trương rà soát, chỉnh sửa hoàn thiện trước đợt kiểm tra tiếp theo.
-- **Về nền nếp giảng dạy và thực hiện quy chế chuyên môn:**
-  - Chấp hành nghiêm túc quy chế chuyên môn, lên lớp đúng giờ, quản lý học sinh tốt trong các tiết học; tuyệt đối không tự ý đổi tiết, bỏ tiết khi chưa có sự phê duyệt của Tổ trưởng và Ban Giám hiệu.
-  - Thực hiện ghi chép Sổ đầu bài đầy đủ, sạch sẽ, khớp 100% với tiến độ phân phối chương trình và Kế hoạch giáo dục của tổ (Phụ lục 3).
-  - Công tác kiểm tra đánh giá thường xuyên: Giáo viên các bộ môn đã chủ động kiểm tra theo tiến độ, vào điểm và cập nhật kịp thời trên phần mềm quản lý điểm của trường.
-  - Nề nếp phòng học bộ môn: Giáo viên Tin học duy trì nền nếp phòng máy vi tính nghiêm túc, hướng dẫn học sinh thực hiện đúng nội quy phòng máy, bảo đảm an toàn thiết bị điện và bảo quản máy móc phục vụ giảng dạy.
-
-### **Kết quả xếp loại hồ sơ chuyên môn tháng 9/2026:**
-| STT | Họ và tên giáo viên | Môn giảng dạy | Số tiết nộp | Xếp loại tháng 9 |
-|:---:|:---|:---|:---:|:---:|
-| 1 | Hoàng Tấn Thiên | Toán 9, Tin học 6 | Đầy đủ | **Tốt** |
-| 2 | Hồ Đăng Danh | Toán 6, Toán 9 | Đầy đủ | **Tốt** |
-| 3 | Trần Sáng | Toán 6, Toán 9 | Đầy đủ | **Tốt** |
-| 4 | Trần Long Hải | Toán 8 | Đầy đủ | **Khá** |
-| 5 | Nguyễn Thị Thảo | Toán 6, Toán 7 | Đầy đủ | **Khá** |
-| 6 | Lê Thị Bình | Toán 7, Toán 8, HĐTN | Đầy đủ | **Khá** |
-| 7 | Hoàng Xuân Ánh | Toán 7, HĐTN 6 | Đầy đủ | **Khá** |
-| 8 | Nguyễn Văn Tính | HĐTN 7 | Đầy đủ | **Khá** |
-| 9 | Đinh Văn Đông | Toán 8 | Đầy đủ | **Khá** |
-| 10 | Dương Quang Tùng | Tin học 6, 7, 8, 9 | Đầy đủ | **Tốt** |
-
-- **Tổng hợp số lượng học sinh tham gia thi Đấu trường VioEdu vòng sơ loại 1:** Toàn trường có **107 học sinh** tham gia dự thi. Cụ thể từng khối: Khối 6: 30 học sinh; Khối 7: 24 học sinh; Khối 8: 31 học sinh; Khối 9: 22 học sinh.
-
-### **4. Công tác chuyên đề, thao giảng:**
-- Tham gia đầy đủ các buổi tập huấn chuyên môn, chuyên đề do Sở GD&ĐT tổ chức; phổ biến lại trong nhóm bộ môn để triển khai thống nhất.
-
-### **5. Công tác ngoại khóa và phong trào:**
-- Đã thực hiện tốt hoạt động GDNGLL theo chủ điểm: Tổ chức Tết Trung thu vui tươi, an toàn cho học sinh; tuyên truyền học sinh chấp hành tốt nội quy trường lớp, tham gia các cuộc thi do Nhà trường và Đoàn - Đội phát động.
-
-### **6. Công tác kiểm tra nội bộ:**
-- Kiểm tra nền nếp ra vào lớp, việc thực hiện quy chế chuyên môn, chất lượng soạn giảng và tiến độ thực hiện chương trình.
-
-### **7. Sử dụng thiết bị dạy học và phòng bộ môn:**
-- Giáo viên trong tổ sử dụng có hiệu quả phòng thực hành Tin học, phòng học chức năng, khai thác triệt để các phần mềm dạy học phục vụ bài giảng.
-
-### **8. Công tác khác:**
-- Tích cực tham gia các phong trào thi đua của Đoàn – Đội, tham gia đầy đủ công tác điều tra phổ cập giáo dục theo phân công của xã.
-
----
-
-## III. KẾ HOẠCH HOẠT ĐỘNG CHUYÊN MÔN THÁNG 10/2026
-
-### **1. Công tác chủ nhiệm:**
-- Ổn định nền nếp lớp chủ nhiệm, tích cực sinh hoạt 15 phút đầu giờ. Phát động đợt thi đua cao điểm chào mừng các ngày lễ lớn trong tháng: Ngày Quốc tế Người cao tuổi (01/10), Ngày Khuyến học Việt Nam (02/10), Ngày Bác Hồ gửi bức thư cuối cùng cho ngành Giáo dục (15/10) và Ngày Phụ nữ Việt Nam (20/10). Tuyên truyền phòng chống ma túy, tội phạm, ATGT, PCCC và phòng tránh tai nạn thương tích.
-- Thực hiện hiệu quả Tuần lễ học tập suốt đời năm 2026; hoàn thành hồ sơ sổ sách GVCN đúng quy định; tiếp tục rà soát học sinh khó khăn; đôn đốc thu nộp BHYT, BHTN; thông tin thường xuyên qua Zalo lớp.
-- Vận động học sinh đăng ký thi VioEdu các vòng tiếp theo; triển khai thư viện số và tiết học thư viện theo thời khóa biểu. Giáo viên bộ môn tích hợp bài dạy STEM (Phụ lục 2) vào Kế hoạch bài dạy theo thời điểm, hướng dẫn học sinh nộp sản phẩm tại phòng STEM.
-
-### **2. Đảm bảo ngày giờ công và nền nếp chuyên môn:**
-- Giáo viên phấn đấu đảm bảo nghiêm túc ngày giờ công, tham gia đầy đủ hoạt động của trường; dạy đúng, dạy đủ số tiết theo phân công chuyên môn; thực hiện kịp thời việc dạy bù, dạy thay khi có phân công.
-
-### **3. Công tác chuyên môn trọng tâm:**
-
-**a) Chuẩn bị công tác kiểm tra nội bộ nhà trường (Thanh tra toàn diện):**
-- Đối tượng kiểm tra: Thầy **Trần Sáng** (thực hiện theo Kế hoạch kiểm tra nội bộ năm học 2026 - 2027 của Trường THCS Trần Phú).
-- Yêu cầu chuẩn bị: Thầy Sáng chuẩn bị chu đáo toàn bộ hồ sơ chuyên môn cá nhân (Kế hoạch bài dạy chuẩn CV 5512, sổ theo dõi và đánh giá học sinh, kế hoạch dạy học cá nhân, thiết bị và đồ dùng dạy học).
-- Phân công phối hợp: Thầy Sáng chủ động gửi Thời khóa biểu và lịch dạy trong tuần cho Tổ trưởng để tổ sắp xếp báo cáo Ban Giám hiệu, đồng thời phân công giáo viên trong tổ bố trí dự giờ, đóng góp ý kiến mang tính xây dựng chuyên môn.
-
-**b) Kế hoạch Chuyên đề Ngoại khóa “Rung chuông vàng” môn Toán khối 6:**
-- Nhằm tạo sân chơi học tập bổ ích, khơi dậy niềm đam mê học Toán và nâng cao kỹ năng vận dụng kiến thức thực tế cho học sinh khối 6, Tổ Toán – Tin thống nhất thành lập Ban Tổ chức và xây dựng tiến độ triển khai:
-  - *Nhóm biên soạn nội dung và ngân hàng đề:* Cô Nguyễn Thị Thảo (Chủ đạo, phụ trách khối 6); Cô Lê Thị Bình (Hỗ trợ xây dựng và rà soát câu hỏi).
-  - *Nhóm tư vấn và thẩm định chuyên môn:* Thầy Hoàng Tấn Thiên (Trưởng ban), Thầy Hồ Đăng Danh, Thầy Nguyễn Văn Tính, Thầy Đinh Văn Đông.
-  - *Nhóm hỗ trợ tổ chức và kỹ thuật - hậu cần:* Thầy Hoàng Xuân Ánh, Thầy Trần Long Hải, Thầy Dương Quang Tùng, Thầy Trần Sáng (chuẩn bị âm thanh, máy chiếu, bảng con, sân bãi).
-- **Lịch trình và tiến độ thực hiện chi tiết (Thực hiện trong tháng 11/2026):**
-
-| Thời gian | Nội dung công việc | Người phụ trách | Ghi chú / Sản phẩm |
-|:---|:---|:---|:---|
-| **08/10 – 15/10/2026** | Xây dựng khung thể lệ; biên soạn bộ ngân hàng 35 câu hỏi Toán 6 (30 câu chính, 5 câu phụ; tích hợp câu hỏi thực tiễn và Tiếng Anh Toán học). | Cô Thảo, Cô Bình | Bản thảo đề & đáp án |
-| **16/10 – 22/10/2026** | Họp nhóm tư vấn thẩm định câu hỏi; Tổ trưởng hoàn thiện kế hoạch chi tiết trình BGH phê duyệt; Cô Thảo xem lịch chọn ngày cụ thể. | Thầy Thiên, Thầy Danh, Thầy Tính, Thầy Đông, Cô Thảo | Kế hoạch được BGH duyệt |
-| **23/10 – 31/10/2026** | Thông báo thể lệ đến các lớp khối 6; các lớp lập danh sách học sinh tham gia (15 HS/lớp); nhóm hỗ trợ chuẩn bị bảng con, phấn, chuông, sân bãi. | Cô Thảo, Thầy Ánh, Thầy Hải, Thầy Tùng, Thầy Sáng | Danh sách thí sinh & CSVC |
-| **01/11 – 07/11/2026** | Chạy thử chương trình, kiểm tra hệ thống âm thanh, máy chiếu trình chiếu câu hỏi; phân công dẫn chương trình (MC) và cứu trợ. | Toàn thể thành viên Ban Tổ chức | Hoàn tất chuẩn bị |
-| **Tuần 2 Tháng 11/2026**<br>*(Dự kiến 14/11/2026)* | Tổ chức chính thức Chuyên đề Ngoại khóa “Rung chuông vàng môn Toán khối 6” chào mừng kỷ niệm Ngày Nhà giáo Việt Nam 20/11. | Tổ Toán – Tin phối hợp Đoàn - Đội | Tổng kết, trao thưởng |
-
-**c) Công tác xây dựng Ma trận, Bản đặc tả, Đề cương và Đề kiểm tra giữa học kỳ 1:**
-- Toàn tổ thực hiện nghiêm túc Công văn số 5529/SGDĐT-GDPT&GDTX của Sở GD&ĐT thành phố Đồng Nai về tổ chức kiểm tra, đánh giá định kỳ.
-- **Yêu cầu chuyên môn:** Ma trận và bản đặc tả phải bám sát nội dung chương trình GDPT 2018, bảo đảm đúng tỉ lệ 4 mức độ nhận thức (Nhận biết 40%, Thông hiểu 30%, Vận dụng 20%, Vận dụng cao 10%). Đề kiểm tra phải bám sát ma trận và đề cương ôn tập, có tính phân hóa phù hợp với đối tượng học sinh.
-- **Phân công phụ trách:** Môn Toán khối 6 do Cô Nguyễn Thị Thảo phụ trách; Môn Toán khối 7 do Thầy Hoàng Xuân Ánh phụ trách; Môn Toán khối 8 do Cô Lê Thị Bình phụ trách; Môn Toán khối 9 do Thầy Trần Sáng phụ trách; Môn Tin học (Khối 6, 7, 8, 9) do Thầy Dương Quang Tùng phụ trách.
-- **Hình thức và thời lượng:**
-  - Môn Toán (Khối 6, 7, 8, 9): Thời gian làm bài 60 phút; hình thức: 100% Tự luận làm trên giấy thi theo đúng hướng dẫn kiểm tra định kỳ.
-  - Môn Tin học (Khối 6, 7, 8, 9): Thời gian làm bài 45 phút; hình thức: Kiểm tra trực tuyến trên phòng máy vi tính thông qua nền tảng OLM (đảm bảo tính khách quan, tự động trộn đề và chấm điểm).
-- **Tiến độ và các mốc thời gian thực hiện bắt buộc:**
-  - **Ngày 15/10/2026:** Hạn chót nộp Ma trận, Bản đặc tả và Đề cương ôn tập về Tổ trưởng chuyên môn thẩm định và duyệt.
-  - **Ngày 24/10/2026:** Hạn chót nộp Đề kiểm tra giữa kỳ (kèm hướng dẫn chấm/thang điểm) và hoàn thành công tác phản biện chéo giữa các giáo viên trong nhóm bộ môn.
-  - **Ngày 28/10/2026:** Tổ trưởng chuyên môn tổng hợp, thẩm định lần cuối và chính thức nộp toàn bộ Đề thi giữa kỳ về bộ phận Chuyên môn nhà trường (Ban Giám hiệu) để chuẩn bị công tác in sao và tổ chức kiểm tra theo kế hoạch.
-
-**d) Kế hoạch Sinh hoạt chuyên môn theo Nghiên cứu bài học (NCBH) trong tháng 11/2026:**
-- Thống nhất chuyển trọng tâm NCBH từ khối 6 sang khối 8 và khối 9 trong tháng 11/2026 (sau kỳ kiểm tra giữa kỳ 1):
-  - *Bài học trọng tâm lựa chọn:* Môn Toán lớp 8 – Bài “Định lí Thalès trong tam giác” (Chương Định lí Thalès, bộ sách GDPT 2018).
-  - *Chuyên đề định hướng nâng cao lớp 9:* Nhóm giáo viên dạy Toán 9 (Thầy Thiên, Thầy Danh, Thầy Sáng) chuẩn bị chuyên đề “Đổi mới phương pháp dạy học Hàm số bậc nhất và Rèn kỹ năng giải toán thực tế cho học sinh lớp 9 ôn thi Tuyển sinh 10”.
-  - *Lý do lựa chọn bài Định lí Thalès (Lớp 8):* Bài học nền tảng hình học 8; khả năng ứng dụng thực tế và giáo dục STEM rất cao (đo bóng mặt trời xác định chiều cao cột cờ, cây xanh); rất thuận lợi ứng dụng Năng lực số với phần mềm hình học động GeoGebra.
-  - *Phân công thực hiện:* Cô Lê Thị Bình (phụ trách chính khối 8) chủ trì xây dựng Kế hoạch bài dạy minh họa; Thầy Trần Long Hải và Thầy Nguyễn Văn Tính phối hợp hỗ trợ thiết kế phiếu học tập, chuẩn bị dụng cụ đo đạc thực hành (thước dây, giác kế mini). Thời gian dạy thể nghiệm dự kiến vào Tuần 1 hoặc Tuần 2 Tháng 11/2026.
-
-**e) Góp ý chuyên sâu chương trình Sách giáo khoa GDPT 2018 môn Toán - Tin:**
-- **Đại số 9:** Trong bài kiểm tra, phần giải bài toán bằng cách lập hệ phương trình, trong quá trình làm bài học sinh được phép sử dụng máy tính cầm tay để bấm nghiệm kiểm tra kết quả và ghi bước kết luận theo đúng tinh thần giảm tải tính toán cơ học.
-- **Hình học 9:** Các hệ thức lượng trong tam giác vuông (như trong SGK cũ) không được áp dụng trực tiếp như định lý sẵn có để làm bài tập; nếu học sinh sử dụng trong bài thi thì bắt buộc phải chứng minh lại bằng tam giác đồng dạng, tuân thủ đúng kết luận thống nhất của Hội đồng bộ môn cấp tỉnh.
-
-### **4. Công tác chuyên đề và bồi dưỡng:**
-- Phát động phong trào thi đua chào mừng ngày Phụ nữ Việt Nam 20/10: Mỗi giáo viên trong tổ đăng ký ít nhất 01 tiết dạy tốt, tăng cường ứng dụng công nghệ thông tin và chuyển đổi số trong giảng dạy.
-- Chuẩn bị chu đáo công tác bồi dưỡng học sinh giỏi khối 8, 9 theo đúng tinh thần Kế hoạch số 4706/KH-SGDĐT của Sở GD&ĐT; lập danh sách học sinh cần hỗ trợ để phụ đạo kịp thời.
-- Tiếp tục quán triệt thực hiện nghiêm túc quy định về dạy thêm, học thêm (Quyết định số 25/2025/QĐ-UBND, Quyết định số 59/2026/QĐ-UBND, Văn bản hợp nhất số 01/2026/VBHN-QĐ-UBND và Công văn 5473/SGDĐT-GDPT&GDTX); tuyệt đối không vi phạm đạo đức nhà giáo.
-
----
-
-## IV. Ý KIẾN THẢO LUẬN VÀ GIẢI PHÁP CHUYÊN MÔN THỰC CHIẾN
-
-Phiên họp diễn ra sôi nổi, thẳng thắn, phản ánh đúng thực tế lớp học và đề xuất các giải pháp kỹ thuật cụ thể:
-
-- **Cô Lê Thị Bình (Giáo viên môn Toán 8, Thư ký):** Qua theo dõi vòng 1 Đấu trường VioEdu, còn một số học sinh ở các lớp bỏ thi hoặc điểm đạt được chưa cao. Đề nghị các thầy cô giáo viên phụ trách khối cần chủ động phối hợp chặt chẽ với giáo viên chủ nhiệm để nhắc nhở các em vào thi trước khi hệ thống tự động khóa vòng vào 23h59 Chủ nhật hàng tuần. Về nhiệm vụ dạy minh họa Nghiên cứu bài học bài “Định lí Thalès trong tam giác”, tôi nhất trí nhận nhiệm vụ và sẽ kết hợp hoạt động đo đạc thực tế ngoài sân trường với mô phỏng GeoGebra; cam kết nộp đề cương Toán 8 giữa kỳ đúng hạn 15/10/2026.
-
-- **Thầy Trần Long Hải (Giáo viên môn Toán 8):** Đề nghị Ban Thi đua nhà trường phổ biến rõ ràng, cụ thể tiêu chí chấm điểm thi đua cho đội cờ đỏ/sao đỏ các lớp để bảo đảm chấm điểm đồng đều, khách quan giữa các lớp (hiện nay đang có sự chênh lệch cách chấm giữa học sinh học ở Cơ sở 1 và Cơ sở 2). Đồng thời, Thầy Hải cam kết sẽ phối hợp cùng Thầy Tính hỗ trợ cô Bình thiết kế phiếu học tập và chuẩn bị dụng cụ đo đạc thực hành cho tiết dạy minh họa Thalès.
-
-- **Thầy Hoàng Xuân Ánh (Giáo viên môn Toán 7, Phụ trách VioEdu K7):** Hoàn toàn nhất trí với phần đánh giá và kế hoạch hoạt động của tổ chuyên môn. Nhóm Toán 7 sẽ tập trung bám sát chuẩn kiến thức kỹ năng để xây dựng ma trận và đề cương kiểm tra giữa kỳ 1 có tính phân hóa phù hợp với học sinh khối 7, bảo đảm nộp đúng hạn 15/10/2026.
-
-- **Cô Nguyễn Thị Thảo (Giáo viên môn Toán 6, Phụ trách VioEdu K6):** Cảm ơn tổ chuyên môn đã đồng thuận chuyển nhiệm vụ Nghiên cứu bài học sang khối 8, tạo điều kiện thuận lợi cho nhóm Toán 6 tập trung toàn lực xây dựng bộ ngân hàng 35 câu hỏi và kịch bản chi tiết cho Chuyên đề Ngoại khóa “Rung chuông vàng môn Toán khối 6” chào mừng ngày 20/11; cam kết hoàn thành dự thảo ngân hàng câu hỏi trước ngày 15/10/2026.
-
-- **Thầy Trần Sáng (Giáo viên môn Toán 9, KTNB):** Tiếp thu toàn diện kế hoạch kiểm tra nội bộ của nhà trường; Thầy Sáng cam kết hoàn thiện hồ sơ Kế hoạch bài dạy chuẩn Công văn 5512, tích hợp chỉ báo Năng lực số và AI in đậm, in nghiêng rõ nét theo đúng kết luận rút kinh nghiệm của tổ; chủ động gửi lịch dạy trong tuần cho Tổ trưởng để tổ sắp xếp dự giờ. Về ma trận và đề kiểm tra Toán 9, Thầy Sáng đảm bảo bám sát cấu trúc đề thi tuyển sinh 10, nộp đúng tiến độ (ma trận ngày 15/10, đề kiểm tra ngày 24/10) để tổ phản biện chéo.
-
-- **Thầy Dương Quang Tùng (Giáo viên Tin học, Phụ trách phòng máy):** Báo cáo tình hình chuẩn bị cho kỳ kiểm tra giữa kỳ môn Tin học: 2 phòng máy tính (45 máy) đã được kiểm tra đường truyền và cài đặt ổn định; sẵn sàng tổ chức cho học sinh làm bài kiểm tra trực tuyến 100% trên nền tảng OLM theo đúng thời lượng 45 phút. Thầy Tùng cũng sẽ hỗ trợ kỹ thuật âm thanh, máy chiếu và trình chiếu câu hỏi cho sân chơi Rung chuông vàng khối 6.
-
----
-
-## V. KẾT LUẬN CỦA CHỦ TỌA VÀ NGHỊ QUYẾT CUỘC HỌP
-
-Thầy Tổ trưởng chuyên môn Hoàng Tấn Thiên kết luận toàn diện phiên họp và chỉ đạo thực hiện các nhiệm vụ trọng tâm sau:
-
-1. Toàn thể giáo viên trong tổ thực hiện chuẩn xác 03 mốc thời gian kiểm tra giữa kỳ 1:
-   - **Ngày 15/10/2026:** Nộp Ma trận, Bản đặc tả và Đề cương ôn tập về Tổ trưởng duyệt.
-   - **Ngày 24/10/2026:** Nộp Đề kiểm tra giữa kỳ và hoàn tất phản biện chéo trong nhóm.
-   - **Ngày 28/10/2026:** Tổ trưởng chính thức nộp toàn bộ đề thi về Ban Giám hiệu để in sao.
-2. Yêu cầu 100% giáo viên khẩn trương rà soát, chỉnh sửa ngay các tồn tại về hồ sơ bài dạy: Khắc phục lỗi công thức toán, sửa ký hiệu góc hình học, định dạng in đậm và in nghiêng các chỉ báo Năng lực số (NLS), AI, đồng bộ Header/Footer theo mẫu chung.
-3. Phối hợp chuẩn bị chu đáo công tác kiểm tra nội bộ toàn diện đối với Thầy Trần Sáng; đẩy mạnh xây dựng ngân hàng đề Rung chuông vàng khối 6; nhóm Toán 8 khẩn trương hoàn thiện Kế hoạch bài dạy minh họa bài “Định lí Thalès trong tam giác” tích hợp GeoGebra và thực hành STEM.
-4. Giáo viên phụ trách các khối tiếp tục đôn đốc học sinh tham gia đầy đủ các vòng thi Đấu trường VioEdu; GVCN phối hợp quản lý tốt các tiết Tiếng Anh giao tiếp với giáo viên nước ngoài.
-5. Chấp hành nghiêm túc quy định pháp luật về dạy thêm, học thêm; tuyệt đối không vi phạm đạo đức nhà giáo.
-
-- **Biểu quyết:** 10/10 thành viên trong tổ (100% giáo viên) nhất trí hoàn toàn với nội dung cuộc họp.
-- Biên bản kết thúc vào lúc 10 giờ 00 phút cùng ngày./.
-
----
-
-<table style="width: 100%; border: none;">
-<tr>
-<td style="width: 50%; text-align: center; vertical-align: top;">
-<strong>THƯ KÝ CUỘC HỌP</strong><br>
-<em>(Ký và ghi rõ họ tên)</em><br><br><br><br>
-<strong>Lê Thị Bình</strong>
-</td>
-<td style="width: 50%; text-align: center; vertical-align: top;">
-<strong>TỔ TRƯỞNG CHUYÊN MÔN</strong><br>
-<em>(Ký và ghi rõ họ tên)</em><br><br><br><br>
-<strong>Hoàng Tấn Thiên</strong>
-</td>
-</tr>
-</table>
-
-<div align="center">
-
-### CÁC THÀNH VIÊN TRONG TỔ KÝ TÊN XÁC NHẬN
-
-</div>
-
-| Đinh Văn Đông | Hồ Đăng Danh | Hoàng Xuân Ánh | Trần Long Hải |
-|:---:|:---:|:---:|:---:|
-| *(Ký tên)* | *(Ký tên)* | *(Ký tên)* | *(Ký tên)* |
-
-| Nguyễn Văn Tính | Dương Quang Tùng | Trần Sáng | Nguyễn Thị Thảo |
-|:---:|:---:|:---:|:---:|
-| *(Ký tên)* | *(Ký tên)* | *(Ký tên)* | *(Ký tên)* |
-"""
-    with open(out_md_path, 'w', encoding='utf-8') as f:
-        f.write(md_content)
-    print(f"Da xuat thanh cong file Markdown: {out_md_path}")
 
 
 def tao_bien_ban_hop_to_lan_2_thang_10_md(out_md_path):
@@ -4537,26 +2900,26 @@ Căn cứ kết quả thực hiện nhiệm vụ, ngày giờ công và tinh th�
 | STT | HỌ VÀ TÊN | CHỨC VỤ | TỰ XẾP LOẠI | TỰ NHẬN XÉT | TỔ XẾP LOẠI | GHI CHÚ |
 |:---:|:---|:---:|:---:|:---|:---:|:---|
 | 1 | **Hoàng Tấn Thiên** | Tổ trưởng | **A** | Lên kế hoạch kịp thời, đúng tiến độ. Hoàn thành tốt công tác soạn giảng, thực hiện tốt quy chế chuyên môn, nhà trường. Ngày giờ công đảm bảo, thông tin 2 chiều kịp thời và chính xác. | **A** | Lên kế hoạch kịp thời, đúng tiến độ. Hoàn thành tốt công tác soạn giảng, thực hiện tốt quy chế chuyên môn, nhà trường. Ngày giờ công đảm bảo, thông tin 2 chiều kịp thời và chính xác. |
-| 2 | Trần Sáng | Tổ phó | A | Thực hiện tốt giảng dạy môn Toán 6, 9; chủ nhiệm lớp 97 nghiêm túc; tích cực tham gia dạy thay 03 tiết Toán và chuẩn bị tốt kịch bản MC Rung chuông vàng. | A | Hoàn thành tốt nhiệm vụ, tích cực dạy thay. |
-| 3 | Hồ Đăng Danh | Giáo viên | A | Thực hiện nghiêm túc tiến độ giảng dạy Toán 6, 9; hồ sơ sổ sách đầy đủ; tích cực tham gia dạy thay 02 tiết Toán 9 cho đồng nghiệp. | A | Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời. |
-| 4 | Hoàng Xuân Ánh | Giáo viên | A | Giảng dạy môn Toán 7, HĐTN khối 6 đúng phân phối chương trình; nề nếp ngày giờ công đảm bảo, hồ sơ giáo án đầy đủ. | A | Hoàn thành tốt nhiệm vụ được giao. |
-| 5 | Trần Long Hải | Giáo viên | A | Giảng dạy môn Toán khối 8 đúng tiến độ; chủ nhiệm lớp 83 trách nhiệm, sâu sát nề nếp học sinh; chuẩn bị tốt đề kiểm tra Toán 8. | A | Hoàn thành tốt nhiệm vụ chuyên môn và chủ nhiệm. |
-| 6 | Lê Thị Bình | Giáo viên (Thư ký) | A | Giảng dạy môn Toán 7, 8; chủ nhiệm lớp 71 tốt; ghi chép biên bản tổ chu đáo; tham gia dạy thay 03 tiết Toán; chuẩn bị chu đáo NCBH Toán 8 và ngân hàng câu hỏi RCV. | A | Hoàn thành tốt nhiệm vụ, nhiệt tình dạy thay. |
+| 2 | Trần Sáng | Tổ phó | A | Thực hiện tốt giảng dạy môn Toán 9 (3 lớp - 12t), Tin 9 (1t); chủ nhiệm lớp 97 nghiêm túc; tích cực tham gia dạy thay 03 tiết Toán 9 và chuẩn bị tốt kịch bản MC Rung chuông vàng. | A | Hoàn thành tốt nhiệm vụ, tích cực dạy thay. |
+| 3 | Hồ Đăng Danh | Giáo viên | A | Thực hiện nghiêm túc tiến độ giảng dạy Toán 9 (4 lớp - 16t); hồ sơ sổ sách đầy đủ, phụ trách kỹ thuật CSDL ngành tốt; tham gia dạy thay 02 tiết Toán 9. | A | Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời. |
+| 4 | Hoàng Xuân Ánh | Giáo viên | A | Giảng dạy môn Toán 8 (3 lớp - 12t), Tin học 6 (4 lớp - 4t) đúng phân phối chương trình; nề nếp ngày giờ công đảm bảo, hồ sơ giáo án đầy đủ. | A | Hoàn thành tốt nhiệm vụ được giao. |
+| 5 | Trần Long Hải | Giáo viên | A | Giảng dạy môn Toán khối 8 (3 lớp - 12t), HĐTN, HN (3t) đúng tiến độ; chủ nhiệm lớp 83 trách nhiệm, sâu sát nề nếp học sinh; hoàn thành tốt đề kiểm tra Toán 8. | A | Hoàn thành tốt nhiệm vụ chuyên môn và chủ nhiệm. |
+| 6 | Lê Thị Bình | Giáo viên (Thư ký) | A | Giảng dạy môn Toán 7 (3 lớp - 12t), HĐTN (3t); chủ nhiệm lớp 71 tốt; ghi chép biên bản tổ chu đáo; tham gia dạy thay 03 tiết Toán; chuẩn bị chu đáo NCBH Toán 8 và đề kiểm tra Toán 7. | A | Hoàn thành tốt nhiệm vụ, nhiệt tình dạy thay. |
 | 7 | Nguyễn Thị Thảo | Giáo viên | A | Giảng dạy môn Toán 6, 7; chủ nhiệm lớp 62 tận tụy, quản lý học sinh tốt; tích cực xây dựng ngân hàng câu hỏi Rung chuông vàng và đề kiểm tra Toán 6. | A | Hoàn thành tốt nhiệm vụ chuyên môn và phong trào. |
-| 8 | Nguyễn Văn Tính | Giáo viên | A | Giảng dạy Toán 65, HĐTN khối 6, 7 đúng tiến độ; chấp hành tốt ngày giờ công; tích cực tham gia dạy thay 02 tiết HĐTN 86. | A | Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời. |
-| 9 | Dương Quang Tùng | Giáo viên | A | Giảng dạy môn Tin học các khối 6, 7, 8, 9 nghiêm túc; quản lý phòng máy vi tính chu đáo, bảo đảm kỹ thuật đường truyền phục vụ kiểm tra giữa kỳ trên OLM. | A | Hoàn thành tốt nhiệm vụ chuyên môn và quản lý thiết bị. |
+| 8 | Nguyễn Văn Tính | Giáo viên | A | Giảng dạy Toán 6 (8t), Toán 7 (8t) đúng tiến độ; chấp hành tốt ngày giờ công; tích cực tham gia dạy thay 02 tiết HĐTN 86. | A | Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời. |
+| 9 | Dương Quang Tùng | Giáo viên | A | Giảng dạy môn Tin học các khối 7, 8, 9 (16t) nghiêm túc; quản lý phòng máy vi tính chu đáo, bảo đảm kỹ thuật đường truyền phục vụ kiểm tra giữa kỳ trên OLM. | A | Hoàn thành tốt nhiệm vụ chuyên môn và quản lý thiết bị. |
 
-*(Ghi chú: Thầy Đinh Văn Đông – Phó Hiệu trưởng thuộc diện cán bộ quản lý do Ban Giám hiệu và cấp trên đánh giá xếp loại riêng; tham gia sinh hoạt tổ và ký xác nhận biên bản đầy đủ).*
+*(Ghi chú: Thầy Đinh Văn Đông – Hiệu trưởng thuộc diện cán bộ quản lý do Ban Giám hiệu và cấp trên đánh giá xếp loại riêng; tham gia sinh hoạt tổ và ký xác nhận biên bản đầy đủ).*
 
 #### 8. Thảo luận vướng mắc chuyên môn (Góp ý SGK GDPT 2018)
 Toàn thể tổ chuyên môn tiến hành thảo luận, ghi nhận các khó khăn, vướng mắc trong quá trình giảng dạy chương trình SGK Toán, Tin học theo Chương trình GDPT 2018 và đề xuất hướng khắc phục cụ thể như sau:
-- **Sách giáo khoa Toán lớp 7: Bài “Bài 3: Lũy thừa với số mũ tự nhiên của một số hữu tỉ”:**
+- **Sách giáo khoa Toán lớp 7 – Bộ Cánh Diều: “Bài 3: Phép tính lũy thừa với số mũ tự nhiên của một số hữu tỉ”:**
   + Khó khăn: Phần khởi động đề bài cho một số rất lớn, học sinh khó hình dung được nội dung và bản chất của bài học.
   + Hướng khắc phục: Đề nghị nên lấy một bài toán thực tế khác với số liệu nhỏ hơn, gần gũi hơn để học sinh dễ hình dung nội dung và yêu cầu của bài toán.
-- **Sách giáo khoa Toán lớp 7: “Bài 13. Hai tam giác bằng nhau. Trường hợp bằng nhau thứ nhất của tam giác”:**
+- **Sách giáo khoa Toán lớp 7 – Bộ Cánh Diều: “Bài 4. Hai tam giác bằng nhau. Trường hợp bằng nhau thứ nhất của tam giác (cạnh – cạnh – cạnh)”:**
   + Khó khăn: Nhiều học sinh lúng túng khi viết kí hiệu hai tam giác bằng nhau, chưa xác định đúng thứ tự các đỉnh tương ứng.
   + Hướng khắc phục: Cần bổ sung thêm lưu ý rõ ràng trong SGK: *“Khi kí hiệu sự bằng nhau của hai tam giác, các đỉnh tương ứng phải được viết đúng thứ tự”*.
-- **Sách giáo khoa Toán lớp 6:** Đối với các bài toán đố có liên quan đến BCNN, ƯCLN, thống nhất cho phép học sinh được sử dụng máy tính cầm tay để tính kết quả, không bắt buộc phải trình bày dài dòng toàn bộ các bước phân tích ra thừa số nguyên tố để tìm BCNN hay ƯCLN.
+- **Sách giáo khoa Toán lớp 6 – Bộ Cánh Diều:** Đối với các bài toán có liên quan đến BCNN, ƯCLN, thống nhất cho phép học sinh được sử dụng máy tính cầm tay để tính kết quả, không bắt buộc phải trình bày dài dòng toàn bộ các bước phân tích ra thừa số nguyên tố để tìm BCNN hay ƯCLN.
 
 ---
 
@@ -4740,7 +3103,7 @@ def tao_bao_cao_thang_10(out_docx_path, out_md_path=None):
             "Trần Sáng",
             "Tổ phó",
             "[CHỮ ĐỎ: A]",
-            "[CHỮ ĐỎ: Thực hiện tốt giảng dạy môn Toán 6, 9; chủ nhiệm lớp 97 nghiêm túc; tích cực tham gia dạy thay 03 tiết Toán và chuẩn bị tốt kịch bản MC Rung chuông vàng.]",
+            "[CHỮ ĐỎ: Thực hiện tốt giảng dạy môn Toán 9 (3 lớp - 12t), Tin 9 (1t); chủ nhiệm lớp 97 nghiêm túc; tích cực tham gia dạy thay 03 tiết Toán 9 và chuẩn bị tốt kịch bản MC Rung chuông vàng.]",
             "[CHỮ ĐỎ: A]",
             "[CHỮ ĐỎ: Hoàn thành tốt nhiệm vụ, tích cực dạy thay.]"
         ),
@@ -4758,7 +3121,7 @@ def tao_bao_cao_thang_10(out_docx_path, out_md_path=None):
             "Hồ Đăng Danh",
             "Giáo viên",
             "[CHỮ ĐỎ: A]",
-            "[CHỮ ĐỎ: Thực hiện nghiêm túc tiến độ giảng dạy Toán 6, 9; hồ sơ sổ sách đầy đủ; tích cực tham gia dạy thay 02 tiết Toán 9 cho đồng nghiệp.]",
+            "[CHỮ ĐỎ: Thực hiện nghiêm túc tiến độ giảng dạy Toán 9 (4 lớp - 16t); hồ sơ sổ sách đầy đủ, phụ trách kỹ thuật CSDL ngành tốt; tham gia dạy thay 02 tiết Toán 9.]",
             "[CHỮ ĐỎ: A]",
             "[CHỮ ĐỎ: Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời.]"
         ),
@@ -4767,7 +3130,7 @@ def tao_bao_cao_thang_10(out_docx_path, out_md_path=None):
             "Hoàng Xuân Ánh",
             "Giáo viên",
             "[CHỮ ĐỎ: A]",
-            "[CHỮ ĐỎ: Giảng dạy môn Toán 7, HĐTN khối 6 đúng phân phối chương trình; nề nếp ngày giờ công đảm bảo, hồ sơ giáo án đầy đủ.]",
+            "[CHỮ ĐỎ: Giảng dạy môn Toán 8 (3 lớp - 12t), Tin học 6 (4 lớp - 4t) đúng phân phối chương trình; nề nếp ngày giờ công đảm bảo, hồ sơ giáo án đầy đủ.]",
             "[CHỮ ĐỎ: A]",
             "[CHỮ ĐỎ: Hoàn thành tốt nhiệm vụ được giao.]"
         ),
@@ -4776,7 +3139,7 @@ def tao_bao_cao_thang_10(out_docx_path, out_md_path=None):
             "Trần Long Hải",
             "Giáo viên",
             "[CHỮ ĐỎ: A]",
-            "[CHỮ ĐỎ: Giảng dạy môn Toán khối 8 đúng tiến độ; chủ nhiệm lớp 83 trách nhiệm, sâu sát nề nếp học sinh; chuẩn bị tốt đề kiểm tra Toán 8.]",
+            "[CHỮ ĐỎ: Giảng dạy môn Toán khối 8 (3 lớp - 12t), HĐTN, HN (3t) đúng tiến độ; chủ nhiệm lớp 83 trách nhiệm, sâu sát nề nếp học sinh; hoàn thành tốt đề kiểm tra Toán 8.]",
             "[CHỮ ĐỎ: A]",
             "[CHỮ ĐỎ: Hoàn thành tốt nhiệm vụ chuyên môn và chủ nhiệm.]"
         ),
@@ -4785,7 +3148,7 @@ def tao_bao_cao_thang_10(out_docx_path, out_md_path=None):
             "Lê Thị Bình",
             "Giáo viên (Thư ký)",
             "[CHỮ ĐỎ: A]",
-            "[CHỮ ĐỎ: Giảng dạy môn Toán 7, 8; chủ nhiệm lớp 71 tốt; ghi chép biên bản tổ chu đáo; tham gia dạy thay 03 tiết Toán; chuẩn bị chu đáo NCBH Toán 8 và ngân hàng câu hỏi RCV.]",
+            "[CHỮ ĐỎ: Giảng dạy môn Toán 7 (3 lớp - 12t), HĐTN (3t); chủ nhiệm lớp 71 tốt; ghi chép biên bản tổ chu đáo; tham gia dạy thay 03 tiết Toán; chuẩn bị chu đáo NCBH Toán 8 và đề kiểm tra Toán 7.]",
             "[CHỮ ĐỎ: A]",
             "[CHỮ ĐỎ: Hoàn thành tốt nhiệm vụ, nhiệt tình dạy thay.]"
         ),
@@ -4803,7 +3166,7 @@ def tao_bao_cao_thang_10(out_docx_path, out_md_path=None):
             "Nguyễn Văn Tính",
             "Giáo viên",
             "[CHỮ ĐỎ: A]",
-            "[CHỮ ĐỎ: Giảng dạy Toán 65, HĐTN khối 6, 7 đúng tiến độ; chấp hành tốt ngày giờ công; tích cực tham gia dạy thay 02 tiết HĐTN 86.]",
+            "[CHỮ ĐỎ: Giảng dạy Toán 6 (8t), Toán 7 (8t) đúng tiến độ; chấp hành tốt ngày giờ công; tích cực tham gia dạy thay 02 tiết HĐTN 86.]",
             "[CHỮ ĐỎ: A]",
             "[CHỮ ĐỎ: Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời.]"
         ),
@@ -4812,7 +3175,7 @@ def tao_bao_cao_thang_10(out_docx_path, out_md_path=None):
             "Dương Quang Tùng",
             "Giáo viên",
             "[CHỮ ĐỎ: A]",
-            "[CHỮ ĐỎ: Giảng dạy môn Tin học các khối 6, 7, 8, 9 nghiêm túc; quản lý phòng máy vi tính chu đáo, bảo đảm kỹ thuật đường truyền phục vụ kiểm tra giữa kỳ trên OLM.]",
+            "[CHỮ ĐỎ: Giảng dạy môn Tin học các khối 7, 8, 9 (16t) nghiêm túc; quản lý phòng máy vi tính chu đáo, bảo đảm kỹ thuật đường truyền phục vụ kiểm tra giữa kỳ trên OLM.]",
             "[CHỮ ĐỎ: A]",
             "[CHỮ ĐỎ: Hoàn thành tốt nhiệm vụ chuyên môn và quản lý thiết bị.]"
         )
@@ -4948,15 +3311,15 @@ Căn cứ kết quả thực hiện nhiệm vụ chuyên môn, ngày giờ công
 | STT | HỌ VÀ TÊN | CHỨC VỤ | TỰ XẾP LOẠI | TỰ NHẬN XÉT | TỔ XẾP LOẠI | GHI CHÚ |
 |:---:|:---|:---:|:---:|:---|:---:|:---|
 | 1 | **Hoàng Tấn Thiên** | Tổ trưởng | **A** | Lên kế hoạch kịp thời, đúng tiến độ. Hoàn thành tốt công tác soạn giảng, thực hiện tốt quy chế chuyên môn, nhà trường. Ngày giờ công đảm bảo, thông tin 2 chiều kịp thời và chính xác. | **A** | Lên kế hoạch kịp thời, đúng tiến độ. Hoàn thành tốt công tác soạn giảng, thực hiện tốt quy chế chuyên môn, nhà trường. Ngày giờ công đảm bảo, thông tin 2 chiều kịp thời và chính xác. |
-| 2 | Trần Sáng | Tổ phó | <span style="color:red">A</span> | <span style="color:red">Thực hiện tốt giảng dạy môn Toán 6, 9; chủ nhiệm lớp 97 nghiêm túc; tích cực tham gia dạy thay 03 tiết Toán và chuẩn bị tốt kịch bản MC Rung chuông vàng.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, tích cực dạy thay.</span> |
+| 2 | Trần Sáng | Tổ phó | <span style="color:red">A</span> | <span style="color:red">Thực hiện tốt giảng dạy môn Toán 9 (3 lớp - 12t), Tin 9 (1t); chủ nhiệm lớp 97 nghiêm túc; tích cực tham gia dạy thay 03 tiết Toán 9 và chuẩn bị tốt kịch bản MC Rung chuông vàng.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, tích cực dạy thay.</span> |
 | 3 | Đinh Văn Đông | Phó Hiệu trưởng | <span style="color:red">A</span> | <span style="color:red">Tham gia giảng dạy HĐTN 86 đầy đủ, đúng quy chế; tích cực chỉ đạo chuyên môn tổ và tham gia dạy thay 02 tiết Toán cho giáo viên trong tổ.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ giảng dạy và chỉ đạo chuyên môn.</span> |
-| 4 | Hồ Đăng Danh | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Thực hiện nghiêm túc tiến độ giảng dạy Toán 6, 9; hồ sơ sổ sách đầy đủ; tích cực tham gia dạy thay 02 tiết Toán 9 cho đồng nghiệp.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời.</span> |
-| 5 | Hoàng Xuân Ánh | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Toán 7, HĐTN khối 6 đúng phân phối chương trình; nề nếp ngày giờ công đảm bảo, hồ sơ giáo án đầy đủ.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ được giao.</span> |
-| 6 | Trần Long Hải | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Toán khối 8 đúng tiến độ; chủ nhiệm lớp 83 trách nhiệm, sâu sát nề nếp học sinh; chuẩn bị tốt đề kiểm tra Toán 8.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ chuyên môn và chủ nhiệm.</span> |
-| 7 | Lê Thị Bình | Giáo viên (Thư ký) | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Toán 7, 8; chủ nhiệm lớp 71 tốt; ghi chép biên bản tổ chu đáo; tham gia dạy thay 03 tiết Toán; chuẩn bị chu đáo NCBH Toán 8 và ngân hàng câu hỏi RCV.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, nhiệt tình dạy thay.</span> |
+| 4 | Hồ Đăng Danh | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Thực hiện nghiêm túc tiến độ giảng dạy Toán 9 (4 lớp - 16t); hồ sơ sổ sách đầy đủ, phụ trách kỹ thuật CSDL ngành tốt; tham gia dạy thay 02 tiết Toán 9.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời.</span> |
+| 5 | Hoàng Xuân Ánh | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Toán 8 (3 lớp - 12t), Tin học 6 (4 lớp - 4t) đúng phân phối chương trình; nề nếp ngày giờ công đảm bảo, hồ sơ giáo án đầy đủ.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ được giao.</span> |
+| 6 | Trần Long Hải | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Toán khối 8 (3 lớp - 12t), HĐTN, HN (3t) đúng tiến độ; chủ nhiệm lớp 83 trách nhiệm, sâu sát nề nếp học sinh; hoàn thành tốt đề kiểm tra Toán 8.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ chuyên môn và chủ nhiệm.</span> |
+| 7 | Lê Thị Bình | Giáo viên (Thư ký) | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Toán 7 (3 lớp - 12t), HĐTN (3t); chủ nhiệm lớp 71 tốt; ghi chép biên bản tổ chu đáo; tham gia dạy thay 03 tiết Toán; chuẩn bị chu đáo NCBH Toán 8 và đề kiểm tra Toán 7.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, nhiệt tình dạy thay.</span> |
 | 8 | Nguyễn Thị Thảo | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Toán 6, 7; chủ nhiệm lớp 62 tận tụy, quản lý học sinh tốt; tích cực xây dựng ngân hàng câu hỏi Rung chuông vàng và đề kiểm tra Toán 6.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ chuyên môn và phong trào.</span> |
-| 9 | Nguyễn Văn Tính | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy Toán 65, HĐTN khối 6, 7 đúng tiến độ; chấp hành tốt ngày giờ công; tích cực tham gia dạy thay 02 tiết HĐTN 86.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời.</span> |
-| 10 | Dương Quang Tùng | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Tin học các khối 6, 7, 8, 9 nghiêm túc; quản lý phòng máy vi tính chu đáo, bảo đảm kỹ thuật đường truyền phục vụ kiểm tra giữa kỳ trên OLM.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ chuyên môn và quản lý thiết bị.</span> |
+| 9 | Nguyễn Văn Tính | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy Toán 6 (8t), Toán 7 (8t) đúng tiến độ; chấp hành tốt ngày giờ công; tích cực tham gia dạy thay 02 tiết HĐTN 86.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ, hỗ trợ dạy thay kịp thời.</span> |
+| 10 | Dương Quang Tùng | Giáo viên | <span style="color:red">A</span> | <span style="color:red">Giảng dạy môn Tin học các khối 7, 8, 9 (16t) nghiêm túc; quản lý phòng máy vi tính chu đáo, bảo đảm kỹ thuật đường truyền phục vụ kiểm tra giữa kỳ trên OLM.</span> | <span style="color:red">A</span> | <span style="color:red">Hoàn thành tốt nhiệm vụ chuyên môn và quản lý thiết bị.</span> |
 
 ---
 
@@ -5637,10 +4000,545 @@ Trên đây là Báo cáo kết quả {ten_cuoc_kt} đối với Thầy Trần S
 """
     with open(out_md_path, 'w', encoding='utf-8') as f:
         f.write(md_content)
+# ==============================================================================
+# PHÂN HỆ CHUẨN HOÁ KẾ HOẠCH HIỆU TRƯỞNG CHUẨN NGHỊ ĐỊNH 30/2020/NĐ-CP
+# (Áp dụng cho các tệp Kế hoạch tại TROLYTHIEN/8_TAO_BAO_CAO/Dau_vao/28.10/)
+# ==============================================================================
+
+def add_header_tan_trieu_tan_phong(doc, so_hieu="……/KH-THCS", ngay_thang_str="Tân Triều, ngày …… tháng …… năm ……"):
+    """Thêm Header chuẩn trường THCS Tân Phong - UBND Phường Tân Triều theo Nghị định 30/2020/NĐ-CP."""
+    table = doc.add_table(rows=1, cols=2)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = False
+    set_table_no_borders(table)
+    
+    cell_l, cell_r = table.rows[0].cells
+    cell_l.width = Inches(2.75)
+    cell_r.width = Inches(3.75)
+    
+    # Cột trái (Cơ quan)
+    p_l = cell_l.paragraphs[0]
+    p_l.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_l.paragraph_format.line_spacing = 1.15
+    p_l.paragraph_format.space_before = Pt(0)
+    p_l.paragraph_format.space_after = Pt(0)
+    p_l.paragraph_format.first_line_indent = Inches(0)
+    
+    r1 = p_l.add_run("UBND PHƯỜNG TÂN TRIỀU\n")
+    r1.font.name = 'Times New Roman'
+    r1.font.size = Pt(12)
+    r1.bold = False
+    
+    r2 = p_l.add_run("TRƯỜNG THCS TÂN PHONG\n")
+    r2.font.name = 'Times New Roman'
+    r2.font.size = Pt(12)
+    r2.bold = True
+    
+    r_line1 = p_l.add_run("───────\n")
+    r_line1.font.name = 'Times New Roman'
+    r_line1.font.size = Pt(8)
+    r_line1.bold = True
+    
+    # Số hiệu: tô màu đỏ phần dấu chấm lửng ……
+    r_so_pre = p_l.add_run("Số: ")
+    r_so_pre.font.name = 'Times New Roman'
+    r_so_pre.font.size = Pt(12)
+    
+    if "……" in so_hieu or "..." in so_hieu:
+        parts_so = re.split(r'(……|\.\.\.+)', so_hieu)
+        for ps in parts_so:
+            r_s = p_l.add_run(ps)
+            r_s.font.name = 'Times New Roman'
+            r_s.font.size = Pt(12)
+            if ps in ("……", "...") or ps.startswith(".."):
+                r_s.font.color.rgb = COLOR_RED
+                r_s.bold = True
+    else:
+        r_so_val = p_l.add_run(so_hieu)
+        r_so_val.font.name = 'Times New Roman'
+        r_so_val.font.size = Pt(12)
+    
+    # Cột phải (Quốc hiệu & Tiêu ngữ)
+    p_r = cell_r.paragraphs[0]
+    p_r.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_r.paragraph_format.line_spacing = 1.15
+    p_r.paragraph_format.space_before = Pt(0)
+    p_r.paragraph_format.space_after = Pt(0)
+    p_r.paragraph_format.first_line_indent = Inches(0)
+    
+    r3 = p_r.add_run("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\n")
+    r3.font.name = 'Times New Roman'
+    r3.font.size = Pt(12)
+    r3.bold = True
+    
+    r4 = p_r.add_run("Độc lập - Tự do - Hạnh phúc\n")
+    r4.font.name = 'Times New Roman'
+    r4.font.size = Pt(13)
+    r4.bold = True
+    
+    r_line2 = p_r.add_run("──────────────────\n")
+    r_line2.font.name = 'Times New Roman'
+    r_line2.font.size = Pt(8)
+    r_line2.bold = True
+    
+    # Địa danh ngày tháng: tô màu đỏ các dấu chấm lửng
+    if "……" in ngay_thang_str or "..." in ngay_thang_str:
+        parts_nt = re.split(r'(……|\.\.\.+)', ngay_thang_str)
+        for pnt in parts_nt:
+            r_nt = p_r.add_run(pnt)
+            r_nt.font.name = 'Times New Roman'
+            r_nt.font.size = Pt(13)
+            r_nt.italic = True
+            if pnt in ("……", "...") or pnt.startswith(".."):
+                r_nt.font.color.rgb = COLOR_RED
+                r_nt.bold = True
+    else:
+        r6 = p_r.add_run(ngay_thang_str)
+        r6.font.name = 'Times New Roman'
+        r6.font.size = Pt(13)
+        r6.italic = True
+    
+    # Dãn cách sau header
+    p_sp = doc.add_paragraph()
+    p_sp.paragraph_format.space_before = Pt(6)
+    p_sp.paragraph_format.space_after = Pt(0)
+    p_sp.paragraph_format.first_line_indent = Inches(0)
+
+
+def add_title_ke_hoach_hieu_truong(doc, title_text="KẾ HOẠCH CÔNG TÁC THÁNG ... NĂM ...", sub_title="Của Hiệu trưởng Trường THCS Tân Phong"):
+    """Tiêu đề Kế hoạch chuẩn Nghị định 30 (cỡ 14pt, đậm, căn giữa)."""
+    p1 = doc.add_paragraph()
+    p1.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p1.paragraph_format.line_spacing = 1.2
+    p1.paragraph_format.space_before = Pt(6)
+    p1.paragraph_format.space_after = Pt(2)
+    p1.paragraph_format.first_line_indent = Inches(0)
+    
+    r1 = p1.add_run("KẾ HOẠCH\n")
+    r1.font.name = 'Times New Roman'
+    r1.font.size = Pt(14)
+    r1.bold = True
+    
+    rest_title = re.sub(r'^KẾ\s+HOẠCH\s*', '', title_text, flags=re.IGNORECASE).strip()
+    r2 = p1.add_run(f"{rest_title.upper()}\n")
+    r2.font.name = 'Times New Roman'
+    r2.font.size = Pt(14)
+    r2.bold = True
+    
+    if sub_title:
+        r3 = p1.add_run(sub_title)
+        r3.font.name = 'Times New Roman'
+        r3.font.size = Pt(14)
+        r3.bold = True
+        
+    p_sp = doc.add_paragraph()
+    p_sp.paragraph_format.space_before = Pt(4)
+    p_sp.paragraph_format.space_after = Pt(0)
+    p_sp.paragraph_format.first_line_indent = Inches(0)
+
+
+def add_ke_hoach_paragraph(doc, text, is_roman_heading=False, is_num_heading=False):
+    """
+    Thêm đoạn văn bản vào tài liệu:
+    - Size toàn bộ văn bản là 14pt
+    - Thụt đầu dòng 1.27cm
+    - Căn lề JUSTIFY
+    - Dãn dòng 1.2, space before/after 2pt
+    - Phân tích và in đậm các nhãn/đề mục
+    """
+    clean_text = text.strip()
+    if not clean_text:
+        return None
+        
+    p = doc.add_paragraph()
+    p.paragraph_format.line_spacing = 1.2
+    p.paragraph_format.first_line_indent = Inches(0.5)  # 1.27 cm
+    
+    if is_roman_heading:
+        p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p.paragraph_format.space_before = Pt(8)
+        p.paragraph_format.space_after = Pt(3)
+        p.paragraph_format.keep_with_next = True
+        
+        r = p.add_run(clean_text)
+        r.font.name = 'Times New Roman'
+        r.font.size = Pt(14)
+        r.bold = True
+        r.italic = False
+        return p
+        
+    if is_num_heading:
+        p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p.paragraph_format.space_before = Pt(5)
+        p.paragraph_format.space_after = Pt(2)
+        p.paragraph_format.keep_with_next = True
+        
+        r = p.add_run(clean_text)
+        r.font.name = 'Times New Roman'
+        r.font.size = Pt(14)
+        r.bold = True
+        r.italic = False
+        return p
+        
+    # Đoạn văn thường
+    p.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+    p.paragraph_format.space_before = Pt(2)
+    p.paragraph_format.space_after = Pt(2)
+    
+    inline_labels = [
+        'Đơn vị:', 'Giáo viên báo cáo:', 'Dạy minh họa:', 'Dạy minh hoạ:',
+        'PHT theo dõi:', 'Phụ trách theo kế hoạch:', 'Chuyên đề:', 'Trọng tâm:', 'STEM:'
+    ]
+    
+    pattern_split = '(' + '|'.join(re.escape(lbl) for lbl in inline_labels) + ')'
+    parts = re.split(pattern_split, clean_text)
+    
+    if len(parts) > 1:
+        for part in parts:
+            if not part:
+                continue
+            if part in inline_labels:
+                r = p.add_run(part)
+                r.font.name = 'Times New Roman'
+                r.font.size = Pt(14)
+                r.bold = True
+            else:
+                r = p.add_run(part)
+                r.font.name = 'Times New Roman'
+                r.font.size = Pt(14)
+                r.bold = False
+    else:
+        r = p.add_run(clean_text)
+        r.font.name = 'Times New Roman'
+        r.font.size = Pt(14)
+        r.bold = False
+        
+    return p
+
+
+def format_ke_hoach_table(new_tbl, old_tbl):
+    """
+    Chuẩn hoá bảng 3 cột của phần III:
+    - Đóng khung kín 4 cạnh và viền trong 0.5pt màu đen
+    - Cột 1: 2.6 inches (~40%), Cột 2: 1.8 inches (~28%), Cột 3: 2.1 inches (~32%) (Tổng 6.5 inches)
+    - cantSplit và tblHeader
+    - Padding ô: top=80, bottom=80, left=100, right=100 dxa
+    - Header row: background #F2F2F2, Center, Bold, 12pt, indent 0
+    - Data rows:
+      + indent 0 (KHÔNG thụt đầu dòng trong bảng)
+      + Font 12pt, line_spacing 1.15, space before/after 1.5pt
+      + Cột 1: in đậm các cụm Tuần 1:, Tuần 2:, Đầu tháng:
+      + Cột 1, 3: JUSTIFY. Cột 2: LEFT/JUSTIFY.
+    """
+    new_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    border_spec = {
+        'val': 'single',
+        'sz': '4',
+        'space': '0',
+        'color': '000000'
+    }
+    col_widths = [Inches(2.6), Inches(1.8), Inches(2.1)]
+    
+    for row_idx, (old_row, new_row) in enumerate(zip(old_tbl.rows, new_tbl.rows)):
+        trPr = new_row._tr.get_or_add_trPr()
+        trPr.append(parse_xml(r'<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'))
+        
+        is_header = (row_idx == 0)
+        if is_header:
+            trPr.append(parse_xml(r'<w:tblHeader xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'))
+            
+        for c_idx, (old_cell, new_cell) in enumerate(zip(old_row.cells, new_row.cells)):
+            new_cell.width = col_widths[c_idx] if c_idx < len(col_widths) else Inches(2.0)
+            
+            # Đóng khung kín 4 cạnh
+            set_cell_border(
+                new_cell,
+                top=border_spec,
+                bottom=border_spec,
+                left=border_spec,
+                right=border_spec
+            )
+            
+            # Padding ô
+            tcPr = new_cell._tc.get_or_add_tcPr()
+            tcMar = OxmlElement('w:tcMar')
+            for m, val in [('top', 80), ('bottom', 80), ('left', 100), ('right', 100)]:
+                node = OxmlElement(f'w:{m}')
+                node.set(qn('w:w'), str(val))
+                node.set(qn('w:type'), 'dxa')
+                tcMar.append(node)
+            tcPr.append(tcMar)
+            
+            if is_header:
+                shd = parse_xml(f'<w:shd {nsdecls("w")} w:fill="F2F2F2"/>')
+                tcPr.append(shd)
+                
+            # Đưa nội dung vào cell
+            p_cell = new_cell.paragraphs[0]
+            p_cell.paragraph_format.first_line_indent = Inches(0)  # KHÔNG thụt đầu dòng
+            p_cell.paragraph_format.line_spacing = 1.15
+            p_cell.paragraph_format.space_before = Pt(1.5)
+            p_cell.paragraph_format.space_after = Pt(1.5)
+            
+            raw_text = old_cell.text.strip()
+            
+            if is_header:
+                p_cell.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                r = p_cell.add_run(raw_text)
+                r.font.name = 'Times New Roman'
+                r.font.size = Pt(12)
+                r.bold = True
+            else:
+                if c_idx == 0:
+                    p_cell.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                    m_week = re.match(r'^(Tuần\s+[^:]+:|Đầu\s+tháng[^:]*:|Giữa\s+tháng[^:]*:|Cuối\s+tháng[^:]*:)\s*(.*)', raw_text, re.DOTALL)
+                    if m_week:
+                        r_w = p_cell.add_run(m_week.group(1) + " ")
+                        r_w.font.name = 'Times New Roman'
+                        r_w.font.size = Pt(12)
+                        r_w.bold = True
+                        
+                        r_c = p_cell.add_run(m_week.group(2))
+                        r_c.font.name = 'Times New Roman'
+                        r_c.font.size = Pt(12)
+                        r_c.bold = False
+                    else:
+                        r = p_cell.add_run(raw_text)
+                        r.font.name = 'Times New Roman'
+                        r.font.size = Pt(12)
+                        r.bold = False
+                elif c_idx == 1:
+                    p_cell.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                    r = p_cell.add_run(raw_text)
+                    r.font.name = 'Times New Roman'
+                    r.font.size = Pt(12)
+                    r.bold = False
+                else:
+                    p_cell.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                    r = p_cell.add_run(raw_text)
+                    r.font.name = 'Times New Roman'
+                    r.font.size = Pt(12)
+                    r.bold = False
+
+
+def add_signatures_ke_hoach_hieu_truong(doc, noi_nhan_text=""):
+    """
+    Thêm phần Nơi nhận và Chữ ký Hiệu trưởng chuẩn Nghị định 30:
+    - Bảng 2 cột không viền
+    - Cột trái: Nơi nhận (đậm nghiêng 12pt, các dòng con 11pt, gạch đầu dòng)
+    - Cột phải: HIỆU TRƯỞNG (hoa đậm 14pt, căn giữa), khoảng trống ký, Phạm Thị Hồng Nghĩa (đậm 14pt, căn giữa)
+    """
+    p_sp = doc.add_paragraph()
+    p_sp.paragraph_format.space_before = Pt(8)
+    p_sp.paragraph_format.space_after = Pt(2)
+    p_sp.paragraph_format.first_line_indent = Inches(0)
+    
+    table = doc.add_table(rows=1, cols=2)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = False
+    set_table_no_borders(table)
+    
+    cell_l, cell_r = table.rows[0].cells
+    cell_l.width = Inches(3.0)
+    cell_r.width = Inches(3.5)
+    
+    # Cột trái (Nơi nhận)
+    p_l = cell_l.paragraphs[0]
+    p_l.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    p_l.paragraph_format.line_spacing = 1.1
+    p_l.paragraph_format.space_before = Pt(0)
+    p_l.paragraph_format.space_after = Pt(2)
+    p_l.paragraph_format.first_line_indent = Inches(0)
+    
+    r_nn = p_l.add_run("Nơi nhận:\n")
+    r_nn.font.name = 'Times New Roman'
+    r_nn.font.size = Pt(12)
+    r_nn.bold = True
+    r_nn.italic = True
+    
+    items = [
+        "- Các Phó Hiệu trưởng;",
+        "- Các tổ chuyên môn, tổ văn phòng;",
+        "- Các bộ phận liên quan;",
+        "- Lưu: VT."
+    ]
+    if noi_nhan_text:
+        clean_nn = re.sub(r'^Nơi\s+nhận\s*:\s*', '', noi_nhan_text, flags=re.IGNORECASE).strip()
+        raw_items = [it.strip() for it in clean_nn.split(';') if it.strip()]
+        if len(raw_items) >= 2:
+            items = []
+            for it in raw_items:
+                # Chuẩn hóa chữ cái đầu viết hoa
+                clean_it = it.lstrip('-*• ').strip()
+                if clean_it:
+                    clean_it = clean_it[0].upper() + clean_it[1:]
+                    items.append("- " + clean_it.rstrip(';. ') + ";")
+            if items:
+                items[-1] = items[-1].rstrip(';') + '.'
+                
+    for it in items:
+        p_it = cell_l.add_paragraph()
+        p_it.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p_it.paragraph_format.line_spacing = 1.05
+        p_it.paragraph_format.space_before = Pt(0)
+        p_it.paragraph_format.space_after = Pt(1)
+        p_it.paragraph_format.first_line_indent = Inches(0)
+        
+        r_it = p_it.add_run(it)
+        r_it.font.name = 'Times New Roman'
+        r_it.font.size = Pt(11)
+        r_it.italic = False
+        r_it.bold = False
+
+    # Cột phải (HIỆU TRƯỞNG)
+    p_r = cell_r.paragraphs[0]
+    p_r.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_r.paragraph_format.line_spacing = 1.15
+    p_r.paragraph_format.space_before = Pt(0)
+    p_r.paragraph_format.space_after = Pt(0)
+    p_r.paragraph_format.first_line_indent = Inches(0)
+    
+    r_cv = p_r.add_run("HIỆU TRƯỞNG\n\n\n\n")
+    r_cv.font.name = 'Times New Roman'
+    r_cv.font.size = Pt(14)
+    r_cv.bold = True
+    
+    r_ten = p_r.add_run("Phạm Thị Hồng Nghĩa")
+    r_ten.font.name = 'Times New Roman'
+    r_ten.font.size = Pt(14)
+    r_ten.bold = True
+
+
+def chuan_hoa_mot_ke_hoach_docx(input_docx_path, output_docx_path):
+    """
+    Chuẩn hoá 1 tệp Kế hoạch Hiệu trưởng sang thể thức Nghị định 30/2020/NĐ-CP:
+    - Bảng Header tiêu ngữ chuẩn 2 cột không viền (chấm lửng màu đỏ).
+    - Cỡ chữ toàn bộ văn bản 14pt (bảng biểu 12pt).
+    - Thụt đầu dòng 1.27cm (Inches(0.5)) cho toàn bộ văn bản, không thụt trong bảng.
+    - Dãn dòng 1.2, căn lề JUSTIFY.
+    - Đóng khung bảng biểu 4 cạnh kín 0.5pt, cantSplit, tblHeader.
+    - Bảng Nơi nhận & Chữ ký chuẩn 2 cột không viền.
+    """
+    doc_in = docx.Document(input_docx_path)
+    doc_out = create_nd30_document()
+    
+    # 1. Trích xuất metadata Header & Title
+    so_hieu = "……/KH-THCS"
+    ngay_thang_str = "Tân Triều, ngày …… tháng …… năm ……"
+    main_title = "KẾ HOẠCH CÔNG TÁC THÁNG ... NĂM ..."
+    sub_title = "Của Hiệu trưởng Trường THCS Tân Phong"
+    noi_nhan_text = ""
+    
+    for p in doc_in.paragraphs[:8]:
+        txt = p.text.strip()
+        if re.search(r'Số:\s*', txt):
+            m = re.search(r'Số:\s*(.+)', txt)
+            if m:
+                so_hieu = m.group(1).strip()
+        if "Tân Triều, ngày" in txt:
+            ngay_thang_str = txt
+        if txt.startswith("KẾ HOẠCH"):
+            main_title = txt
+        if txt.startswith("Của Hiệu trưởng"):
+            sub_title = txt
+            
+    for p in doc_in.paragraphs[-6:]:
+        txt = p.text.strip()
+        if txt.startswith("Nơi nhận:"):
+            noi_nhan_text = txt
+            
+    # Thêm Header chuẩn
+    add_header_tan_trieu_tan_phong(doc_out, so_hieu=so_hieu, ngay_thang_str=ngay_thang_str)
+    
+    # Thêm Tiêu đề chuẩn
+    add_title_ke_hoach_hieu_truong(doc_out, title_text=main_title, sub_title=sub_title)
+    
+    # 2. Xử lý phần thân văn bản theo thứ tự XML body
+    body_elements = doc_in._body._body
+    seen_romans = []
+    
+    for child in body_elements:
+        tag = child.tag.split('}')[-1]
+        
+        if tag == 'p':
+            p = docx.text.paragraph.Paragraph(child, doc_in)
+            txt = p.text.strip()
+            if not txt:
+                continue
+                
+            # Bỏ qua các đoạn header / title đã xử lý
+            if any(k in txt for k in ["UBND PHƯỜNG", "CỘNG HÒA XÃ HỘI", "TRƯỜNG THCS", "Độc lập - Tự do", "Số:", "Tân Triều, ngày"]):
+                continue
+            if txt == main_title or txt == sub_title:
+                continue
+            if txt.startswith("Nơi nhận:") or txt == "HIỆU TRƯỞNG" or "Phạm Thị Hồng Nghĩa" in txt:
+                continue
+                
+            # Kiểm tra đề mục La Mã
+            m_roman = re.match(r'^([IVXLCDM]+)\.\s*(.*)', txt)
+            if m_roman:
+                r_num = m_roman.group(1)
+                r_txt = m_roman.group(2).strip()
+                # Phát hiện lỗi đánh số trùng lặp V. -> sửa thành VI.
+                if r_num == 'V' and 'V' in seen_romans:
+                    r_num = 'VI'
+                seen_romans.append(r_num)
+                adjusted_heading = f"{r_num}. {r_txt}"
+                add_ke_hoach_paragraph(doc_out, adjusted_heading, is_roman_heading=True)
+                continue
+                
+            # Kiểm tra tiểu mục số (1., 2., 3...)
+            m_num = re.match(r'^([1-9]\d*)\.\s*(.*)', txt)
+            if m_num:
+                add_ke_hoach_paragraph(doc_out, txt, is_num_heading=True)
+                continue
+                
+            # Đoạn văn thường
+            add_ke_hoach_paragraph(doc_out, txt)
+            
+        elif tag == 'tbl':
+            old_tbl = docx.table.Table(child, doc_in)
+            # Tạo bảng mới trong doc_out
+            new_tbl = doc_out.add_table(rows=len(old_tbl.rows), cols=len(old_tbl.columns))
+            format_ke_hoach_table(new_tbl, old_tbl)
+            
+            # Dãn cách sau bảng
+            p_sp = doc_out.add_paragraph()
+            p_sp.paragraph_format.space_before = Pt(4)
+            p_sp.paragraph_format.space_after = Pt(2)
+            p_sp.paragraph_format.first_line_indent = Inches(0)
+            
+    # 3. Thêm Nơi nhận & Chữ ký chuẩn
+    add_signatures_ke_hoach_hieu_truong(doc_out, noi_nhan_text=noi_nhan_text)
+    
+    # 4. Lưu tài liệu
+    saved_path = save_docx_robust(doc_out, output_docx_path)
+    return saved_path
+
+
+def chuan_hoa_toan_bo_ke_hoach_28_10(input_dir, output_dir):
+    """Chuẩn hóa toàn bộ các tệp kế hoạch trong thư mục 28.10."""
+    in_dir = Path(input_dir)
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    
+    files = sorted(in_dir.glob("*.docx"))
+    print(f"Bat dau chuan hoa {len(files)} tep ke hoach trong: {in_dir}")
+    
+    results = []
+    for f in files:
+        out_f = out_dir / f.name
+        res = chuan_hoa_mot_ke_hoach_docx(str(f), str(out_f))
+        print(f" -> Da chuan hoa xong: {f.name} -> {out_f}")
+        results.append((f.name, str(out_f)))
+        
+    return results
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Hệ thống xuất văn bản Word chuẩn NĐ 30 Tổ Toán - Tin THCS Trần Phú")
-    parser.add_argument("--loai", type=str, default="tat_ca", choices=["bien_ban_1_8", "bien_ban_1_9", "bien_ban_2_9", "bien_ban_1_10", "bien_ban_2_10", "bao_cao_thang_10", "ktnb_bien_ban", "ktnb_bao_cao", "ktnb", "tat_ca"], help="Loại văn bản cần xuất")
+    parser.add_argument("--loai", type=str, default="tat_ca", choices=["bien_ban_1_8", "bien_ban_1_9", "bien_ban_2_9", "bien_ban_1_10", "bien_ban_2_10", "bao_cao_thang_10", "ktnb_bien_ban", "ktnb_bao_cao", "ktnb", "chuan_hoa_28_10", "tat_ca"], help="Loại văn bản cần xuất")
     parser.add_argument("--out-dir", type=str, default="c:/Users/HoangThien/Documents/GitHub/giangbai/TROLYTHIEN/8_TAO_BAO_CAO/Ket_qua/22.10", help="Thư mục kết quả")
     args = parser.parse_args()
     
@@ -5650,6 +4548,12 @@ if __name__ == "__main__":
     root_ket_qua.mkdir(parents=True, exist_ok=True)
     import shutil
     
+    # Thư mục đích đúng tên tệp đầu vào
+    bien_ban_dir = out_dir / "BIEN BAN"
+    bien_ban_dir.mkdir(parents=True, exist_ok=True)
+    root_bien_ban_dir = root_ket_qua / "22.10" / "BIEN BAN"
+    root_bien_ban_dir.mkdir(parents=True, exist_ok=True)
+
     # Chức năng 1: Biên bản họp tổ lần 1 tháng 8 (Đầu năm học 2026 - 2027)
     if args.loai in ("bien_ban_1_8", "tat_ca"):
         docx_file_bb1 = out_dir / "Bien_Ban_Hop_To_Lan_1_Thang_8_2026.docx"
@@ -5657,7 +4561,14 @@ if __name__ == "__main__":
         tao_bien_ban_hop_to_lan_1_thang_8(str(docx_file_bb1), str(md_file_bb1))
         safe_copy2(docx_file_bb1, root_ket_qua / "Bien_Ban_Hop_To_Lan_1_Thang_8_2026.docx")
         safe_copy2(md_file_bb1, root_ket_qua / "Bien_Ban_Hop_To_Lan_1_Thang_8_2026.md")
-        print(f"Da dong bo Bien ban hop to thang 8 vao: {root_ket_qua / 'Bien_Ban_Hop_To_Lan_1_Thang_8_2026.docx'}")
+        # Xuất đúng tên tệp đầu vào
+        safe_copy2(docx_file_bb1, bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 1.docx")
+        safe_copy2(md_file_bb1, bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 1.md")
+        safe_copy2(docx_file_bb1, root_bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 1.docx")
+        safe_copy2(md_file_bb1, root_bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 1.md")
+        safe_copy2(docx_file_bb1, root_ket_qua / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 1.docx")
+        safe_copy2(md_file_bb1, root_ket_qua / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 1.md")
+        print(f"Da dong bo Bien ban hop to thang 8 vao: {bien_ban_dir / 'BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 1.docx'}")
 
     # Chức năng 1B: Biên bản họp tổ lần 1 tháng 9 (Công văn 5512 & Tích hợp NLS, AI)
     if args.loai in ("bien_ban_1_9", "tat_ca"):
@@ -5666,7 +4577,14 @@ if __name__ == "__main__":
         tao_bien_ban_hop_to_lan_1_thang_9(str(docx_file_bb9), str(md_file_bb9))
         safe_copy2(docx_file_bb9, root_ket_qua / "Bien_Ban_Hop_To_Lan_1_Thang_9_2026.docx")
         safe_copy2(md_file_bb9, root_ket_qua / "Bien_Ban_Hop_To_Lan_1_Thang_9_2026.md")
-        print(f"Da dong bo Bien ban hop to thang 9 vao: {root_ket_qua / 'Bien_Ban_Hop_To_Lan_1_Thang_9_2026.docx'}")
+        # Xuất đúng tên tệp đầu vào
+        safe_copy2(docx_file_bb9, bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 2.docx")
+        safe_copy2(md_file_bb9, bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 2.md")
+        safe_copy2(docx_file_bb9, root_bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 2.docx")
+        safe_copy2(md_file_bb9, root_bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 2.md")
+        safe_copy2(docx_file_bb9, root_ket_qua / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 2.docx")
+        safe_copy2(md_file_bb9, root_ket_qua / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 2.md")
+        print(f"Da dong bo Bien ban hop to thang 9 vao: {bien_ban_dir / 'BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 2.docx'}")
 
     # Chức năng 1C: Biên bản họp tổ lần 2 tháng 9 (HD 5351 Quản lý ĐT & KH 5264 CĐS, AI)
     if args.loai in ("bien_ban_2_9", "tat_ca"):
@@ -5675,9 +4593,16 @@ if __name__ == "__main__":
         tao_bien_ban_hop_to_lan_2_thang_9(str(docx_file_bb9_2), str(md_file_bb9_2))
         safe_copy2(docx_file_bb9_2, root_ket_qua / "Bien_Ban_Hop_To_Lan_2_Thang_9_2026.docx")
         safe_copy2(md_file_bb9_2, root_ket_qua / "Bien_Ban_Hop_To_Lan_2_Thang_9_2026.md")
-        print(f"Da dong bo Bien ban hop to thang 9 lan 2 vao: {root_ket_qua / 'Bien_Ban_Hop_To_Lan_2_Thang_9_2026.docx'}")
+        # Xuất đúng tên tệp đầu vào
+        safe_copy2(docx_file_bb9_2, bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 3.docx")
+        safe_copy2(md_file_bb9_2, bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 3.md")
+        safe_copy2(docx_file_bb9_2, root_bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 3.docx")
+        safe_copy2(md_file_bb9_2, root_bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 3.md")
+        safe_copy2(docx_file_bb9_2, root_ket_qua / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 3.docx")
+        safe_copy2(md_file_bb9_2, root_ket_qua / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 3.md")
+        print(f"Da dong bo Bien ban hop to thang 9 lan 2 vao: {bien_ban_dir / 'BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 3.docx'}")
 
-    # Chức năng 1D: Biên bản họp tổ lần 1 tháng 10 (Kiểm tra giữa kỳ, Rung chuông vàng K6, Đề án TA)
+    # Chức năng 1D: Biên bản họp tổ lần 1 tháng 10 (Kiểm tra giữa kỳ, Rung chuông vàng K6, Đề kiểm tra)
     if args.loai in ("bien_ban_1_10", "tat_ca"):
         docx_file_bb10_1 = out_dir / "Bien_Ban_Hop_To_Lan_1_Thang_10_2026.docx"
         md_file_bb10_1 = out_dir / "Bien_Ban_Hop_To_Lan_1_Thang_10_2026.md"
@@ -5686,7 +4611,14 @@ if __name__ == "__main__":
         safe_copy2(md_file_bb10_1, root_ket_qua / "Bien_Ban_Hop_To_Lan_1_Thang_10_2026.md")
         safe_copy2(docx_file_bb10_1, root_ket_qua / "Noi_Dung_Hop_To_Lan_1_Thang_10_2026.docx")
         safe_copy2(md_file_bb10_1, root_ket_qua / "Noi_Dung_Hop_To_Lan_1_Thang_10_2026.md")
-        print(f"Da dong bo Bien ban hop to thang 10 lan 1 vao: {root_ket_qua / 'Bien_Ban_Hop_To_Lan_1_Thang_10_2026.docx'}")
+        # Xuất đúng tên tệp đầu vào
+        safe_copy2(docx_file_bb10_1, bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 4.docx")
+        safe_copy2(md_file_bb10_1, bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 4.md")
+        safe_copy2(docx_file_bb10_1, root_bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 4.docx")
+        safe_copy2(md_file_bb10_1, root_bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 4.md")
+        safe_copy2(docx_file_bb10_1, root_ket_qua / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 4.docx")
+        safe_copy2(md_file_bb10_1, root_ket_qua / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 4.md")
+        print(f"Da dong bo Bien ban hop to thang 10 lan 1 vao: {bien_ban_dir / 'BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 4.docx'}")
 
     # Chức năng 1E: Biên bản họp tổ lần 2 tháng 10
     if args.loai in ("bien_ban_2_10", "tat_ca"):
@@ -5695,9 +4627,16 @@ if __name__ == "__main__":
         tao_bien_ban_hop_to_lan_2_thang_10(str(docx_file), str(md_file))
         safe_copy2(docx_file, root_ket_qua / "Bien_Ban_Hop_To_Lan_2_Thang_10_2026.docx")
         safe_copy2(md_file, root_ket_qua / "Bien_Ban_Hop_To_Lan_2_Thang_10_2026.md")
-        print(f"Da dong bo Bien ban hop to vao: {root_ket_qua / 'Bien_Ban_Hop_To_Lan_2_Thang_10_2026.docx'}")
+        # Xuất đúng tên tệp đầu vào
+        safe_copy2(docx_file, bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 5.docx")
+        safe_copy2(md_file, bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 5.md")
+        safe_copy2(docx_file, root_bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 5.docx")
+        safe_copy2(md_file, root_bien_ban_dir / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 5.md")
+        safe_copy2(docx_file, root_ket_qua / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 5.docx")
+        safe_copy2(md_file, root_ket_qua / "BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 5.md")
+        print(f"Da dong bo Bien ban hop to vao: {bien_ban_dir / 'BIÊN BẢN HỌP TỔ TOÁN - TIN LẦN 5.docx'}")
         
-    # Chức năng 2: Báo cáo hoạt động tháng
+        # Chức năng 2: Báo cáo hoạt động tháng
     if args.loai in ("bao_cao_thang_10", "tat_ca"):
         docx_file_bc = out_dir / "Bao_Cao_Hoat_Dong_To_Toan_Tin_Thang_10_2026.docx"
         md_file_bc = out_dir / "Bao_Cao_Hoat_Dong_To_Toan_Tin_Thang_10_2026.md"
@@ -5723,6 +4662,11 @@ if __name__ == "__main__":
         safe_copy2(md_file_bc_ktnb, root_ket_qua / "KTNB_Mau_05_Bao_Cao_Ket_Qua_Kiem_Tra.md")
         print(f"Da dong bo Bao cao KTNB Mau 05 vao: {root_ket_qua / 'KTNB_Mau_05_Bao_Cao_Ket_Qua_Kiem_Tra.docx'}")
 
-
-
+    # Chức năng Chuẩn hoá Kế hoạch 28.10 sang chuẩn Nghị định 30/2020/NĐ-CP
+    if args.loai in ("chuan_hoa_28_10", "tat_ca"):
+        in_28_10 = Path("c:/Users/HoangThien/Documents/GitHub/giangbai/TROLYTHIEN/8_TAO_BAO_CAO/Dau_vao/28.10")
+        if in_28_10.exists():
+            out_28_10 = root_ket_qua / "28.10"
+            chuan_hoa_toan_bo_ke_hoach_28_10(str(in_28_10), str(out_28_10))
+            print(f"Da chuan hoa toan bo ke hoach vao: {out_28_10}")
 

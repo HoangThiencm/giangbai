@@ -1,0 +1,155 @@
+Chương 29: Chương trình khiến người ta kinh ngạc
+
+Trần Nhiên dĩ nhiên chẳng thể nào biết được những toan tính, ấm ức trong đầu của Lâm Phàm.
+
+Thậm chí trước khi nghe Chủ nhiệm Trương nhắc tới, anh còn chẳng mảy may biết đối thủ cạnh tranh trực tiếp với mình tên là gì.
+
+Sáng thứ Hai, anh vẫn tiếp tục bận rộn gặp gỡ, trao đổi với các giám đốc chuỗi phòng hát karaoke trên địa bàn thành phố:
+
+"Chương trình này hiện mới chỉ nằm ở giai đoạn đề án sơ bộ thôi anh ạ, đài có phê duyệt sản xuất hay không thì tôi chưa dám khẳng định một trăm phần trăm. Nhưng một khi chương trình được bấm máy lên sóng, đây sẽ là một cơ hội quảng bá thương hiệu tự nhiên vô giá cho chuỗi karaoke của bên anh..."
+
+"Hiện tại tôi đang công tác tại Kênh Công cộng, nhưng sắp tới sẽ được điều chuyển sang Kênh Giải trí. Anh thử nghĩ mà xem, Kênh Công cộng làm sao có thể sản xuất một gameshow âm nhạc trẻ trung quy mô thế này đúng không ạ?"
+
+"Dạ vâng, cảm ơn anh nhiều, làm phiền anh quá."
+
+Trần Nhiên cúp điện thoại, khẽ lắc lắc chiếc đầu đang ong ong vì mệt mỏi.
+
+Đêm qua anh lại tiếp tục thức trắng để hoàn thiện hơn nửa bản đề án. Nhưng bù lại, hôm nay anh đã gặt hái được rất nhiều tin vui: Hàng loạt số liệu thị trường thực tế đắt giá từ các tụ điểm giải trí đã được thu thập đầy đủ, biến bản đề án của anh trở nên đanh thép, thuyết phục và có sức nặng ngàn cân!
+
+Ngồi trước màn hình máy tính, Trần Nhiên tỉ mỉ rà soát từng câu chữ, gọt giũa lại từng chi tiết nhỏ.
+
+Gameshow 《Tôi Yêu Nhớ Lời Bài Hát》 nếu đem nguyên xi format của kiếp trước đặt vào thời điểm hiện tại thì thực sự có phần hơi cũ kỹ.
+
+Thuở chương trình đó làm mưa làm gió ở kiếp trước, mạng internet chưa phát triển bùng nổ như bây giờ, máy tính cá nhân còn chưa phổ cập tới từng nhà chứ đừng nói tới những chiếc điện thoại thông minh vạn năng.
+
+Thời đại không ngừng vận động phát triển, một chương trình truyền hình cũng tuyệt đối không thể rập khuôn giậm chân tại chỗ, mà bắt buộc phải bắt nhịp từng hơi thở của thời đại. Rời xa quần chúng nhân dân thì sớm muộn cũng sẽ bị quần chúng đào thải không thương tiếc.
+
+Trong format của 《Tôi Yêu Nhớ Lời Bài Hát》, linh hồn sống còn của sân khấu chính là dàn "ca sĩ lĩnh xướng" (領唱).
+
+Đối với những người chơi may mắn được bốc thăm ngẫu nhiên bước lên sân khấu, chương trình hoàn toàn không đòi hỏi kỹ thuật thanh nhạc cao siêu, chỉ cần họ nhớ đúng từng ca từ bài hát là có thể vượt ải giật giải.
+
+Thế nhưng đối với dàn ca sĩ lĩnh xướng thì tiêu chuẩn tuyển chọn lại khắt khe vô cùng: Giọng hát bắt buộc phải nội lực điêu luyện, ngoại hình phải ưa nhìn sáng sân khấu, và đặc biệt chất giọng phải có nét độc đáo, độ nhận diện cao để lôi cuốn khán giả.
+
+Đài truyền hình địa phương lấy đâu ra sẵn một dàn ca sĩ tài sắc vẹn toàn như thế?
+
+Không có sẵn thì bắt buộc phải tổ chức tuyển chọn!
+
+Sau một hồi suy tính kỹ lưỡng, Trần Nhiên liền nảy ra một ý tưởng vô cùng táo bạo: Liên kết với các ứng dụng hát karaoke trực tuyến trên điện thoại thông minh để đồng tổ chức một chiến dịch tìm kiếm và tuyển chọn ca sĩ lĩnh xướng trên diện rộng!
+
+Thời buổi công nghệ số hiện nay, ứng dụng hát karaoke trên điện thoại đang là trào lưu cực hot của giới trẻ. Đi tụ tập đông bạn bè thì người ta mới kéo nhau vào quán KTV, còn những lúc cô đơn một mình trong phòng trọ muốn nghêu ngao ca hát thì tải một app karaoke về máy tiện lợi hơn gấp bội phần.
+
+Hợp tác với các nền tảng công nghệ này chẳng những giải quyết triệt để bài toán tuyển chọn nhân tài, mà còn tạo nên một chiến dịch truyền thông dội bom miễn phí trước ngày phát sóng!
+
+Còn việc làm thế nào để đàm phán hợp tác sâu với các ông lớn công nghệ thì lúc này chưa phải là phần việc Trần Nhiên cần bận tâm.
+
+Giai đoạn nộp đề án này thực chất là một cuộc thi thố xem ai "vẽ bánh" khéo léo, tinh tế và thực tế hơn mà thôi. Đợi đến khi đề án được ban giám đốc đài duyệt bấm máy thật, những khâu triển khai chi tiết đó sẽ tự khắc có cả một bộ máy chuyên môn vào cuộc giải quyết.
+
+Cân nhắc thấu đáo mọi khía cạnh, Trần Nhiên liền hạ bút bổ sung toàn bộ cơ chế liên kết này vào trong bản kế hoạch.
+
+Bản đề án tâm huyết này, tính từ lúc thai nghén ý tưởng đến khi hoàn thiện văn bản, anh đã phải mất ròng rã suốt hai ngày đêm vắt kiệt tâm lực.
+
+Khi anh mang tập tài liệu in nóng hổi sang nhà giao tận tay cho Chủ nhiệm Trương, ông không khỏi giật mình kinh ngạc:
+
+"Nhanh thế cơ à cháu?!"
+
+Trần Nhiên mỉm cười đáp: "Dạ, vì khung kịch bản cháu đã chuẩn bị sẵn trong đầu từ trước rồi nên lúc gõ chữ cũng tương đối nhanh. Trăm sự nhờ chú Trương đọc thẩm định và sửa chữa giúp cháu ạ."
+
+Chủ nhiệm Trương mang theo chút bán tín bán nghi, mở tập hồ sơ ra, bắt đầu chăm chú đọc từng trang, từng mục một cách vô cùng cẩn trọng.
+
+Và rồi, sự nghi hoặc trong mắt ông nhanh chóng bị thay thế bằng một nỗi bàng hoàng thán phục! Trần Nhiên thằng nhóc này, bản đề án nó chắp bút không chỉ đơn thuần là chi tiết và lớp lang, mà nó còn vượt xa khỏi khuôn khổ của một cuộc thi đấu chức danh Tổng biên tập!
+
+Dù đã được nghe Trần Nhiên trình bày sơ bộ từ hôm trước, nhưng khi tận mắt nhìn thấy bản đề án hoàn chỉnh hiển hiện trên mặt giấy, Chủ nhiệm Trương vẫn không khỏi dâng lên một cảm giác choáng ngợp, kinh ngạc đến nghẹt thở!
+
+Chủ nhiệm Trương từng đọc qua không ít kịch bản của Trần Nhiên, bản thân 《Tiêu Điểm Triệu Nam》 cũng là do ông đích thân đốc thúc anh viết; thế nhưng bản tin thời sự đó thực chất chỉ là một bộ khung sườn cơ bản, không có quá nhiều tiểu tiết phức tạp.
+
+Còn bản đề án 《Tôi Yêu Nhớ Lời Bài Hát》 này thì hoàn toàn khác biệt! Từng mắt xích kịch bản, từng cơ chế tương tác, luật chơi, cho đến hệ thống số liệu khảo sát thị trường thực tế đều được anh trình bày một cách rành mạch, khoa học và chặt chẽ đến mức khó tin!
+
+Các bảng biểu số liệu không hề là thứ bịa đặt sáo rỗng, mà đều có nguồn gốc trích dẫn và khảo sát thực tế vô cùng chuẩn xác, thể hiện một sự đầu tư công phu và tâm huyết tột độ của người viết.
+
+Xét riêng trên phương diện chuyên môn của một bản đề án format, Chủ nhiệm Trương sẵn sàng chấm 98 trên thang điểm 100! Sở dĩ không dám cho điểm tuyệt đối 100 là vì ông sợ thằng nhóc này sinh tâm lý tự kiêu mà thôi.
+
+"Bản đề án rất xuất sắc, vô cùng xuất sắc! Chỉ có điều về quy chuẩn thể thức văn bản hành chính của đài và một vài câu từ diễn đạt chuyên môn còn đôi chỗ chưa chuẩn chỉnh lắm. Cháu mang về phòng trọ chỉnh sửa lại chút xíu về mặt hình thức, tối mai mang sang nộp lại cho chú nhé." Chủ nhiệm Trương vỗ mạnh vào vai Trần Nhiên khen ngợi hết lời.
+
+Chờ cho bóng lưng Trần Nhiên vừa bước ra khỏi cửa, khóe miệng Chủ nhiệm Trương bỗng cong lên một nụ cười sướng rơn, tấm tắc thầm thì một mình:
+
+"Trời đất ơi! Nhà họ Trương nhà mình đúng là vớ được một báu vật vô giá rồi!"
+
+Trần Nhiên thằng bé này sao mà đáng quý đến thế không biết: Tính tình thì điềm đạm, khiêm tốn, nhân phẩm đứng đắn đàng hoàng, nay đến năng lực chuyên môn cũng thuộc hàng quái kiệt xuất chúng thế này, một chàng rể hoàn mỹ như thế này thì thắp đuốc đi tìm khắp thiên hạ liệu có tìm nổi người thứ hai hay không?
+
+Đối với một người làm cha như Chủ nhiệm Trương, ông chưa từng mong muốn con gái mình phải gả vào chốn hào môn tài phiệt lắm tiền nhiều của làm gì. Tìm được một người đàn ông có bản lĩnh, tính tình ôn hòa, thương yêu gia đình như Trần Nhiên mới chính là chỗ dựa vững chắc nhất cho một cuộc sống hôn nhân hạnh phúc bền lâu.
+
+Ông thầm cảm thấy may mắn vì bản thân đã nhanh tay chớp thời cơ mai mối sớm! Đài truyền hình này gái đẹp nhiều như mây trên trời, các nữ MC dẫn chương trình ai nấy đều xinh đẹp rạng ngời; may mà Trần Nhiên làm công việc biên kịch ở hậu trường, ít có cơ hội tiếp xúc với người ngoài, bằng không một món bảo bối sáng giá thế này làm sao đến lượt con gái ông rước về cho được!
+
+Chủ nhiệm Trương càng nghĩ lại càng thấy ưng bụng, hài lòng không sao kể xiết!
+
+...
+
+Chớp mắt một cái đã tới ngày thứ Tư.
+
+Bản đề án kịch bản hoàn chỉnh của Trần Nhiên đã chính thức được gửi lên hội đồng thẩm định. Kết quả thắng bại ra sao, giờ đây chỉ còn chờ đợi thông báo chính thức từ ban giám đốc đài.
+
+Khu văn phòng Kênh Giải trí.
+
+Giám đốc Kênh Giải trí – ông Dương Khải Quân – tháo cặp kính lão xuống, lấy khăn mềm lau nhẹ mắt kính.
+
+Cốc! Cốc! Cốc!
+
+Tiếng gõ cửa vang lên, ông cất giọng trầm ấm: "Mời vào!"
+
+Chủ nhiệm Lưu bước nhanh vào phòng, cung kính đặt một tập tài liệu lên bàn làm việc: "Báo cáo Tổng giám đốc, đây là bản đề án kịch bản do cậu Lâm Phàm vừa hoàn thiện nộp lên ạ."
+
+Nghe thấy cái tên Lâm Phàm, trong đầu Dương Khải Quân lập tức nhớ lại cuộc điện thoại gửi gắm thân tình của người bạn cũ Lâm Quân cách đây mấy hôm. Ông khẽ gật đầu: "Được rồi, cậu cứ để đó, tôi sẽ xem xét cẩn thận."
+
+Cái tên Lâm Phàm đối với Dương Khải Quân vốn dĩ chẳng có gì xa lạ. Ông từng nhiều lần ghé thăm nhà Lâm Quân dùng cơm thân mật, chạm mặt chàng trai trẻ này không dưới dăm ba lần.
+
+Chưa kể Lâm Phàm đã cắm rễ làm việc ở Kênh Giải trí của ông suốt bảy năm trời, tính nết và trình độ ra sao ông nắm rõ trong lòng bàn tay.
+
+Nhận xét một cách công tâm, Lâm Phàm là một cán bộ có năng lực chuyên môn khá tốt, làm việc cẩn trọng, chỉ có điều tư duy đổi mới sáng tạo thì lại thuộc dạng bình bình, không có gì nổi trội. Dẫu vậy, xét trên bình diện chung thì việc cất nhắc cậu ta lên vị trí Tổng biên tập một chương trình giải trí cũng hoàn toàn đủ tiêu chuẩn.
+
+Dương Khải Quân lật giở từng trang đề án của Lâm Phàm: Đó là một format gameshow trò chơi vận động tương tác giữa cha mẹ và con cái, nhóm đối tượng mục tiêu nhắm thẳng vào các bà mẹ trẻ hiện đại.
+
+Dương Khải Quân khẽ gật đầu đánh giá. Đề án của Lâm Phàm viết tương đối chắc tay, các trò chơi vận động trong chương trình cũng khá vui nhộn, thú vị. Điều đó đã phần nào làm thay đổi cách nhìn của ông về cậu thanh niên này: Làm theo đường hướng này thì điểm mạnh lớn nhất chính là sự "an toàn, chắc chắn".
+
+Tuy nhiên, muốn đưa format này lên sóng đài lớn thì chắc chắn lãnh đạo đài sẽ không duyệt, bởi mô hình gameshow gia đình này dẫu sao vẫn còn quá rập khuôn, lối mòn cũ kỹ, tính đột phá sáng tạo vẫn còn thiếu hụt trầm trọng.
+
+Nhớ lại những lời gửi gắm kín đáo của Giám đốc Lâm Quân hôm trước, Dương Khải Quân thầm nhủ trong bụng: "Cái cậu Trần Nhiên kia năm nay mới ngoài hai mươi tuổi đầu, bước chân vào đài mới được vài tháng ngắn ngủi, trước nay chưa từng kinh qua sản xuất gameshow giải trí bao giờ. Bản đề án cậu ta viết ra cùng lắm chắc cũng chỉ sàn sàn ngang ngửa với Lâm Phàm là cùng. Nếu thế thì mình cũng chẳng cần phải khó xử làm gì, cứ thuận nước đẩy thuyền chọn người nhà Kênh Giải trí là êm đẹp cả đôi đường."
+
+Thực tâm mà nói, Dương Khải Quân ban đầu cũng chẳng mấy hài lòng với quyết định can thiệp nhân sự của cấp trên. Kênh Giải trí của ông xưa nay tự hạch toán thu chi độc lập, cớ sao lãnh đạo đài lại cứ nằng nặc nhét một người từ Kênh Công cộng sang tranh ghế?
+
+Thế nhưng sau khi đọc qua bản hồ sơ thành tích chói lọi của 《Tiêu Điểm Triệu Nam》, ông quyết định mở ra một cơ hội công bằng: Nếu Trần Nhiên thực sự là một kỳ tài xuất chúng, viết ra được một đề án làm chấn động lòng người, thì ông đương nhiên sẵn sàng dang rộng hai tay thu nạp viên ngọc quý đó về dưới trướng.
+
+Ngược lại, nếu bản đề án của anh chẳng hơn gì Lâm Phàm, thì một kẻ như vậy Kênh Giải trí của ông cũng chẳng việc gì phải chứa chấp.
+
+Dương Khải Quân tương đối hài lòng với bản đề án của Lâm Phàm, giao cho cậu ta làm Tổng biên tập chương trình mới xem ra cũng coi như tạm ổn.
+
+Đúng lúc đó.
+
+Ting ting!
+
+Hộp thư điện tử nội bộ trên máy tính của ông phát ra tiếng chuông báo thư mới.
+
+Bản đề án kịch bản của Trần Nhiên cũng đã chính thức được gửi tới!
+
+Dương Khải Quân vốn dĩ không có thói quen đọc tài liệu dài trên màn hình máy tính, nhìn màn hình quá nhiều dễ gây mỏi mắt và làm giảm độ nhạy bén cảm thụ ngôn từ.
+
+Ông liền nhấc máy gọi thư ký vào, yêu cầu in bản đề án của Trần Nhiên ra giấy A4 rồi mang vào bàn làm việc.
+
+Cầm tập tài liệu còn thơm mùi mực in trên tay, dòng chữ in đậm trên trang bìa lập tức đập vào mắt ông:
+
+《Tôi Yêu Nhớ Lời Bài Hát》?
+
+Cái tên chương trình nghe có vẻ kỳ quặc và lạ tai thật đấy! Rốt cuộc đây là thể loại gameshow gì thế này?
+
+Dương Khải Quân ôm theo một bụng đầy nghi hoặc và tò mò, chầm chậm lật giở trang giấy đầu tiên...
+
+Và rồi, sự nghi hoặc hờ hững ban đầu bỗng chốc biến mất không còn một dấu vết!
+
+Ông ngồi dán mắt vào từng trang giấy suốt nửa buổi trời, không hề rời mắt lấy một giây!
+
+Sắc mặt của vị Giám đốc Kênh Giải trí gạo cội biến chuyển không ngừng: Từ vẻ điềm tĩnh ban đầu dần chuyển sang kinh ngạc, từ kinh ngạc biến thành sững sờ, và cuối cùng dừng lại ở một biểu cảm hoàn toàn choáng ngợp, kinh hãi tột độ!
+
+Cho đến khi đặt nhẹ tập tài liệu xuống mặt bàn, thần sắc của Dương Khải Quân đã hoàn toàn thay đổi 180 độ.
+
+Ông ngả người ra sau chiếc ghế da lớn, đưa tay tháo kính lão, khẽ lắc đầu thở dài một tiếng cảm thán:
+
+"Lâm Quân ơi là Lâm Quân! Xem ra toàn bộ những toan tính cửa sau của ông bạn già đành phải ngâm nước nóng bốc hơi sạch bách rồi!"
