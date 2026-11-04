@@ -434,16 +434,18 @@ def build_baocao_prompt(
         title = "Soạn Biên bản họp tổ Toán – Tin theo quy chuẩn sinh hoạt chuyên môn Trường THCS Trần Phú và Nghị định 30/2020/NĐ-CP."
         guide = _guides("08_bien_ban_hop_to.md", "08_tao_bao_cao.md")
         special_notes = (
-            "YÊU CẦU CẤU TRÚC BIÊN BẢN HỌP TỔ TOÁN – TIN (BẮT BUỘC ĐỦ 3 PHẦN):\n"
+            "YÊU CẦU CẤU TRÚC BIÊN BẢN HỌP TỔ TOÁN – TIN (BẮT BUỘC ĐỦ 3 PHẦN & NGUYÊN TẮC LIÊN HOÀN HAI THÁNG):\n"
+            "⚠️ NGUYÊN TẮC BẮT BUỘC TỪ NHÀ TRƯỜNG: Triển khai ở tháng trước sẽ có đánh giá ở tháng sau (Ví dụ: muốn dạy tiết NCBH trong tháng 11 thì tháng 10 phải phân công GV dạy; muốn làm STEM tháng 11 thì tháng 10 phải phân công nhiệm vụ chuẩn bị).\n\n"
             "I. TRIỂN KHAI VĂN BẢN:\n"
             "   - Đọc kỹ tất cả các văn bản đầu vào do Thầy cung cấp.\n"
             "   - Triển khai ngắn gọn, súc tích trọng tâm của từng văn bản (số hiệu, ngày, trích yếu, yêu cầu cốt lõi).\n"
             "   - Nếu cần thiết thì cân nhắc phân công cho các giáo viên thực hiện văn bản đó.\n"
             "II. ĐÁNH GIÁ CÔNG TÁC GIAI ĐOẠN:\n"
+            "   - ĐỐI CHIẾU & ĐÁNH GIÁ KẾT QUẢ CÁC NHIỆM VỤ ĐÃ PHÂN CÔNG TỪ THÁNG TRƯỚC (BẮT BUỘC): Tiết dạy NCBH của tháng trước đã thực hiện ra sao (ưu điểm, học tập kinh nghiệm), bài học STEM triển khai thế nào (hứng thú, sản phẩm), việc nộp ma trận đề cương có đúng hạn.\n"
             "   - Đánh giá toàn diện các mặt công tác chuyên môn qua: KHBD, nề nếp giảng dạy, ngày giờ công, dạy thay, quy chế chuyên môn...\n"
             "III. CÔNG TÁC TỚI:\n"
             "   - Bám sát định hướng của Thầy Tổ trưởng để cụ thể hóa công việc.\n"
-            "   - Cân nhắc để phân công giáo viên trong tổ thực hiện từng nhiệm vụ rõ ràng.\n\n"
+            "   - PHÂN CÔNG NHIỆM VỤ GỐI ĐẦU CHO THÁNG TIẾP THEO (BẮT BUỘC): Phân công GV dạy minh họa NCBH tháng tới (bài dạy, lớp, tuần), phân công chuẩn bị bài học STEM tháng tới (chủ đề, GV phụ trách, học liệu), phân công ra đề kiểm tra giữa kỳ/học kỳ.\n\n"
             "🔴 QUY TẮC BẮT BUỘC VỀ MÀU SẮC: Những nội dung nào không chắc chắn, thông tin chưa có số liệu chính xác trong đầu vào, hoặc nhân sự phân công mang tính dự kiến thì BẮT BUỘC ĐƯỢC IN CHỮ MÀU ĐỎ (trong Word áp dụng font color đỏ, trong văn bản ghi [CHỮ ĐỎ: ...]) để Thầy Tổ trưởng dễ dàng rà soát và kiểm tra."
         )
     elif is_ke_hoach_thang:
@@ -451,18 +453,19 @@ def build_baocao_prompt(
         guide = _guides("08_ke_hoach_thang_to.md", "08_tao_bao_cao.md")
         special_notes = (
             "YÊU CẦU CẤU TRÚC KẾ HOẠCH & BÁO CÁO THÁNG THEO ĐÚNG FORM ẢNH TRƯỜNG THCS TRẦN PHÚ:\n"
+            "⚠️ NGUYÊN TẮC BẮT BUỘC TỪ NHÀ TRƯỜNG: Triển khai ở tháng trước sẽ có đánh giá ở tháng sau (Muốn tháng 11 dạy NCBH hay STEM thì tháng 10 phải có phân công gối đầu).\n\n"
             "1. Header: TRƯỜNG THCS TRẦN PHÚ / TỔ TOÁN - TIN HỌC / Số: .../BC - TCM | CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM / Độc lập – Tự do – Hạnh phúc / Xuân Đông, ngày ...\n"
             "2. Tiêu đề: BÁO CÁO HOẠT ĐỘNG TỔ TOÁN – TIN HỌC THÁNG .../2026 (hoặc KẾ HOẠCH HOẠT ĐỘNG TỔ...)\n"
             "3. Căn cứ ban hành:\n"
             "   - Căn cứ chỉ đạo, định hướng công tác chuyên môn trường THCS Trần Phú tháng ... năm học 2026 - 2027.\n"
             "   - Căn cứ tình hình thực tế hoạt động chuyên môn của tổ Toán – Tin học báo cáo hoạt động chuyên môn tháng ... cụ thể như sau:\n"
             "4. Bố cục 4 phần chuẩn form mẫu:\n"
-            "   I. ĐÁNH GIÁ CÔNG TÁC QUA: 1. Chủ nhiệm; 2. Ngày giờ công (kèm chi tiết dạy thay); 3. Hoạt động tổ chuyên môn (PCCM, KHGD phụ lục 1,2,3, NLS 20%, AI 12 tiết, VioEdu khối 6,7,8,9, tập huấn CSDL ngành, tiến độ KHBD...); 4. Công tác khác.\n"
-            "   II. KẾ HOẠCH TRỌNG TÂM TRONG THỜI GIAN TỚI: 1. Chủ nhiệm; 2. Ngày giờ công; 3. Hoạt động tổ chuyên môn; 4. Công tác khác.\n"
+            "   I. ĐÁNH GIÁ CÔNG TÁC QUA: 1. Chủ nhiệm; 2. Ngày giờ công (kèm chi tiết dạy thay); 3. Hoạt động tổ chuyên môn (ĐỐI CHIẾU TIẾT NCBH VÀ BÀI HỌC STEM ĐÃ PHÂN CÔNG THÁNG TRƯỚC; PCCM, KHGD phụ lục 1,2,3, NLS 20%, AI 12 tiết, VioEdu khối 6,7,8,9, tập huấn CSDL ngành, tiến độ KHBD...); 4. Công tác khác.\n"
+            "   II. KẾ HOẠCH TRỌNG TÂM TRONG THỜI GIAN TỚI: 1. Chủ nhiệm; 2. Ngày giờ công; 3. Hoạt động tổ chuyên môn (PHÂN CÔNG GỐI ĐẦU CHO THÁNG TIẾP THEO: phân công GV dạy minh họa NCBH, phân công phụ trách bài học STEM, phân công ra đề kiểm tra định kỳ); 4. Công tác khác.\n"
             "   III. ĐÁNH GIÁ THI ĐUA TRONG THÁNG: Bảng biểu đóng khung kín 4 cạnh viền ngoài và các đường kẻ trong, đúng 7 cột: | STT | HỌ VÀ TÊN | CHỨC VỤ | TỰ XẾP LOẠI | TỰ NHẬN XÉT | TỔ XẾP LOẠI | GHI CHÚ |. Dòng 1: Thầy Hoàng Tấn Thiên (Tổ trưởng, tự xếp loại A, tổ xếp loại A); các dòng tiếp theo tạo khung cho giáo viên trong tổ (Thầy sẽ cung cấp danh sách sau).\n"
             "   IV. ĐỀ XUẤT, KIẾN NGHỊ TRONG THỜI GIAN TỚI: Ghi 'Không' hoặc nội dung đề xuất.\n"
             "5. Chữ ký cuối trang: Cột trái: Ban giám hiệu | Cột phải: Tổ trưởng / Hoàng Tấn Thiên.\n\n"
-            "🔴 QUY TẮC BẮT BUỘC VỀ MÀU SẮC: Những nội dung nào không chắc chắn (số liệu, người dạy thay, tiết dạy thay, ngày giờ cụ thể, phân công dự kiến, xếp loại thi đua...) BẮT BUỘC ĐƯỢC IN CHỮ MÀU ĐỎ (trong Word áp dụng font color đỏ, trong văn bản ghi [CHỮ ĐỎ: ...]) để Thầy Tổ trưởng biết và rà soát."
+            "🔴 QUY TẮC BẮT BUỘC VỀ MÀU SẮC: Những nội dung nào không chắc chắn (số liệu, người dạy thay, tiết dạy thay, phân công NCBH/STEM dự kiến, xếp loại thi đua...) BẮT BUỘC ĐƯỢC IN CHỮ MÀU ĐỎ (trong Word áp dụng font color đỏ, trong văn bản ghi [CHỮ ĐỎ: ...]) để Thầy Tổ trưởng biết và rà soát."
         )
     else:
         title = "Soạn báo cáo chuyên môn hoặc văn bản hành chính theo Nghị định 30/2020/NĐ-CP."

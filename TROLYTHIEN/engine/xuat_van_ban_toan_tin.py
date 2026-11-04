@@ -559,6 +559,90 @@ def add_thi_dua_table(doc, rows_data=None):
     p_sp.paragraph_format.space_after = Pt(2)
 
 
+def add_phan_cong_goi_dau_table(doc, rows_data=None):
+    """
+    Thêm bảng Phân công nhiệm vụ gối đầu cho tháng tiếp theo (NCBH, STEM, Đề kiểm tra...)
+    Đáp ứng chỉ đạo của Nhà trường: 'Triển khai tháng trước có đánh giá ở tháng sau'.
+    Khung viền kín 4 cạnh và các đường kẻ trong, cantSplit và tblHeader.
+    Tự động in chữ MÀU ĐỎ cho mọi nội dung đánh dấu [CHỮ ĐỎ: ...].
+    """
+    headers = [
+        "STT", "NHIỆM VỤ GỐI ĐẦU THÁNG TỚI", "NỘI DUNG / BÀI HỌC", "KHỐI / LỚP", "GIÁO VIÊN PHỤ TRÁCH", "THỜI GIAN", "GHI CHÚ / PHỐI HỢP"
+    ]
+    col_widths = [Inches(0.45), Inches(1.5), Inches(1.4), Inches(0.7), Inches(1.1), Inches(0.8), Inches(1.1)]
+
+    if not rows_data:
+        rows_data = [
+            (
+                "1",
+                "Dạy tiết Nghiên cứu bài học (NCBH)",
+                "[CHỮ ĐỎ: Bài dạy minh họa NCBH]",
+                "[CHỮ ĐỎ: Khối 8]",
+                "[CHỮ ĐỎ: Thầy Trần Long Hải]",
+                "[CHỮ ĐỎ: Tuần 11]",
+                "[CHỮ ĐỎ: Nhóm Toán 8 cùng xây dựng KHBD bước 1]"
+            ),
+            (
+                "2",
+                "Thực hiện bài học STEM / Trải nghiệm",
+                "[CHỮ ĐỎ: Chủ đề STEM Toán học]",
+                "[CHỮ ĐỎ: Khối 6]",
+                "[CHỮ ĐỎ: Cô Nguyễn Thị Thảo]",
+                "[CHỮ ĐỎ: Tuần 12]",
+                "[CHỮ ĐỎ: Chuẩn bị phiếu học tập và học liệu]"
+            ),
+            (
+                "3",
+                "Xây dựng đề kiểm tra định kỳ",
+                "[CHỮ ĐỎ: Ma trận, đặc tả và đề đề xuất]",
+                "[CHỮ ĐỎ: Khối 6,7,8,9]",
+                "[CHỮ ĐỎ: Các nhóm bộ môn]",
+                "[CHỮ ĐỎ: Tuần 13]",
+                "[CHỮ ĐỎ: Nộp Tổ trưởng thẩm định đúng hạn]"
+            )
+        ]
+
+    table = doc.add_table(rows=len(rows_data) + 1, cols=7)
+    format_table_borders_closed(table)
+
+    # Header Row
+    hdr_cells = table.rows[0].cells
+    for i, h_text in enumerate(headers):
+        hdr_cells[i].width = col_widths[i]
+        p = hdr_cells[i].paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.line_spacing = 1.15
+        p.paragraph_format.space_before = Pt(3)
+        p.paragraph_format.space_after = Pt(3)
+        r = p.add_run(h_text)
+        r.font.name = 'Times New Roman'
+        r.font.size = Pt(11)
+        r.bold = True
+
+    # Data Rows
+    for row_idx, data_tuple in enumerate(rows_data):
+        row_cells = table.rows[row_idx + 1].cells
+        for col_idx, cell_value in enumerate(data_tuple):
+            row_cells[col_idx].width = col_widths[col_idx]
+            p = row_cells[col_idx].paragraphs[0]
+            p.paragraph_format.line_spacing = 1.15
+            p.paragraph_format.space_before = Pt(2)
+            p.paragraph_format.space_after = Pt(2)
+
+            if col_idx in (0, 3, 5):
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            elif col_idx in (1, 4):
+                p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            else:
+                p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
+            add_run_parsed(p, str(cell_value), default_size=11)
+
+    p_sp = doc.add_paragraph()
+    p_sp.paragraph_format.space_before = Pt(4)
+    p_sp.paragraph_format.space_after = Pt(2)
+
+
 def add_bien_ban_signatures(doc, chu_tri="Hoàng Tấn Thiên", thu_ky="Lê Thị Bình"):
     """Phần chữ ký của Biên bản họp tổ: Thư ký (trái) và Chủ trì (phải)."""
     p_sp = doc.add_paragraph()

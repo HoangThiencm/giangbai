@@ -33,7 +33,17 @@
 
 ---
 
-## 2. BỐ CỤC 4 PHẦN CHUẨN FORM MẪU THỰC TẾ
+## 2. NGUYÊN TẮC QUẢN LÝ BẮT BUỘC TỪ NHÀ TRƯỜNG: "KẾ HOẠCH GỐI ĐẦU & ĐỐI CHIẾU ĐÁNH GIÁ LIÊN HOÀN"
+> ⚠️ **CHỈ ĐẠO CỐT LÕI CỦA NHÀ TRƯỜNG:**
+> "Triển khai ở tháng trước sẽ có đánh giá ở tháng sau. Ví dụ muốn dạy tiết Nghiên cứu bài học (NCBH) trong tháng 11 thì trong tháng 10 phải có phân công nhiệm vụ GV dạy. Muốn thực hiện bài học STEM trong tháng 11 thì tháng 10 cũng phải phân công nhiệm vụ chuẩn bị."
+
+Kế hoạch hoạt động tháng của tổ phải gắn kết chặt chẽ:
+1. **Ở mục I (ĐÁNH GIÁ CÔNG TÁC QUA):** Bắt buộc đánh giá kết quả thực hiện các nhiệm vụ chuyên môn đã phân công từ tháng trước: tiết NCBH đã dạy chưa, bài học STEM đã triển khai ra sao, việc chuẩn bị đề kiểm tra định kỳ có đúng tiến độ.
+2. **Ở mục II (KẾ HOẠCH TRỌNG TÂM TRONG THỜI GIAN TỚI):** Bắt buộc phân công nhiệm vụ cụ thể cho giáo viên để chuẩn bị gối đầu cho tháng tiếp theo (dạy minh họa NCBH, triển khai bài học STEM, ra đề kiểm tra, làm đồ dùng dạy học...).
+
+---
+
+## 3. BỐ CỤC 4 PHẦN CHUẨN FORM MẪU THỰC TẾ
 
 ### I. ĐÁNH GIÁ CÔNG TÁC QUA:
 1. **Chủ nhiệm:**
@@ -45,10 +55,14 @@
    - Đảm bảo ngày giờ công, không vô muộn ra sớm.
    - **Công tác dạy thay:** Ghi rõ quyết định cử đi tập huấn/công tác (ví dụ: Quyết định số... của UBND...), từ ngày... đến ngày... Phân công dạy thay chi tiết từng thứ, ngày, tiết, môn, lớp và giáo viên dạy thay.
 3. **Hoạt động tổ chuyên môn:**
+   - **Đánh giá kết quả các nhiệm vụ đã phân công từ tháng trước (YÊU CẦU NHÀ TRƯỜNG):**
+     * *Tiết sinh hoạt chuyên môn theo NCBH:* Thầy/Cô ... đã thực hiện dạy minh họa tại lớp ... đúng kế hoạch; đánh giá việc tiếp thu của học sinh và rút kinh nghiệm cho tổ.
+     * *Bài học STEM / Chuyên đề trải nghiệm:* Thầy/Cô ... đã triển khai chủ đề STEM ... cho học sinh khối ...; học sinh hào hứng tham gia, có sản phẩm cụ thể.
+     * *Công tác kiểm tra định kỳ:* Các giáo viên được phân công đã nộp ma trận, bản đặc tả, đề cương và đề kiểm tra đúng hạn.
    - Phân công nhiệm vụ năm học (PCCM, ra đề, NCBH, thanh kiểm tra, chuyên đề...).
    - Giảng dạy theo PCCM và TKB các tuần trong tháng.
    - Xây dựng KHGD (phụ lục 1, 2, 3) tích hợp Khung năng lực số (20% tổng số tiết) và 12 tiết Khung AI.
-   - Sinh hoạt nhóm bộ môn giải quyết vướng mắc SGK thống nhất, đăng ký chuyên đề NCBH, đề xuất KTNB.
+   - Sinh hoạt nhóm bộ môn giải quyết vướng mắc SGK thống nhất, đề xuất KTNB.
    - Phân công giáo viên phụ trách VioEdu ở các khối 6, 7, 8, 9; tạo tài khoản, lập nhóm hỗ trợ học sinh.
    - Bồi dưỡng chuyên môn, chuyên đề tổ trưởng triển khai (tích hợp AI, NotebookLM, NLS...).
    - Tham gia tập huấn CSDL ngành, EnetViet, NLS, AI, bồi dưỡng thường xuyên, khảo sát tiếng Anh...
@@ -72,6 +86,9 @@
    - Soạn KHBD các tuần tiếp theo và nộp CSDL ngành (lưu ý tích hợp NLS, AI, học sinh hòa nhập).
    - Kiểm tra nội bộ trường học theo kế hoạch.
    - Sinh hoạt nhóm định kỳ giải quyết vướng mắc và nâng cao chất lượng bộ môn.
+   - **PHÂN CÔNG NHIỆM VỤ GỐI ĐẦU CHO THÁNG TIẾP THEO (YÊU CẦU NHÀ TRƯỜNG):**
+     * *Chuẩn bị tiết dạy Nghiên cứu bài học (NCBH) tháng tới:* Phân công giáo viên dạy minh họa (Thầy/Cô ...), phân công nhóm hỗ trợ xây dựng KHBD bước 1 (Thầy/Cô ...), xác định bài dạy và lớp dạy (Lớp ..., Tuần ...).
+     * *Chuẩn bị bài học STEM / Hoạt động trải nghiệm tháng tới:* Phân công giáo viên phụ trách chính (Thầy/Cô ...), chủ đề STEM ..., khối lớp ..., giáo viên phối hợp chuẩn bị thiết bị/học liệu.
 4. **Công tác khác:** Các nhiệm vụ phát sinh theo chỉ đạo Ban Giám hiệu.
 
 ### III. ĐÁNH GIÁ THI ĐUA TRONG THÁNG ...:
@@ -103,6 +120,6 @@ Gồm đúng 7 cột chuẩn form:
 
 ---
 
-## 3. QUY TẮC ĐẶC BIỆT: IN CHỮ ĐỎ CHO NỘI DUNG CHƯA CHẮC CHẮN
-- 🔴 **BẮT BUỘC:** Tất cả các nội dung dự kiến, số liệu chưa chốt, danh sách giáo viên tạm thời, chi tiết tiết dạy thay, xếp loại thi đua chưa có kết quả... **PHẢI ĐƯỢC IN CHỮ MÀU ĐỎ** (`<w:color w:val="FF0000"/>` hoặc `RGBColor(255, 0, 0)`) trong file Word `.docx` để Thầy Tổ trưởng nhận diện ngay lập tức khi mở tài liệu.
+## 4. QUY TẮC ĐẶC BIỆT: IN CHỮ ĐỎ CHO NỘI DUNG CHƯA CHẮC CHẮN
+- 🔴 **BẮT BUỘC:** Tất cả các nội dung dự kiến, số liệu chưa chốt, phân công nhân sự dạy NCBH/STEM chưa chính thức, danh sách giáo viên tạm thời, chi tiết tiết dạy thay, xếp loại thi đua chưa có kết quả... **PHẢI ĐƯỢC IN CHỮ MÀU ĐỎ** (`<w:color w:val="FF0000"/>` hoặc `RGBColor(255, 0, 0)`) trong file Word `.docx` để Thầy Tổ trưởng nhận diện ngay lập tức khi mở tài liệu.
 - Trong bản nháp hiển thị dạng: `[CHỮ ĐỎ: nội dung]` hoặc `<span style="color:red">nội dung</span>`.

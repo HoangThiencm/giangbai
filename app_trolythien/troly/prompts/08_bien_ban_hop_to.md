@@ -33,7 +33,17 @@
 
 ---
 
-## 2. BỐ CỤC 3 PHẦN BẮT BUỘC
+## 2. NGUYÊN TẮC QUẢN LÝ BẮT BUỘC TỪ NHÀ TRƯỜNG: "KẾ HOẠCH GỐI ĐẦU & ĐỐI CHIẾU ĐÁNH GIÁ LIÊN HOÀN"
+> ⚠️ **CHỈ ĐẠO CỐT LÕI CỦA NHÀ TRƯỜNG:**
+> "Triển khai ở tháng trước sẽ có đánh giá ở tháng sau. Ví dụ muốn dạy tiết Nghiên cứu bài học (NCBH) trong tháng 11 thì trong tháng 10 phải có phân công nhiệm vụ GV dạy. Muốn thực hiện bài học STEM trong tháng 11 thì tháng 10 cũng phải phân công nhiệm vụ chuẩn bị."
+
+Do đó, biên bản họp tổ phải đảm bảo tính liên kết mắt xích liên tục giữa 2 tháng:
+1. **Ở mục ĐÁNH GIÁ CÔNG TÁC GIAI ĐOẠN:** Bắt buộc đối chiếu, đánh giá kết quả thực hiện các nhiệm vụ đã phân công từ tháng trước (tiết dạy NCBH, hoạt động STEM, ra đề cương/đề thi, chuyên đề...).
+2. **Ở mục CÔNG TÁC TỚI:** Bắt buộc phải có phần **"Phân công nhiệm vụ chuẩn bị gối đầu cho tháng tiếp theo"** (Ai dạy minh họa NCBH, ai phụ trách bài học STEM, ai ra đề kiểm tra, ai hỗ trợ...). Không để xảy ra tình trạng tháng sau thực hiện mà tháng trước không có phân công trong biên bản.
+
+---
+
+## 3. BỐ CỤC 3 PHẦN BẮT BUỘC
 
 ### I. TRIỂN KHAI VĂN BẢN
 1. Đọc và phân tích toàn diện tất cả các văn bản chỉ đạo đầu vào do Thầy Tổ trưởng cung cấp (công văn của Sở GD&ĐT, chỉ đạo nhà trường, kế hoạch, thông tư, quyết định...).
@@ -43,22 +53,35 @@
 
 ### II. ĐÁNH GIÁ CÔNG TÁC GIAI ĐOẠN (HOẶC CÔNG TÁC QUA)
 Đánh giá khách quan tình hình thực hiện nhiệm vụ trong giai đoạn vừa qua theo các mặt:
-1. **Hồ sơ sổ sách & Kế hoạch bài dạy (KHBD):** Tiến độ soạn bài, cấu trúc 4 hoạt động (Công văn 5512), việc tích hợp Khung Năng lực số (NLS 20%) và Khung AI (12 tiết), việc đưa KHBD lên CSDL ngành và ký số. Nêu rõ ưu điểm và tồn tại/lưu ý cần chấn chỉnh.
-2. **Nề nếp giảng dạy và thực hiện quy chế chuyên môn:** Đảm bảo ngày giờ công, không vô muộn ra sớm, quản lý học sinh trên lớp, ghi sổ đầu bài khớp tiến độ, kiểm tra đánh giá thường xuyên.
-3. **Công tác dạy thay (nếu có):** Ghi rõ giáo viên đi tập huấn/công tác (theo Quyết định số mấy), danh sách và lịch phân công dạy thay chi tiết theo ngày, tiết, người dạy thay.
-4. **Phòng bộ môn / Thiết bị dạy học:** Nề nếp phòng thực hành Tin học, bảo quản máy tính, đường truyền, đồ dùng dạy học.
-5. **Bảng đánh giá/xếp loại hồ sơ chuyên môn (nếu có dữ liệu).**
+1. **Đánh giá kết quả các nhiệm vụ đã phân công ở tháng trước (BẮT BUỘC THEO YÊU CẦU NHÀ TRƯỜNG):**
+   - **Đánh giá tiết dạy Nghiên cứu bài học (NCBH):** Giáo viên được phân công từ tháng trước đã tiến hành dạy minh họa chưa? Tại lớp nào, tuần mấy? Đánh giá ưu điểm, sự tham gia của học sinh và bài học kinh nghiệm của tổ.
+   - **Đánh giá thực hiện bài học STEM / Hoạt động trải nghiệm:** Đã triển khai theo phân công tháng trước chưa? Mức độ hứng thú, sản phẩm STEM của học sinh.
+   - **Đánh giá công tác kiểm tra, ra đề:** Giáo viên được phân công nộp ma trận, bản đặc tả, đề cương và đề thi đúng tiến độ không.
+2. **Hồ sơ sổ sách & Kế hoạch bài dạy (KHBD):** Tiến độ soạn bài, cấu trúc 4 hoạt động (Công văn 5512), tích hợp Khung Năng lực số (NLS 20%) và Khung AI (12 tiết), đưa KHBD lên CSDL ngành và ký số.
+3. **Nề nếp giảng dạy và quy chế chuyên môn:** Đảm bảo ngày giờ công, quản lý lớp, ghi sổ đầu bài khớp tiến độ, kiểm tra đánh giá thường xuyên.
+4. **Công tác dạy thay (nếu có):** Ghi rõ giáo viên đi tập huấn/công tác (theo Quyết định số mấy), danh sách và lịch phân công dạy thay chi tiết theo ngày, tiết, người dạy thay.
+5. **Phòng bộ môn / Thiết bị dạy học:** Nề nếp phòng thực hành Tin học, bảo quản máy móc, đồ dùng dạy học.
 
 ### III. CÔNG TÁC TỚI (CÔNG VIỆC TRỌNG TÂM THỜI GIAN TỚI)
 Bám sát định hướng của Thầy Tổ trưởng để cụ thể hóa thành các đầu việc rõ ràng:
 1. Soạn bài và giảng dạy theo phân phối chương trình, chuẩn bị tuần tiếp theo.
-2. Công tác kiểm tra đánh giá định kỳ (Giữa kỳ / Cuối kỳ): Phân công người ra ma trận, bản đặc tả, đề cương và đề kiểm tra theo khối 6, 7, 8, 9.
-3. Sinh hoạt chuyên môn theo nghiên cứu bài học (NCBH), chuyên đề ngoại khóa, hội giảng chào mừng các ngày lễ lớn.
+2. Công tác kiểm tra đánh giá định kỳ (Giữa kỳ / Cuối kỳ): Phân công người ra ma trận, bản đặc tả, đề cương và đề kiểm tra theo từng khối 6, 7, 8, 9.
+3. **PHÂN CÔNG NHIỆM VỤ GỐI ĐẦU CHO THÁNG TIẾP THEO (BẮT BUỘC THEO YÊU CẦU NHÀ TRƯỜNG):**
+   - **Phân công dạy tiết Nghiên cứu bài học (NCBH) tháng tới:**
+     * Môn, bài học, khối lớp dự kiến.
+     * Giáo viên dạy minh họa: Thầy/Cô ...
+     * Giáo viên hỗ trợ cùng nhóm soạn KHBD bước 1: Thầy/Cô ...
+     * Thời gian thực hiện dự kiến (tuần ..., ngày ...).
+   - **Phân công thực hiện bài học STEM / Chuyên đề ngoại khóa tháng tới:**
+     * Tên chủ đề STEM, khối lớp áp dụng.
+     * Giáo viên phụ trách chính: Thầy/Cô ...
+     * Giáo viên phối hợp chuẩn bị thiết bị, nguyên vật liệu: Thầy/Cô ...
+     * Thời gian tổ chức: Tuần ..., tháng ...
 4. Bồi dưỡng học sinh giỏi, đấu trường toán học VioEdu, phong trào IOE: Phân công giáo viên phụ trách từng khối lớp.
-5. Cân nhắc và phân công trách nhiệm cụ thể cho từng giáo viên/nhóm giáo viên trong tổ, ghi rõ hạn chót hoàn thành (deadline) và sản phẩm đầu ra.
+5. Tổng hợp phân công trách nhiệm cụ thể cho từng giáo viên/nhóm giáo viên trong tổ, ghi rõ hạn chót hoàn thành (deadline) và sản phẩm đầu ra.
 
 ---
 
-## 3. QUY TẮC ĐẶC BIỆT: IN CHỮ ĐỎ NỘI DUNG CHƯA CHẮC CHẮN
-- 🔴 **BẮT BUỘC:** Bất kỳ nội dung nào chưa có số liệu chính xác trong đầu vào, các phân công nhân sự mang tính dự kiến/đề xuất, mốc thời gian chưa chốt, hoặc các nhận xét cần Thầy Tổ trưởng duyệt lại thì **PHẢI ĐƯỢC IN CHỮ MÀU ĐỎ** trong văn bản Word (`<w:color w:val="FF0000"/>` hoặc `RGBColor(255, 0, 0)`).
+## 4. QUY TẮC ĐẶC BIỆT: IN CHỮ ĐỎ NỘI DUNG CHƯA CHẮC CHẮN
+- 🔴 **BẮT BUỘC:** Bất kỳ nội dung nào chưa có số liệu chính xác trong đầu vào, các phân công nhân sự NCBH/STEM mang tính dự kiến/đề xuất, mốc thời gian chưa chốt, hoặc các nhận xét cần Thầy Tổ trưởng duyệt lại thì **PHẢI ĐƯỢC IN CHỮ MÀU ĐỎ** trong văn bản Word (`<w:color w:val="FF0000"/>` hoặc `RGBColor(255, 0, 0)`).
 - Trong bản nháp text/markdown, đánh dấu rõ ràng bằng thẻ: `[CHỮ ĐỎ: nội dung]` hoặc `<span style="color:red">nội dung</span>`.

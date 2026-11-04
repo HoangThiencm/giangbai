@@ -1754,6 +1754,60 @@
             }
             #substitute-announcement-modal .dt-ann-btn-download { grid-column: auto; }
         }
+
+        .bg-print-only { display: none; }
+        @media print {
+            @page { size: A4; margin: 12mm; }
+            html, body {
+                height: auto !important;
+                overflow: visible !important;
+                background: #fff !important;
+            }
+            #top-navbar,
+            #left-panel,
+            #tt-left-panel,
+            .tt-toolbar,
+            .live-stats-banner,
+            .workspace-bar,
+            .top-brand-bar,
+            .no-print,
+            .bg-missing-tkb,
+            #plan-onboarding {
+                display: none !important;
+            }
+            .app-view { display: none !important; overflow: visible !important; height: auto !important; }
+            #view-baogiang {
+                display: block !important;
+                padding: 0 !important;
+                overflow: visible !important;
+                background: #fff !important;
+                height: auto !important;
+            }
+            #view-baogiang .panel-card {
+                max-width: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                box-shadow: none !important;
+                background: #fff !important;
+            }
+            .bg-print-only { display: block !important; color: #000 !important; }
+            .bg-print-sign {
+                display: flex !important;
+                justify-content: space-between;
+                gap: 24px;
+                margin-top: 28px;
+                page-break-inside: avoid;
+            }
+            .bg-print-sign div { width: 42%; text-align: center; }
+            #bg-schedule, #bg-schedule article, #bg-schedule table { break-inside: auto; }
+            .data-table { width: 100%; font-size: 11pt; color: #000; background: #fff; }
+            .data-table th, .data-table td {
+                border: 1px solid #334155 !important;
+                background: #fff !important;
+                color: #000 !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1946,6 +2000,11 @@
                 <summary class="tt-import-summary"><span><i class="fas fa-image"></i> Nhập ảnh Thời khóa biểu</span><span class="tt-import-badge">Dán, kéo thả hoặc chọn ảnh</span></summary>
                 <div class="tt-import-body">
                     <div class="form-grid" style="grid-template-columns: 1fr 1fr; margin:0;">
+                        <div class="form-group" style="grid-column: 1 / -1;">
+                            <label for="tt-apply-week">Tuần áp dụng TKB</label>
+                            <select class="form-control" id="tt-apply-week" onchange="onTimetableApplyWeekChange(this.value)"></select>
+                            <p id="tt-apply-week-hint" style="margin:6px 0 0; color:#64748b; font-size:0.78rem;">Tuần chưa lưu riêng sẽ kế thừa tuần gần nhất trước đó, rồi TKB của đợt, rồi TKB mặc định.</p>
+                        </div>
                         <div class="form-group">
                             <label>Năm học:</label>
                             <input type="text" class="form-control" id="tt-school-year" placeholder="VD: 2026 - 2027" onchange="persistAndSaveTimetableLocal()">
@@ -2002,6 +2061,7 @@
                     <i class="fas fa-robot text-indigo-600"></i> Model: <span id="tt-toolbar-model-label">2.5 Flash</span>
                 </button>
                 <button type="button" class="btn-small" onclick="goToNextTimetableTeacher(true)">GV tiếp theo ➔</button>
+                <button type="button" class="btn-small" onclick="saveTimetableForSelectedWeek()"><i class="fas fa-calendar-check"></i> Lưu TKB tuần này</button>
                 <button type="button" class="btn-small" onclick="clearCurrentTeacherTimetable()"><i class="fas fa-trash"></i> Xóa TKB GV này</button>
             </div>
         </main>
@@ -2039,7 +2099,7 @@
     <!-- 4. LỊCH BÁO GIẢNG -->
     <div class="app-view" id="view-baogiang" style="padding:20px; overflow:auto; background:#f8fafc;">
         <div class="panel-card" style="max-width:1200px; margin:0 auto; padding:20px;">
-            <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:start;">
+            <div class="no-print" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:start;">
                 <div>
                     <h2 style="margin:0;color:#1e3a8a;"><i class="fas fa-calendar-week"></i> Lịch báo giảng</h2>
                     <p style="margin:6px 0;color:#64748b;">Tự ghép TKB giáo viên với PPCT. Ngày nghỉ không tiêu thụ tiết PPCT; lịch tự dồn sang lần dạy thực tế tiếp theo.</p>
@@ -2052,10 +2112,12 @@
                     <button class="btn-small btn-small-primary" onclick="saveToDB()"><i class="fas fa-save"></i> Lưu kế hoạch</button>
                 </div>
             </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0;">
+            <div class="no-print" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:16px 0;">
                 <label class="form-group"><span>Ngày bắt đầu áp dụng (Tuần 1)</span> <span id="bg-start-date-lock-status" aria-live="polite"></span><input class="form-control" id="bg-start-date" type="date" onchange="updateBaoGiangSettings('start-date')"><button type="button" id="bg-unlock-start-date-btn" class="btn-small" style="margin-top:7px;" onclick="unlockBaoGiangStartDate()"><i class="fas fa-lock-open"></i> Mở khóa sửa</button></label>
                 <label class="form-group"><span>Giáo viên</span><select class="form-control" id="bg-filter-teacher" onchange="renderBaoGiangView()"><option value="">Tất cả giáo viên</option></select></label>
                 <label class="form-group"><span>Tháng xem lịch</span><input class="form-control" id="bg-filter-month" type="month" onchange="baoGiangMonthChanged(this.value)"></label>
+                <label class="form-group"><span>Từ ngày</span><input class="form-control" id="bg-date-from" type="date" onchange="baoGiangDateRangeChanged()"></label>
+                <label class="form-group"><span>Đến ngày</span><input class="form-control" id="bg-date-to" type="date" onchange="baoGiangDateRangeChanged()"></label>
                 <label class="form-group"><span>Chế độ xem</span><select class="form-control" id="bg-view-mode" onchange="renderBaoGiangView()"><option value="day">Sổ theo Thứ - Ngày</option><option value="week">Lưới theo tuần</option><option value="table">Bảng tổng hợp</option></select></label>
                 <input id="bg-view-date" type="hidden"><input id="bg-days" type="hidden" value="31">
             </div>
@@ -3052,6 +3114,7 @@
                 substitutes: {}
             },
             bao_giang: { start_date: '', start_date_locked: false, curriculum_text: '', ppct_default_grade: '', ppct_default_subject: '', exceptions: [], recipient_ids: [] },
+            weekly_timetables: {},
             evaluations: {
                 current_month: '',
                 records: {}
@@ -3145,6 +3208,18 @@
             if (!Array.isArray(s.bao_giang.exceptions)) s.bao_giang.exceptions = [];
             if (!Array.isArray(s.bao_giang.recipient_ids)) s.bao_giang.recipient_ids = [];
             s.bao_giang.recipient_ids = [...new Set(s.bao_giang.recipient_ids.map(String))];
+            if (!s.weekly_timetables || typeof s.weekly_timetables !== 'object' || Array.isArray(s.weekly_timetables)) s.weekly_timetables = {};
+            Object.keys(s.weekly_timetables).forEach(weekKey => {
+                const bucket = s.weekly_timetables[weekKey];
+                if (!bucket || typeof bucket !== 'object' || Array.isArray(bucket)) {
+                    delete s.weekly_timetables[weekKey];
+                    return;
+                }
+                Object.keys(bucket).forEach(teacherId => {
+                    bucket[String(teacherId)] = normalizeTeacherTimetable(bucket[teacherId]);
+                    if (String(teacherId) !== teacherId) delete bucket[teacherId];
+                });
+            });
             Object.keys(s.attendance.substitutes).forEach(k => {
                 if (!Array.isArray(s.attendance.substitutes[k])) s.attendance.substitutes[k] = [];
                 s.attendance.substitutes[k].forEach((item, i) => {
@@ -3217,6 +3292,60 @@
         }
 
         // ================= LỊCH BÁO GIẢNG: TKB + PPCT + NGOẠI LỆ =================
+        function baoGiangSchoolWeekRange(weekNumber) {
+            const start = baoGiangDate(state.bao_giang && state.bao_giang.start_date);
+            const week = Number(weekNumber);
+            if (!start || !week || week < 1) return null;
+            const firstMonday = new Date(start);
+            firstMonday.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+            const monday = new Date(firstMonday);
+            monday.setDate(firstMonday.getDate() + (week - 1) * 7);
+            const sunday = new Date(monday);
+            sunday.setDate(monday.getDate() + 6);
+            return { start: baoGiangIso(monday), end: baoGiangIso(sunday), key: `W${week}` };
+        }
+        function timetableWeekKeyForDate(dateValue) {
+            const week = baoGiangTeachingWeek(dateValue, state.bao_giang && state.bao_giang.start_date);
+            if (!week || week < 1) return '';
+            return `W${week}`;
+        }
+        function weeklyTimetableSaved(weekKey, teacherId) {
+            const bucket = state.weekly_timetables && state.weekly_timetables[weekKey];
+            if (!bucket || typeof bucket !== 'object') return false;
+            return Object.prototype.hasOwnProperty.call(bucket, String(teacherId));
+        }
+        function phaseTimetableForDate(teacher, iso) {
+            const phases = Array.isArray(state.phases) ? state.phases : [];
+            for (let index = 0; index < phases.length; index++) {
+                const phase = phases[index];
+                const from = phase && phase.date_start;
+                const to = phase && phase.date_end;
+                if (!from || !to || iso < from || iso > to) continue;
+                const teachers = (((state.phase_assignments || {})[phase.id] || {}).teachers) || [];
+                const found = teachers.find(item => String(item.id) === String(teacher.id));
+                const timetable = found ? normalizeTeacherTimetable(found.timetable) : null;
+                if (timetable && timetableHasLessons(timetable)) return timetable;
+            }
+            return null;
+        }
+        function getTeacherTimetableForDate(teacher, dateValue) {
+            const date = dateValue instanceof Date ? dateValue : baoGiangDate(dateValue);
+            const iso = date ? baoGiangIso(date) : String(dateValue || '');
+            const weekKey = timetableWeekKeyForDate(iso);
+            if (teacher && weekKey && weeklyTimetableSaved(weekKey, teacher.id)) {
+                return normalizeTeacherTimetable(state.weekly_timetables[weekKey][String(teacher.id)]);
+            }
+            if (teacher && weekKey) {
+                const current = Number(weekKey.slice(1));
+                for (let week = current - 1; week >= 1; week--) {
+                    const key = `W${week}`;
+                    if (weeklyTimetableSaved(key, teacher.id)) return normalizeTeacherTimetable(state.weekly_timetables[key][String(teacher.id)]);
+                }
+            }
+            const phaseTimetable = teacher ? phaseTimetableForDate(teacher, iso) : null;
+            if (phaseTimetable) return phaseTimetable;
+            return normalizeTeacherTimetable(teacher && teacher.timetable);
+        }
         function baoGiangDate(value) { const d = new Date(`${value}T00:00:00`); return Number.isNaN(d.getTime()) ? null : d; }
         function baoGiangIso(date) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; }
         function baoGiangWeekdayLabel(dateValue) {
