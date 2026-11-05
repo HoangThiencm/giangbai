@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 # HƯỚNG DẪN DUYỆT ĐỀ KIỂM TRA, MA TRẬN & BẢN ĐẶC TẢ
 **Phiên bản: VERSION 2.1.0 (CHUẨN HÓA SƯ PHẠM & BẰNG CHỨNG TRUY VẾT)**  
 *Áp dụng: Thông tư 22/2021/BGDĐT, Công văn 3280/BGDĐT-GDTrH, Nghị định 30/2020/NĐ-CP & Quy chế Chuyên môn Trường THCS Trần Phú*
@@ -201,3 +202,85 @@ Khi có lệnh yêu cầu tạo đề / tạo bộ đề song sinh, Trợ lý Th
   + Biên bản thẩm định Word: `TROLYTHIEN/4_DUYET_DE/Ket_qua/[DD.MM]/Bien_Ban_Tham_Dinh_[Mon]_[Lop]_[KyThi].docx`
   + Biên bản thẩm định Markdown: `TROLYTHIEN/4_DUYET_DE/Ket_qua/[DD.MM]/Bien_Ban_Tham_Dinh_[Mon]_[Lop]_[KyThi].md`
   + Đề thi tạo mới (nếu có yêu cầu): `TROLYTHIEN/4_DUYET_DE/Ket_qua/[DD.MM]/De_Kiem_Tra_[Mon]_[Lop]_[KyThi]_Chuan_Hoa.docx`
+=======
+# HƯỚNG DẪN DUYỆT ĐỀ KIỂM TRA (THẨM ĐỊNH MA TRẬN & ĐỀ THI)
+**Phiên bản: VERSION 2.0.0 (BẢN VÁ KỶ LUẬT DUYỆT ĐỀ & QUY CHẾ VỆ SINH ZERO-RESIDUE)**  
+*Áp dụng: Công văn 7991/BGDĐT-GDTrH, Công văn 5512/BGDĐT-GDTrH, Nghị định 30/2020/NĐ-CP và Quy chế chuyên môn Trường THCS Trần Phú*
+
+---
+
+## 1. NGUYÊN TẮC THÉP TRẢ HỒ SƠ ĐỀ KIỂM TRA (ZERO TOLERANCE CRITERIA)
+
+Tổ trưởng chuyên môn và Trợ lý Sư phạm áp dụng **3 NGUYÊN TẮC THÉP BẮT BUỘC TRẢ ĐỀ 100%**:
+
+```mermaid
+flowchart TD
+    A[HỒ SƠ ĐỀ ĐẦU VÀO: ĐỀ + MA TRẬN + BẢN ĐẶC TẢ] --> B{Kiểm tra 3 Tiêu chí Thép}
+    B -->|1. Sai ma trận: Lệch mức độ, sai tỷ lệ điểm, thiếu câu| R1[TRẢ HỒ SƠ 100%]
+    B -->|2. Sai kỹ thuật: Lỗi font, mất mũ góc, sai Word Equation| R2[TRẢ HỒ SƠ 100%]
+    B -->|3. Sai chuyên môn: Nhầm đáp án, đề mơ hồ, bẫy sai kiến thức| R3[TRẢ HỒ SƠ 100%]
+    B -->|Đạt chuẩn 100% không tì vết| P[PHÊ DUYỆT CHÍNH THỨC & KÝ DUYỆT]
+```
+
+### 🔴 TIÊU CHÍ 1: SAI MA TRẬN & ĐẶC TẢ (CÔNG VĂN 7991) $\rightarrow$ TRẢ HỒ SƠ 100%
+1. **Khớp nối Ma trận - Đặc tả - Đề bài**:
+   - Số câu hỏi, dạng thức câu hỏi (TN 4 lựa chọn, TN đúng/sai, TN trả lời ngắn, Tự luận) phải khớp 1-1 với Ma trận và Bản đặc tả.
+   - Tỷ lệ điểm giữa các mức độ (Nhận biết - Thông hiểu - Vận dụng - Vận dụng cao) phải chuẩn xác 100% theo kế hoạch giáo dục đã phê duyệt.
+2. **Thang điểm và đáp án**:
+   - Thang điểm chi tiết đến 0.25đ đối với câu tự luận; đáp án và biểu điểm phải tường minh, không gộp bước gây tranh cãi khi chấm.
+   - Thiếu đáp án hoặc biểu điểm sơ sài $\rightarrow$ **TRẢ HỒ SƠ NGAY LẬP TỨC**.
+
+---
+
+### 🔴 TIÊU CHÍ 2: SAI KÝ HIỆU TOÁN HỌC & CÔNG THỨC $\rightarrow$ TRẢ HỒ SƠ 100%
+1. **Ký hiệu góc**: Phải có dấu mũ góc chuẩn $\widehat{A}, \widehat{xOy}, \widehat{MNP}$. Tuyệt đối không để chữ in hoa trần hoặc bị lỗi font rác ($A^\bot, \dot{x}Oz$).
+2. **Chuẩn hóa công thức**: 100% công thức toán học phải soạn thảo bằng **Microsoft Word Equation (OMML)**. Nghiêm cấm chèn công thức dưới dạng ảnh chụp mờ nhạt hoặc font MathType bị lỗi ô vuông, biến dạng phân số.
+3. **Hình vẽ hình học**: Hình vẽ minh họa phải rõ ràng, kích thước chuẩn, ký hiệu góc vuông và độ dài chính xác, lưu tập trung tại thư mục `Ket_qua/hinh_ve/`.
+
+---
+
+### 🔴 TIÊU CHÍ 3: SAI NỘI DUNG CHUYÊN MÔN $\rightarrow$ TRẢ HỒ SƠ 100%
+1. Đề thi có câu hỏi mơ hồ, phương án nhiễu không hợp lệ hoặc có từ 2 đáp án đúng trở lên trong câu trắc nghiệm đơn.
+2. Sai kiến thức khoa học, sai quy tắc biến đổi toán học hoặc đưa nội dung đã giảm tải vào đề thi.
+
+---
+
+## 2. QUY CHUẨN THỂ THỨC VĂN BẢN ĐẦU RA (NGHỊ ĐỊNH 30/2020/NĐ-CP)
+
+1. **Phông chữ**: `Times New Roman`, bảng mã Unicode.
+2. **Cỡ chữ nội dung**: Đồng nhất **13pt** (khoảng cách đoạn `space before 0pt`, `space after 3pt`, dãn dòng `1.15` - `1.2`).
+3. **Bảng biểu**: Đóng khung kín 4 cạnh, căn giữa trang giấy, lề văn bản chuẩn (trên 20mm, dưới 20mm, trái 30mm, phải 15-20mm).
+4. **Ký duyệt điện tử**:
+   - Thư mục chuẩn chữ ký giáo viên: `TROLYTHIEN/4_DUYET_DE/Ket_qua/chu_ky/`
+   - Chữ ký đã được chuẩn hóa: **Phông nền trong suốt 100% (RGBA)**, nét ký **đậm đà, sắc nét**, màu xanh mực bút ký chính thức (`RGB: 0, 36, 150`), độ phân giải cao `1600px` (300 DPI).
+   - Đảm bảo khi co nhỏ chèn vào ô ký duyệt trong bảng biểu Word, chữ ký hiển thị đậm rõ, không bị mờ nhạt hay đứt nét.
+
+---
+
+## 3. QUY CHẾ VỆ SINH THƯ MỤC & XỬ LÝ FILE RÁC (ZERO-RESIDUE DIRECTIVE)
+
+> [!IMPORTANT]
+> **KỶ LUẬT VỆ SINH THƯ MỤC BẮT BUỘC: DUYỆT XONG PHẢI DỌN SẠCH!**  
+> Tuyệt đối không để lại file rác, ảnh chụp trang tạm, file nháp thử nghiệm làm bẩn thư mục thành phẩm `Ket_qua` và thư mục đầu vào `Dau_vao`.
+
+### 1. Phân định vùng lưu trữ:
+- **`Dau_vao/`**: Chỉ lưu trữ file đề gốc giáo viên nộp (`.pdf`, `.docx`) và thư mục ảnh chữ ký gốc (`CHU KY GV/`). Nghiêm cấm lưu lại các thư mục bung trang tạm (`de_cuong_*_pages/`).
+- **`Ket_qua/`**: Chỉ chứa sản phẩm hoàn chỉnh đã phê duyệt:
+  + Biên bản thẩm định/phản biện (`Phan_Bien_*.docx`, `Phan_Bien_*.md`).
+  + Đề cương / Đề thi chuẩn hóa chính thức (`De_Cuong_*_Chuan_Hoa_Chinh_Thuc.docx`, `.pdf`).
+  + Thư mục hình vẽ hình học chuẩn (`hinh_ve/`).
+  + Thư mục chữ ký giáo viên chuẩn (`chu_ky/`).
+  + Thư mục lưu trữ phiên bản lịch sử theo ngày (`DD.MM/`).
+- **Thư mục đệm tạm thời**: Mọi quá trình bóc tách trang PDF, chụp ảnh màn hình so sánh, test góc độ hình học PHẢI thực hiện tại thư mục đệm (`scratch/` hoặc thư mục tạm hệ thống) và tự động dọn sạch sau khi nghiệm thu.
+
+### 2. Quy trình xử lý rác tự động (Post-Audit Auto Cleanup):
+Sau khi hoàn thành đợt duyệt đề và xuất xong tài liệu nghiệm thu, bắt buộc thực thi công cụ dọn rác tự động:
+```bash
+python TROLYTHIEN/engine/clean_temp_files.py
+```
+Công cụ sẽ tự động:
+1. Xóa toàn bộ ảnh trang trung gian: `page_*.png`, `fixed_page_*.png`, `v*_page_*.png`.
+2. Xóa toàn bộ tài liệu thử nghiệm nháp: `test_*.docx`, `test_*.pdf`, `test_*.py`, `convert_test.ps1`.
+3. Xóa các thư mục bóc tách PDF tạm trong `Dau_vao`: `de_cuong_*_pages/`.
+4. Quy hoạch các script công cụ dev về đúng vị trí `TROLYTHIEN/engine/`.
+>>>>>>> Stashed changes

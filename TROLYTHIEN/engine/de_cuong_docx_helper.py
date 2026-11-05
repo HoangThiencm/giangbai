@@ -49,6 +49,9 @@ def latex_to_omml(latex_code):
         if "BCNN" in code and r"\text{BCNN}" not in code:
             code = code.replace("BCNN", r"\text{BCNN}")
         
+        # Chuẩn hóa ký hiệu góc: \widehat{...} chuyển thành \hat{...}
+        code = code.replace(r"\widehat", r"\hat")
+        
         # 1. Tránh lỗi cặp ngoặc nhọn rỗng \{ \} trong equation bị sinh thẻ m:e rỗng:
         code = re.sub(r'\\\{\s*\\\}', r'\{ \\text{ } \}', code)
         
@@ -60,6 +63,29 @@ def latex_to_omml(latex_code):
         omml = _transform(tree)
         
         ns = {'m': 'http://schemas.openxmlformats.org/officeDocument/2006/math'}
+
+        # SỬA LỖI KÝ HIỆU GÓC (\widehat và \hat):
+        # MML2OMML chuyển \widehat thành m:limUpp với text '^', làm dấu mũ bay lơ lửng trên trời.
+        # Chuyển m:limUpp thành m:acc với chr val="̂" (\u0302) để thành mũ góc chuẩn Office Math ôm trọn đỉnh/chữ.
+        for limUpp in omml.xpath('//m:limUpp', namespaces=ns):
+            lim_t = limUpp.xpath('./m:lim//m:t', namespaces=ns)
+            if lim_t and lim_t[0].text in ['^', '\u02c6', '\u0302']:
+                e_elms = limUpp.xpath('./m:e', namespaces=ns)
+                if e_elms:
+                    acc = ET.Element('{http://schemas.openxmlformats.org/officeDocument/2006/math}acc')
+                    accPr = ET.SubElement(acc, '{http://schemas.openxmlformats.org/officeDocument/2006/math}accPr')
+                    chr_elm = ET.SubElement(accPr, '{http://schemas.openxmlformats.org/officeDocument/2006/math}chr')
+                    chr_elm.set('{http://schemas.openxmlformats.org/officeDocument/2006/math}val', '\u0302')
+                    acc.append(e_elms[0])
+                    limUpp.getparent().replace(limUpp, acc)
+
+        # Đảm bảo m:acc luôn dùng chr val="̂" (\u0302) thay vì dấu caret '^' hoặc '\u02c6'
+        for acc in omml.xpath('//m:acc', namespaces=ns):
+            chr_elm = acc.xpath('./m:accPr/m:chr', namespaces=ns)
+            if chr_elm:
+                val = chr_elm[0].get('{http://schemas.openxmlformats.org/officeDocument/2006/math}val')
+                if val in ['^', '\u02c6']:
+                    chr_elm[0].set('{http://schemas.openxmlformats.org/officeDocument/2006/math}val', '\u0302')
 
         # KHẮC PHỤC TRIỆT ĐỂ LỖI DẤU TRỪ SAU DẤU MỞ NGOẶC (MML2OMML separator bug):
         # Tránh ô vuông rỗng (<m:e/>) trong các biểu thức: (-2; 1), (-1/2)^2, (-x)...

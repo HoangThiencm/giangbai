@@ -12,6 +12,7 @@ Thầy hãy sao chép các tệp tài liệu liên quan vào thư mục này:
 
 ---
 
+<<<<<<< Updated upstream
 ## 2. NGUYÊN TẮC QUẢN LÝ BẮT BUỘC TỪ NHÀ TRƯỜNG: "KẾ HOẠCH GỐI ĐẦU & ĐỐI CHIẾU ĐÁNH GIÁ LIÊN HOÀN"
 > ⚠️ **CHỈ ĐẠO CỐT LÕI CỦA NHÀ TRƯỜNG:**
 > "Triển khai ở tháng trước sẽ có đánh giá ở tháng sau. Ví dụ muốn dạy tiết Nghiên cứu bài học (NCBH) trong tháng 11 thì trong tháng 10 phải có phân công nhiệm vụ GV dạy. Muốn thực hiện bài học STEM trong tháng 11 thì tháng 10 cũng phải phân công nhiệm vụ chuẩn bị."
@@ -49,6 +50,38 @@ Mọi văn bản họp tổ hoặc kế hoạch tháng đều phải tuân thủ
 ## 4. Quy tắc bắt buộc: In đỏ nội dung chưa chắc chắn
 - 🔴 **BẮT BUỘC:** Mọi thông tin, số liệu, phân công nhân sự dạy NCBH/STEM chưa chính thức, tiết dạy thay hoặc nội dung chưa chắc chắn / chưa chốt số liệu trong đầu vào **PHẢI ĐƯỢC IN CHỮ MÀU ĐỎ** (`<w:color w:val="FF0000"/>` hoặc `RGBColor(255, 0, 0)`) trong file Word `.docx` để Thầy Tổ trưởng dễ dàng rà soát và hoàn thiện.
 - Trong bản nháp hiển thị dạng: `[CHỮ ĐỎ: nội dung]` hoặc `<span style="color:red">nội dung</span>`.
+=======
+## 2. Hai chức năng chuyên sâu mới cho Tổ Toán – Tin học:
+
+### 🌟 CHỨC NĂNG 1: BIÊN BẢN HỌP TỔ TOÁN – TIN (3 PHẦN CHUẨN)
+- **Cấu trúc bắt buộc:**
+  + **I. Triển khai văn bản:** Đọc tất cả các văn bản đầu vào do Thầy cung cấp; triển khai ngắn gọn, súc tích trọng tâm của từng văn bản (số hiệu, ngày, trích yếu, yêu cầu cốt lõi). Nếu cần thiết thì cân nhắc phân công cho các giáo viên thực hiện văn bản đó.
+  + **II. Đánh giá công tác giai đoạn:** Đánh giá tình hình chuyên môn qua các mặt: KHBD, nề nếp giảng dạy, sổ đầu bài, ngày giờ công, công tác dạy thay, kiểm tra thường xuyên/định kỳ...
+  + **III. Công tác tới:** Bám sát định hướng của Thầy Tổ trưởng để cụ thể hóa công việc; cân nhắc để phân công giáo viên trong tổ thực hiện từng nhiệm vụ rõ ràng.
+
+### 🌟 CHỨC NĂNG 2: KẾ HOẠCH & BÁO CÁO HOẠT ĐỘNG TỔ THEO THÁNG (FORM THCS TRẦN PHÚ)
+- **Cấu trúc chuẩn form mẫu thực tế của Trường THCS Trần Phú:**
+  + **Tiêu đề:** `BÁO CÁO HOẠT ĐỘNG TỔ TOÁN – TIN HỌC THÁNG .../...` (hoặc `KẾ HOẠCH VÀ BÁO CÁO HOẠT ĐỘNG TỔ...`).
+  + **Căn cứ:** Căn cứ chỉ đạo định hướng nhà trường và tình hình thực tế hoạt động chuyên môn của tổ.
+  + **I. Đánh giá công tác qua:** 1. Chủ nhiệm; 2. Ngày giờ công (chi tiết dạy thay: người dạy thay, tiết dạy thay); 3. Hoạt động tổ chuyên môn (PCCM, KHGD phụ lục 1,2,3, NLS 20%, AI 12 tiết, VioEdu khối 6-9, tập huấn CSDL ngành, tiến độ KHBD...); 4. Công tác khác (khai giảng, lao động, phổ cập...).
+  + **II. Kế hoạch trọng tâm trong thời gian tới:** 1. Chủ nhiệm; 2. Ngày giờ công; 3. Hoạt động tổ chuyên môn (đề cương, đề kiểm tra định kỳ, quy chế cho điểm, nộp KHBD CSDL ngành, kiểm tra nội bộ...); 4. Công tác khác.
+  + **III. Đánh giá thi đua trong tháng:** Bảng biểu đóng khung kín 4 cạnh viền ngoài và các đường kẻ trong, đúng 7 cột: `| STT | HỌ VÀ TÊN | CHỨC VỤ | TỰ XẾP LOẠI | TỰ NHẬN XÉT | TỔ XẾP LOẠI | GHI CHÚ |`. Dòng 1 là Thầy Hoàng Tấn Thiên (Tổ trưởng, loại A); các dòng tiếp theo là khung danh sách giáo viên trong tổ (Thầy sẽ cung cấp danh sách sau).
+  + **IV. Đề xuất, kiến nghị trong thời gian tới:** Ghi "Không" hoặc đề xuất cụ thể.
+  + **Chữ ký cuối văn bản:** Ban giám hiệu (cột trái) | Tổ trưởng: Hoàng Tấn Thiên (cột phải).
+
+---
+
+## 3. Quy tắc bắt buộc: In đỏ nội dung chưa chắc chắn
+- 🔴 **BẮT BUỘC:** Mọi thông tin, số liệu, danh sách phân công, tiết dạy thay hoặc nội dung chưa chắc chắn / chưa chốt số liệu trong đầu vào **PHẢI ĐƯỢC IN CHỮ MÀU ĐỎ** (`<w:color w:val="FF0000"/>` hoặc `RGBColor(255, 0, 0)`) trong file Word `.docx` để Thầy Tổ trưởng dễ dàng rà soát và hoàn thiện.
+- Trong bản nháp hiển thị dạng: `[CHỮ ĐỎ: nội dung]` hoặc `<span style="color:red">nội dung</span>`.
+
+---
+
+## 4. Bố cục nội dung theo từng loại văn bản khác
+- **BÁO CÁO:** Bố cục rõ 3 phần: (I) Đánh giá tình hình/kết quả đạt được (số liệu cụ thể); (II) Tồn tại, hạn chế và nguyên nhân; (III) Phương hướng, nhiệm vụ trọng tâm thời gian tới và kiến nghị.
+- **KẾ HOẠCH:** Bố cục gồm: (I) Căn cứ xây dựng kế hoạch; (II) Mục đích, yêu cầu; (III) Nội dung, chỉ tiêu và giải pháp thực hiện; (IV) Tổ chức thực hiện và phân công trách nhiệm.
+- **TỜ TRÌNH, QUYẾT ĐỊNH, CÔNG VĂN, THÔNG BÁO, BIÊN BẢN.**
+>>>>>>> Stashed changes
 
 ---
 
