@@ -109,6 +109,12 @@
                         <span class="label">Ghi chú</span>
                         <textarea id="linkNote" rows="2" class="field" placeholder="Ghi chú nội bộ cho giáo viên"></textarea>
                     </label>
+                    <label class="sm:col-span-2">
+                        <span class="inline-flex items-center gap-2 text-sm font-bold text-slate-700">
+                            <input id="escapeInApp" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-indigo-600" checked>
+                            Tự động thoát Zalo / In-App Browser (khuyên dùng khi gửi đề thi, Gemini, Google Form)
+                        </span>
+                    </label>
                     <label id="activeWrap" class="hidden sm:col-span-2">
                         <span class="inline-flex items-center gap-2 text-sm font-bold text-slate-700">
                             <input id="isActive" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-indigo-600" checked>
@@ -144,8 +150,9 @@
                 </div>
                 <div class="mt-4 flex flex-wrap justify-center gap-2">
                     <button type="button" onclick="downloadQr()" class="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"><i class="fas fa-download mr-2"></i>Tải ảnh QR</button>
+                    <button id="qrPreviewButton" type="button" onclick="previewQrBridge()" class="hidden rounded-xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-700 hover:bg-sky-100"><i class="fas fa-shield-alt mr-2"></i>Xem thử màn hình Zalo</button>
                 </div>
-                <p class="mt-3 text-xs text-slate-500">In hoặc chiếu mã QR để học sinh quét và mở link ngay.</p>
+                <p id="qrBridgeNote" class="mt-3 text-xs text-slate-500">In hoặc chiếu mã QR để học sinh quét và mở link ngay.</p>
             </div>
         </div>
     </div>
@@ -251,6 +258,7 @@
                             <div class="flex flex-wrap items-center gap-2">
                                 <h3 class="text-lg font-black text-slate-900">${esc(item.title || item.code)}</h3>
                                 ${statusChip(item)}
+                                ${item.escape_inapp ? '<span class="chip bg-sky-100 text-sky-700"><i class="fas fa-shield-alt mr-1"></i>Thoát Zalo</span>' : ''}
                             </div>
                             <p class="mt-2 break-all font-mono text-sm font-bold text-indigo-700">${esc(item.short_url)}</p>
                             <p class="mt-2 break-all text-sm text-slate-500"><i class="fas fa-arrow-turn-down mr-2 text-slate-400"></i>${esc(item.target_url)}</p>
@@ -280,6 +288,7 @@
             document.getElementById('creatorTitle').textContent = 'Tạo link rút gọn';
             document.getElementById('customCodeWrap').classList.remove('hidden');
             document.getElementById('activeWrap').classList.add('hidden');
+            document.getElementById('escapeInApp').checked = true;
             document.getElementById('creatorModal').classList.remove('hidden');
         }
 
@@ -294,6 +303,7 @@
             document.getElementById('expiresAt').value = item.expires_at ? String(item.expires_at).replace(' ', 'T').slice(0, 16) : '';
             document.getElementById('linkNote').value = item.note || '';
             document.getElementById('isActive').checked = !!item.is_active;
+            document.getElementById('escapeInApp').checked = item.escape_inapp !== false;
             document.getElementById('creatorTitle').textContent = 'Sửa link rút gọn';
             document.getElementById('customCodeWrap').classList.add('hidden');
             document.getElementById('activeWrap').classList.remove('hidden');
@@ -312,7 +322,8 @@
                 title: document.getElementById('linkTitle').value.trim(),
                 note: document.getElementById('linkNote').value.trim(),
                 max_clicks: document.getElementById('maxClicks').value.trim(),
-                expires_at: document.getElementById('expiresAt').value
+                expires_at: document.getElementById('expiresAt').value,
+                escape_inapp: document.getElementById('escapeInApp').checked
             };
             try {
                 if (id) {
@@ -343,15 +354,25 @@
         }
 
         let qrInstance = null;
+        let qrBridgeUrl = '';
         function openQr(id) {
             const item = links.find(link => link.id === id);
             if (!item) return;
             document.getElementById('qrTitle').textContent = item.title || item.code;
             document.getElementById('qrLinkInput').value = item.short_url;
+            qrBridgeUrl = item.escape_inapp ? item.short_url : '';
+            document.getElementById('qrPreviewButton').classList.toggle('hidden', !qrBridgeUrl);
+            document.getElementById('qrBridgeNote').textContent = item.escape_inapp
+                ? 'Đã bật Smart Bridge chống lỗi Zalo. Khi quét bằng Zalo, link sẽ hướng dẫn mở bằng trình duyệt.'
+                : 'In hoặc chiếu mã QR để học sinh quét và mở link ngay.';
             const mount = document.getElementById('qrMount');
             mount.innerHTML = '';
             qrInstance = new QRCode(mount, { text: item.short_url, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
             document.getElementById('qrModal').classList.remove('hidden');
+        }
+
+        function previewQrBridge() {
+            if (qrBridgeUrl) window.open(qrBridgeUrl, '_blank', 'noopener');
         }
 
         function closeQr() {

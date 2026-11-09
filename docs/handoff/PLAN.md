@@ -1,79 +1,112 @@
-# PLAN: Quản lý Thời khóa biểu theo Tuần/Đợt và Xuất Lịch Báo Giảng / PDF Chuẩn Xác
+# PLAN: Tích Hợp Chế Độ Thoát Zalo/In-App Browser Vào Hệ Thống Link Rút Gọn & QR Code
 
 ## Hiện trạng
-1. **Lỗi nhân bản TKB tĩnh:** Trong `phancongtochuyenmon.html`, hàm `baoGiangRows(until)` (dòng 3252) lặp qua từng ngày từ ngày bắt đầu năm học đến ngày xem lịch nhưng chỉ đọc từ một bảng `teacher.timetable` tĩnh duy nhất của đợt hiện tại. Hệ thống không lưu lịch sử TKB theo từng tuần hoặc theo từng đợt áp dụng có khoảng ngày hiệu lực.
-2. **Hậu quả thực tế:** Dù trường học thay đổi TKB hàng tuần từ tháng 9 đến nay và đã gửi TKB từng tuần cho giáo viên (như thầy Hoàng Tấn Thiên), hệ thống vẫn lấy TKB cũ áp đặt cho tất cả các tuần. Ngày 02/10/2026 (Thứ Sáu) giáo viên không có tiết nhưng khi xuất báo giảng/CSDL vẫn bị ghi nhận 4 tiết Toán cũ.
-3. **Thiếu liên kết dữ liệu theo mốc thời gian:** Hệ thống đã có tính năng tạo Đợt (`phases`) có trường `date_start`, `date_end`, nhưng Lịch báo giảng hoàn toàn bỏ qua các mốc này, không tự động chuyển TKB theo ngày thực tế.
-4. **Bảng tổng hợp thiếu định danh:** Hàm `baoGiangMonthTable` khi xem ở chế độ "Tất cả giáo viên" không có cột Tên giáo viên, dễ gây hiểu nhầm tiết của đồng nghiệp là tiết của mình.
-5. **Chưa có xuất PDF linh hoạt:** Chưa có bộ chọn khoảng thời gian tự do `Từ ngày ... Đến ngày ...` và thiếu CSS `@media print` chuyên biệt cho trang in A4.
+1. **Cơ chế chuyển hướng hiện tại (`s.php`):**
+   - Khi truy cập `/s/{code}`, máy chủ PHP trả về mã chuyển hướng HTTP 302 trực tiếp (`header('Location: ' . $targetUrl, true, 302)`).
+   - Khi quét mã QR hoặc bấm link từ Zalo, In-App Browser (WebView nội bộ) của Zalo sẽ tự động bám theo mã 302 và tải trang đích ngay bên trong WebView.
+2. **Hậu quả thực tế:**
+   - Các dịch vụ như Google Login, Gemini AI, WebSockets, WebRTC, hoặc Canvas phức tạp bị Zalo chặn hoặc thiếu API, dẫn đến màn hình trắng, lỗi kết nối hoặc không đăng nhập được tài khoản Google.
+   - Người dùng thường không biết cách tự bấm dấu `...` để mở trình duyệt ngoài.
+3. **Trang quản lý link (`rutgon.html`):**
+   - Đã có tính năng tạo link ngắn và mã QR, nhưng chưa có tùy chọn bật/tắt cơ chế Smart Bridge (thoát In-App Browser) và chưa hiển thị chỉ dẫn chuyên biệt cho quét Zalo.
 
-## Phạm vi
-1. **Kiến trúc dữ liệu TKB theo tuần / đợt hiệu lực:**
-   - Bổ sung cấu trúc lưu trữ `weekly_timetables` trong `state` (ví dụ: `state.weekly_timetables[week_key][teacher_id]` hoặc gắn TKB theo đợt có `date_start` -> `date_end`).
-   - Tương thích ngược: Nếu tuần nào chưa có TKB riêng, tự động kế thừa TKB của đợt/tuần gần nhất trước đó (hoặc `teacher.timetable` mặc định).
-2. **Cập nhật giao diện nhập và quản lý TKB (Tab 2):**
-   - Cho phép chọn tuần/đợt áp dụng khi xem, chỉnh sửa, nhận diện AI hoặc nạp TKB.
-   - Khi lưu TKB cho một tuần (hoặc khi gửi email TKB tuần), dữ liệu được lưu cố định vào tuần đó trong CSDL, không ghi đè làm hỏng các tuần khác.
-3. **Cải tiến logic sinh Lịch báo giảng (`baoGiangRows`):**
-   - Với mỗi ngày `date`, tự động xác định tuần tương ứng (`week_key`) hoặc đợt hiệu lực để lấy đúng TKB của giáo viên trong tuần đó từ CSDL.
-   - Ngày nào không có tiết trong TKB tuần đó (như ngày 02/10/2026) sẽ tự động sạch tiết, PPCT tự dồn chính xác.
-4. **Bộ chọn thời gian & Xuất PDF chuẩn A4:**
-   - Bổ sung bộ lọc khoảng thời gian tùy ý: `Từ ngày [dd/mm/yyyy]` đến `Đến ngày [dd/mm/yyyy]` trong Tab 4 (Lịch báo giảng).
-   - Thêm nút "Xuất PDF" kèm bộ CSS `@media print` chuẩn trang A4 (khổ ngang/dọc, ẩn navbar, sidebar, thanh nút bấm; giữ nguyên bảng biểu sắc nét, có tiêu đề và chữ ký).
-5. **Đồng bộ hiển thị:** Bổ sung cột Tên giáo viên trong bảng chi tiết ngày khi chọn chế độ "Tất cả giáo viên".
+---
+
+## Phạm vi thực hiện
+1. **Nâng cấp Cơ chế Chuyển hướng Trung gian (`s.php` - Smart Bridge Escaper):**
+   - Phát hiện User-Agent truy cập từ In-App Browser (Zalo, Messenger, Facebook, Instagram, TikTok...).
+   - Nếu không phải In-App Browser (Chrome, Safari, Edge, Firefox, Desktop): Giữ nguyên HTTP 302 tức thì về `$targetUrl`.
+   - Nếu phát hiện In-App Browser và link có bật `escape_inapp`:
+     - **Đối với Android:** Xuất trang cầu nối HTML/JS nhẹ tự động kích hoạt **Android Intent** (`intent://...#Intent;scheme=https;package=com.android.chrome;end`) để tự động "văng" ra Google Chrome hoặc trình duyệt mặc định mà không cần người dùng thao tác.
+     - **Đối với iOS (iPhone/iPad):** Vì Apple chặn tự động gọi `safari://`, hiển thị giao diện đệm thông minh (Interstitial Screen):
+       + Mũi tên động trực quan hướng thẳng lên góc trên bên phải (vị trí nút `...` của Zalo).
+       + Hướng dẫn 2 bước rõ ràng: Bấm `...` $\rightarrow$ Chọn *Mở bằng Safari* / *Trình duyệt mặc định*.
+       + Nút 1 chạm "Sao chép liên kết" (để dán vào trình duyệt).
+       + Nút "Mở bằng Google Chrome" (`googlechromes://...`).
+       + Nút "Vẫn tiếp tục trên Zalo" (fallback).
+2. **Nâng cấp CSDL và API (`api/short_links.php`):**
+   - Bổ sung cột `escape_inapp TINYINT(1) NOT NULL DEFAULT 1` vào bảng `short_links` (tự động cập nhật qua `short_link_schema()`).
+   - Cập nhật các action `list`, `create`, `update` để lưu trữ và trả về thuộc tính `escape_inapp` (mặc định luôn bật = 1 để bảo vệ tối đa người dùng).
+3. **Nâng cấp Giao diện Quản lý Link & QR (`rutgon.html`):**
+   - Bổ sung tùy chọn checkbox: `Tự động thoát Zalo / In-App Browser (Mở bằng Chrome/Safari)` trong form tạo/sửa link (mặc định tích chọn).
+   - Hiển thị huy hiệu `Chống chặn Zalo` trên từng thẻ link trong danh sách.
+   - Cải tiến modal QR Code: Thêm thông báo hướng dẫn "Đã bật Smart Bridge chống lỗi Zalo" và nút "Xem thử màn hình Zalo" để giáo viên kiểm tra trước.
+
+---
 
 ## Ngoài phạm vi
-- Không can thiệp vào bộ giải thuật toán xếp TKB tự động trong `thoikhoabieu.html` / `thoikhoabieu-engine.js`.
-- Không thay đổi các chức năng khác không liên quan (`duyetde.html`, `smartquiz.html`, `sodiem.html`, `KHBD/`, v.v.).
+- Không can thiệp vào các trang nội dung học tập khác (`thitructuyen.html`, `smartquiz.html`, `canvas_soanbaigiang.html`...).
+- Không ép buộc cài đặt ứng dụng thứ ba không rõ nguồn gốc lên máy người dùng.
 
-## File dự kiến tác động
-- `phancongtochuyenmon.html` (Giao diện chính, state management, logic sinh lịch `baoGiangRows`, bộ lọc thời gian, in ấn/PDF).
-- `api/calendar_feed.php` (Đọc đúng TKB theo tuần/đợt cho feed lịch cá nhân).
-- `api/phancong.php` (Đảm bảo cấu trúc lưu trữ JSON trong `phancong_chuyenmon.data_json` bảo toàn `weekly_timetables`).
+---
 
-## Các bước thực hiện
-1. **Nâng cấp State Schema (`defaultState` & `normalizeState`):**
-   - Thêm trường `weekly_timetables: {}` vào state.
-   - Đảm bảo khi lưu và tải từ LocalStorage / CSDL MySQL, trường `weekly_timetables` được duy trì nguyên vẹn.
-2. **Gắn bộ chọn Tuần vào Tab 2 (Thời khoá biểu GV):**
-   - Thêm dropdown/input chọn tuần học cần cập nhật TKB (mặc định là tuần hiện tại hoặc toàn năm học).
-   - Khi chỉnh sửa hoặc AI nhận diện TKB cho tuần $W$, lưu vào `state.weekly_timetables[W][teacher_id]`.
-3. **Cải tiến hàm `baoGiangRows(until)` trong `phancongtochuyenmon.html`:**
-   - Thay vì luôn đọc `teacher.timetable` cố định, hàm sẽ gọi `getTeacherTimetableForDate(teacher, date)`:
-     - Kiểm tra `state.weekly_timetables[week_key]?.[teacher.id]`.
-     - Nếu không có, kiểm tra TKB của Phase tương ứng với ngày `date`.
-     - Nếu vẫn không có, fallback về `teacher.timetable`.
-   - Lọc chính xác các tiết theo đúng TKB có hiệu lực tại ngày đó.
-4. **Thêm bộ lọc khoảng ngày tự do trong Tab 4 (Lịch báo giảng):**
-   - Thêm 2 trường `Từ ngày` (`bg-date-from`) và `Đến ngày` (`bg-date-to`).
-   - Cập nhật hàm `renderBaoGiangView()` để lọc các dòng trong khoảng ngày này thay vì chỉ gò bó theo tháng.
-5. **Tối ưu bảng biểu & Xây dựng bản in PDF (`@media print`):**
-   - Thêm cột `Giáo viên` vào `baoGiangMonthTable` khi xem "Tất cả giáo viên".
-   - Thêm nút "Xuất PDF / In báo giảng" mở hộp thoại in với CSS `@media print` chuyên biệt:
-     - Ẩn `#top-navbar`, `#left-panel`, `#tt-left-panel`, thanh công cụ, nút bấm.
-     - Căn lề khổ A4, nền trắng, kẻ viền nét mảnh chuẩn văn bản sư phạm.
-6. **Kiểm thử hồi quy:**
-   - Kiểm tra ngày 02/10/2026: Đảm bảo không xuất hiện 4 tiết Toán cũ.
-   - Kiểm tra các tuần khác: Đảm bảo mỗi tuần hiển thị đúng TKB riêng của tuần đó.
+## Danh sách File dự kiến tác động
+- `s.php` (Bộ xử lý chuyển hướng trung gian, nhận diện User-Agent, Android Intent & màn hình đệm iOS).
+- `api/short_links.php` (Schema CSDL, CRUD tham số `escape_inapp`).
+- `rutgon.html` (Form cấu hình, hiển thị danh sách, thông tin mã QR).
 
-## Rủi ro
-1. **Tương thích ngược dữ liệu cũ:** Các bản ghi cũ trong CSDL chưa có `weekly_timetables` có thể bị rỗng ➔ Giải pháp: Cơ chế Fallback nhiều tầng (Tuần ➔ Đợt ➔ TKB mặc định).
-2. **Lệch mốc tuần (ISO week vs Tuần trường học):** Tuần học có thể bắt đầu từ Thứ Hai nhưng ngày khai giảng/áp dụng rơi vào giữa tuần ➔ Giải pháp: Dùng hàm `baoGiangWeekRange` đồng nhất với `bg-start-date` (Tuần 1).
+---
 
-## Cách kiểm thử
-1. **Kiểm thử logic ngày 02/10/2026:**
-   - Cài đặt TKB tuần 4 (chứa ngày 02/10) không có tiết Thứ 6 cho thầy Hoàng Tấn Thiên / Hoàng Tấn.
-   - Chạy hàm xuất báo giảng: Ngày 02/10/2026 phải hiển thị trống/không có tiết.
-2. **Kiểm thử đa tuần:**
-   - Tuần 3 có tiết Thứ 6, Tuần 4 không có tiết Thứ 6.
-   - Xuất dữ liệu tháng 10: Tuần 3 có tiết, Tuần 4 không có tiết.
-3. **Kiểm thử xuất PDF:**
-   - Chọn khoảng ngày từ `2026-10-01` đến `2026-10-15`.
-   - Bấm nút Xuất PDF / In: Bản in hiển thị đúng 15 ngày, trang in vừa vặn, không bị tràn lề, không xuất hiện nút bấm hay thanh điều hướng.
+## Chi tiết kỹ thuật cần cài đặt
 
-## Tiêu chí nghiệm thu
-- Không còn tình trạng lấy 1 TKB mẫu áp đặt mù quáng cho mọi tuần trong năm.
-- Hệ thống tự động đọc đúng TKB của từng tuần từ CSDL khi xuất Báo giảng / Lịch dạy.
-- Ngày 02/10/2026 và các ngày nghỉ thực tế không còn bị chèn tiết sai.
-- Người dùng không phải xóa tay hay thêm ngoại lệ thủ công mỗi tuần.
-- Xuất được PDF / In chuẩn A4 theo khoảng thời gian tùy chọn.
+### 1. `api/short_links.php`
+- Trong `short_link_schema()`:
+  - Bổ sung lệnh kiểm tra hoặc `ALTER TABLE short_links ADD COLUMN IF NOT EXISTS escape_inapp TINYINT(1) NOT NULL DEFAULT 1;` (hoặc check qua `SHOW COLUMNS`).
+- Trong hàm `short_link_public_item()`:
+  - Bổ sung trường `'escape_inapp' => (bool)($row['escape_inapp'] ?? 1)`.
+- Trong `action === 'create'`:
+  - Lấy `$escapeInApp = isset($body['escape_inapp']) ? ((bool)$body['escape_inapp'] ? 1 : 0) : 1;`
+  - Thêm trường `escape_inapp` vào câu lệnh `INSERT`.
+- Trong `action === 'update'`:
+  - Cho phép cập nhật trường `escape_inapp`.
+
+### 2. `s.php`
+- Cập nhật hàm `short_redirect_schema()` để đảm bảo cột `escape_inapp` tồn tại.
+- Lấy giá trị `escape_inapp` từ `$row`.
+- Logic kiểm tra In-App Browser:
+  ```php
+  $ua = (string)($_SERVER['HTTP_USER_AGENT'] ?? '');
+  $isZalo = (bool)preg_match('/(Zalo|ZaloTheme)/i', $ua);
+  $isInApp = (bool)preg_match('/(Zalo|FB_IAB|FBAN|FBAV|Instagram|MicroMessenger|Line|Snapchat|Bytedance|TikTok)/i', $ua);
+  $isAndroid = (bool)preg_match('/Android/i', $ua);
+  $isIOS = (bool)preg_match('/(iPhone|iPad|iPod)/i', $ua);
+  $escapeInApp = (bool)($row['escape_inapp'] ?? 1);
+  ```
+- Nếu `$isInApp && $escapeInApp`:
+  - Không gửi `header('Location: ...', true, 302)`.
+  - Kết xuất giao diện HTML5 chuẩn UX cao:
+    - Android: Chạy script kích hoạt `intent://` URL tự động mở Chrome; fallback sau 1.2s mở generic browser intent.
+    - iOS: Hiển thị giao diện chỉ dẫn sinh động:
+      + Đồ họa mũi tên nhấp nháy chỉ góc trên bên phải (vị trí `...` của Zalo).
+      + Bước 1: Chạm vào dấu **`...`** ở góc trên bên phải.
+      + Bước 2: Chọn **"Mở bằng trình duyệt"** (Safari/Chrome).
+      + Nút 1 chạm "Sao chép link" (`navigator.clipboard.writeText`).
+      + Nút "Thử mở bằng Chrome" (`googlechromes://...`).
+      + Link kín: "Tiếp tục xem trong Zalo".
+
+### 3. `rutgon.html`
+- Thêm trường checkbox trong `creatorForm`:
+  ```html
+  <label class="sm:col-span-2">
+      <span class="inline-flex items-center gap-2 text-sm font-bold text-slate-700">
+          <input id="escapeInApp" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-indigo-600" checked>
+          Tự động thoát Zalo / In-App Browser (khuyên dùng khi gửi đề thi, Gemini, Google Form)
+      </span>
+  </label>
+  ```
+- Cập nhật `openCreator()`, `openEditor()`, `saveLink()` để đồng bộ trường `escapeInApp`.
+- Trong `renderLinks()`: Thêm nhãn `<span class="chip bg-sky-100 text-sky-700"><i class="fas fa-shield-alt mr-1"></i>Thoát Zalo</span>` khi `item.escape_inapp` là true.
+- Trong `openQr()`: Thêm ghi chú dưới mã QR để giáo viên an tâm khi gửi cho học sinh/phụ huynh qua Zalo.
+
+---
+
+## Tiêu chí nghiệm thu & Kịch bản kiểm thử
+1. **Kiểm thử trên trình duyệt chuẩn (Chrome, Edge Desktop/Mobile):**
+   - Truy cập `/s/{code}`: Tự động chuyển hướng 302 trực tiếp đến trang đích ngay lập tức mà không hiện trang đệm.
+2. **Kiểm thử giả lập Zalo Android:**
+   - Dùng User-Agent Zalo Android: Trang web kích hoạt Intent mở Chrome bên ngoài.
+3. **Kiểm thử giả lập Zalo iOS:**
+   - Dùng User-Agent Zalo iOS: Trang web hiển thị giao diện hướng dẫn với mũi tên chỉ vào nút `...`, các nút sao chép link và mở Chrome hoạt động mượt mà.
+4. **Kiểm thử cấu hình trong `rutgon.html`:**
+   - Tạo mới hoặc chỉnh sửa link, bật/tắt tùy chọn "Thoát Zalo", kiểm tra lưu thành công vào CSDL.
+   - Tạo mã QR, tải ảnh mã QR bình thường.

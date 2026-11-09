@@ -30,6 +30,7 @@ function short_link_schema(PDO $pdo): void
         max_clicks INT DEFAULT NULL,
         expires_at DATETIME DEFAULT NULL,
         is_active TINYINT(1) NOT NULL DEFAULT 1,
+        escape_inapp TINYINT(1) NOT NULL DEFAULT 1,
         last_clicked_at DATETIME DEFAULT NULL,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -39,6 +40,11 @@ function short_link_schema(PDO $pdo): void
         INDEX idx_short_links_expires (expires_at),
         CONSTRAINT fk_short_link_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+
+    $column = $pdo->query("SHOW COLUMNS FROM short_links LIKE 'escape_inapp'")->fetch();
+    if (!$column) {
+        $pdo->exec('ALTER TABLE short_links ADD COLUMN escape_inapp TINYINT(1) NOT NULL DEFAULT 1 AFTER is_active');
+    }
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS short_link_clicks (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -197,6 +203,7 @@ function short_link_public_item(array $row): array
         'max_clicks' => $row['max_clicks'] !== null ? (int)$row['max_clicks'] : null,
         'expires_at' => $row['expires_at'],
         'is_active' => (bool)$row['is_active'],
+        'escape_inapp' => (bool)($row['escape_inapp'] ?? 1),
         'last_clicked_at' => $row['last_clicked_at'],
         'created_at' => $row['created_at'],
         'updated_at' => $row['updated_at'],
@@ -266,9 +273,10 @@ if ($method === 'POST' && $action === 'create') {
     $maxClicks = $body['max_clicks'] ?? null;
     $maxClicks = ($maxClicks === '' || $maxClicks === null) ? null : max(1, (int)$maxClicks);
     $expiresAt = short_link_datetime($body['expires_at'] ?? null);
+    $escapeInApp = isset($body['escape_inapp']) ? ((bool)$body['escape_inapp'] ? 1 : 0) : 1;
     $code = short_link_unique_code($pdo, $customCode !== '' ? $customCode : null);
 
-    $stmt = $pdo->prepare('INSERT INTO short_links (code, target_url, title, note, owner_id, max_clicks, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    $stmt = $pdo->prepare('INSERT INTO short_links (code, target_url, title, note, owner_id, max_clicks, expires_at, escape_inapp) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
     $stmt->execute([
         $code,
         $targetUrl,
@@ -277,6 +285,7 @@ if ($method === 'POST' && $action === 'create') {
         (int)$teacher['id'],
         $maxClicks,
         $expiresAt,
+        $escapeInApp,
     ]);
 
     $id = (int)$pdo->lastInsertId();
@@ -307,8 +316,11 @@ if ($method === 'POST' && $action === 'update') {
         ? short_link_datetime($body['expires_at'])
         : $row['expires_at'];
     $isActive = array_key_exists('is_active', $body) ? ((bool)$body['is_active'] ? 1 : 0) : (int)$row['is_active'];
+    $escapeInApp = array_key_exists('escape_inapp', $body)
+        ? ((bool)$body['escape_inapp'] ? 1 : 0)
+        : (int)($row['escape_inapp'] ?? 1);
 
-    $stmt = $pdo->prepare('UPDATE short_links SET target_url = ?, title = ?, note = ?, max_clicks = ?, expires_at = ?, is_active = ? WHERE id = ? AND owner_id = ?');
+    $stmt = $pdo->prepare('UPDATE short_links SET target_url = ?, title = ?, note = ?, max_clicks = ?, expires_at = ?, is_active = ?, escape_inapp = ? WHERE id = ? AND owner_id = ?');
     $stmt->execute([
         $targetUrl,
         $title !== '' ? mb_substr($title, 0, 200) : null,
@@ -316,6 +328,7 @@ if ($method === 'POST' && $action === 'update') {
         $maxClicks,
         $expiresAt,
         $isActive,
+        $escapeInApp,
         $id,
         (int)$teacher['id'],
     ]);
