@@ -1,56 +1,62 @@
 # PLAN
 
 ## Hiện trạng
-- Người dùng vào trang quản trị `admin.html` bật quyền "Sửa lỗi chính tả AI" (`sualoichinhta`) cho tài khoản giáo viên/học sinh và lưu lại, nhưng tài khoản không nhận được quyền và công cụ không hiển thị trên trang chủ (`index.html`).
-- Nguyên nhân:
-  + Trong backend `api/helpers.php`: Hàm `page_catalog()` (danh mục trang hợp lệ của hệ thống) chưa khai báo key `'sualoichinhta'`. Do đó, hàm `normalize_pages()` khi xử lý lưu quyền (`api/admin_students.php`) và khi trả về phiên đăng nhập (`api/me.php` -> `teacher_allowed_pages_resolved()`) đã tự động loại bỏ `'sualoichinhta'` ra khỏi mảng `allowed_pages`.
-  + Trong `api/helpers.php`: Các hàm `teacher_workspace_page_ids()` và `teacher_feature_keys_for_pages()` cũng chưa đăng ký `'sualoichinhta'`.
-  + Trong frontend `admin.html`: Mảng `CLIENT_FEATURE_CHECKS` và khối toggle tính năng toàn cục chưa có `'sualoichinhta'`, dẫn đến cờ tính năng `user_features` không được đồng bộ chuẩn xác khi lưu quyền giáo viên.
+- Trang `sualoichinhta.html` hiện tại khi xử lý sửa lỗi xong chỉ cung cấp nút tải file `.txt` (`van-ban-da-sua.txt`).
+- Khi người dùng tải lên tệp Word (`.docx`), trang chỉ trích xuất text thô bằng `JSZip` rồi bỏ tệp zip gốc, khiến người dùng không thể nhận lại tệp Word đã sửa với đầy đủ định dạng ban đầu (font chữ, cỡ chữ, căn lề, bảng biểu, màu sắc).
 
 ## Phạm vi
-1. Cập nhật `api/helpers.php`:
-   - Bổ sung `'sualoichinhta'` vào `page_catalog()`:
-     `'sualoichinhta' => ['title' => 'Sửa lỗi chính tả AI', 'url' => 'sualoichinhta.html'],`
-   - Bổ sung `'sualoichinhta'` vào mảng trả về của hàm `teacher_workspace_page_ids()`.
-   - Bổ sung `'sualoichinhta' => 'sualoichinhta'` vào mảng trả về của hàm `teacher_feature_keys_for_pages()`.
-2. Cập nhật `admin.html`:
-   - Bổ sung `'sualoichinhta'` vào mảng `CLIENT_FEATURE_CHECKS`.
-   - Bổ sung ô checkbox cấu hình tính năng toàn cục `cfg_sualoichinhta` trong phần quản trị tính năng của Admin.
+1. Nâng cấp cơ chế quản lý tệp Word trong `sualoichinhta.html`:
+   - Lưu trữ đối tượng `loadedDocxZip` (`JSZip`) và `loadedFileName` khi người dùng tải lên tệp `.docx`.
+   - Giữ nguyên cấu trúc các đoạn văn `<w:p>` khi trích xuất hiển thị trên khung soạn thảo.
+2. Đồng bộ hóa việc sửa lỗi vào tệp Word gốc (Patch XML):
+   - Khi người dùng nhấn "Áp dụng" từng lỗi hoặc "Áp dụng tất cả", hệ thống thay thế chuỗi lỗi `original_text` bằng `suggested_text` đồng thời trên khung soạn thảo và trực tiếp vào tệp `word/document.xml` của `loadedDocxZip`.
+   - Đảm bảo việc thay thế không làm hỏng thẻ cấu trúc OpenXML (escape ký tự đặc biệt `&`, `<`, `>`).
+3. Chức năng xuất tệp Word (`.docx`):
+   - Nếu có tệp `.docx` gốc tải lên: Đóng gói lại `loadedDocxZip` thành tệp `.docx` (dùng `generateAsync({ type: 'blob' })`) và tải về với tên `<ten_file>_da_sua.docx`. Toàn bộ định dạng, bảng biểu, lề trang và bố cục gốc được giữ nguyên 100%.
+   - Nếu người dùng nhập/dán văn bản trực tiếp (hoặc file `.txt`): Tự động tạo tệp `.docx` chuẩn bằng OpenXML template (font Times New Roman 13pt, dãn dòng 1.25, lề chuẩn A4) thông qua `JSZip` để xuất file `.docx`.
+4. Cải tiến giao diện người dùng:
+   - Thêm nút "Tải file Word (.docx)" nổi bật kèm biểu tượng Word.
+   - Thêm nút phụ "Tải .txt" cho người dùng khi có nhu cầu lưu text trơn.
+   - Hiển thị badge trạng thái tệp gốc (ví dụ: `Đang xử lý: Van_Ban_Test_Loi_Chinh_Ta.docx`).
 
 ## Ngoài phạm vi
-- Không thay đổi logic phân quyền trong `access-control.js` hay cấu trúc giao diện `sualoichinhta.html`.
-- Không can thiệp vào cấu trúc cơ sở dữ liệu bảng `users`.
+- Không thay đổi backend API `api/sualoichinhta_ai.php` (API chỉ tiếp nhận text và trả về JSON danh sách lỗi).
+- Không can thiệp vào cơ chế phân quyền trong `access-control.js` hay `admin.html`.
 
 ## File dự kiến tác động
-- `api/helpers.php`
-- `admin.html`
+- `sualoichinhta.html`
 
 ## Các bước thực hiện
-1. Bước 1: Chỉnh sửa `api/helpers.php`:
-   - Thêm `'sualoichinhta' => ['title' => 'Sửa lỗi chính tả AI', 'url' => 'sualoichinhta.html']` vào mảng trả về của `page_catalog()`.
-   - Thêm `'sualoichinhta'` vào mảng trả về của `teacher_workspace_page_ids()`.
-   - Thêm `'sualoichinhta' => 'sualoichinhta'` vào mảng trả về của `teacher_feature_keys_for_pages()`.
-2. Bước 2: Chỉnh sửa `admin.html`:
-   - Thêm `'sualoichinhta'` vào mảng `CLIENT_FEATURE_CHECKS`.
-   - Thêm ô checkbox `cfg_sualoichinhta` trong tab cấu hình tính năng chung (Global Features).
-3. Bước 3: Kiểm thử đồng bộ:
-   - Dùng script kiểm tra Node.js xác nhận `api/helpers.php` và `admin.html` chứa đầy đủ các khai báo.
-   - Đảm bảo `normalize_pages` không còn lọc mất `sualoichinhta`.
+1. Bước 1: Khảo sát và nâng cấp hàm xử lý tệp trong `sualoichinhta.html`:
+   - Tạo biến trạng thái `loadedDocxZip`, `loadedDocxXml`, `loadedFileName`.
+   - Khi tải `.docx`: nạp qua `JSZip.loadAsync(file)`, lưu trữ XML gốc, trích xuất text có ngắt đoạn rõ ràng vào `#sourceText`, cập nhật nhãn tên tệp.
+2. Bước 2: Nâng cấp hàm `applyOne()` và `applyAll()`:
+   - Cập nhật `#sourceText` và mảng lỗi `errors`.
+   - Nếu có `loadedDocxZip`, cập nhật chuỗi thay thế tương ứng trong `word/document.xml`.
+3. Bước 3: Xây dựng hàm tạo file Word chuẩn từ văn bản thuần (Fallback generator):
+   - Dùng `JSZip` tạo cấu trúc docx gồm `[Content_Types].xml`, `_rels/.rels`, `word/_rels/document.xml.rels`, `word/document.xml` với style Times New Roman 13pt.
+4. Bước 4: Nâng cấp nút tải file:
+   - Đổi nút tải chính thành "Tải file Word (.docx)" (`#downloadDocx`).
+   - Thêm nút "Tải .txt" (`#downloadTxt`).
+5. Bước 5: Kiểm thử:
+   - Tải file Word mẫu `Van_Ban_Test_Loi_Chinh_Ta.docx` trên Desktop lên trang.
+   - Bấm quét lỗi và áp dụng sửa.
+   - Tải file Word về, mở và kiểm tra định dạng bảng biểu, font chữ được bảo toàn 100%.
 
 ## Rủi ro
-- Cache phiên làm việc trình duyệt (`sessionStorage` chứa `global_config_cache_v1` hoặc `localStorage.getItem('allowedPages')` cũ): Cần hướng dẫn người dùng nhấn F5 hoặc đăng nhập lại để cập nhật quyền mới nhất từ server.
+- Từ lỗi bị ngắt giữa các thẻ run `<w:r>` trong Word XML (ví dụ: một phần in đậm, một phần thường): Xử lý thay thế an toàn trên cấp độ chuỗi văn bản và các thẻ `<w:t>`.
+- Ký tự đặc biệt XML (`&`, `<`, `>`): Cần escape chuẩn xác khi đưa vào XML để tránh làm hỏng file docx.
 
 ## Cách kiểm thử
-1. Kiểm tra tĩnh file code:
-   - Xác nhận `page_catalog()`, `teacher_workspace_page_ids()`, `teacher_feature_keys_for_pages()` trong `api/helpers.php` đều chứa `sualoichinhta`.
-   - Xác nhận `CLIENT_FEATURE_CHECKS` trong `admin.html` chứa `sualoichinhta`.
-2. Kiểm tra lưu và đọc quyền:
-   - Vào `admin.html`, mở cấu hình một tài khoản giáo viên, bật switch "Sửa lỗi chính tả AI" và bấm lưu.
-   - Kiểm tra CSDL hoặc response từ `api/admin_students.php` xác nhận `allowed_pages` trả về có chứa `sualoichinhta` và `allowed_count` tăng tương ứng.
-   - Đăng nhập tài khoản giáo viên, kiểm tra `api/me.php` trả về `allowed_pages` có `sualoichinhta`.
-   - Mở trang chủ `index.html`, xác nhận thẻ "Sửa lỗi chính tả AI" xuất hiện và click mở được `sualoichinhta.html`.
+1. Kiểm tra cú pháp JavaScript của `sualoichinhta.html` bằng Node.js.
+2. Kiểm tra luồng tải lên `.docx`:
+   - Tải tệp `.docx` có bảng biểu và định dạng.
+   - Nhấn kiểm tra và áp dụng sửa.
+   - Nhấn tải file Word `.docx` và kiểm tra tệp sinh ra có thể giải nén/đọc được đầy đủ cấu trúc XML chuẩn.
+3. Kiểm tra luồng nhập văn bản thuần:
+   - Dán text vào ô nhập, nhấn tải file Word và xác nhận tải về được tệp `.docx` hợp lệ.
 
 ## Tiêu chí nghiệm thu
-- Backend `api/helpers.php` chấp nhận và lưu `sualoichinhta` vào CSDL không bị lọc bỏ.
-- Cấp quyền trong `admin.html` lưu thành công, thông báo hiển thị đúng số lượng quyền.
-- Trang chủ `index.html` của tài khoản được cấp quyền hiển thị ngay thẻ công cụ "Sửa lỗi chính tả AI".
+- Tải lên tệp Word (`.docx`) ➔ Sửa lỗi ➔ Tải về tệp Word (`.docx`) giữ nguyên định dạng, bảng biểu, layout gốc.
+- Nhập text trực tiếp ➔ Vẫn có thể xuất ra file Word (`.docx`) chuẩn Times New Roman 13pt.
+- Giữ thêm tùy chọn tải file `.txt` cho người dùng cần văn bản thuần.

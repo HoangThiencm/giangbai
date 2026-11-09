@@ -4,23 +4,22 @@
 PASS
 
 ## Đối chiếu scope
-- Khai báo danh mục hợp lệ backend (`api/helpers.php`): Đạt. `page_catalog()` đã bổ sung `'sualoichinhta' => ['title' => 'Sửa lỗi chính tả AI', 'url' => 'sualoichinhta.html']`, đảm bảo `normalize_pages()` không còn loại bỏ quyền này khi lưu CSDL (`api/admin_students.php`) và khi trả về phiên người dùng (`api/me.php`).
-- Khai báo danh sách trang workspace giáo viên (`api/helpers.php`): Đạt. `teacher_workspace_page_ids()` đã bổ sung `'sualoichinhta'`.
-- Ánh xạ cờ tính năng (`api/helpers.php`): Đạt. `teacher_feature_keys_for_pages()` đã bổ sung `'sualoichinhta' => 'sualoichinhta'`.
-- Đồng bộ tính năng frontend (`admin.html`): Đạt. Mảng `CLIENT_FEATURE_CHECKS` đã bổ sung `'sualoichinhta'` và thêm checkbox `cfg_sualoichinhta`.
+- Quản lý tệp Word khi tải lên (`sualoichinhta.html`): Đạt. Đã lưu trữ đối tượng `loadedDocxZip`, chuỗi XML gốc `loadedDocxXml`, tên tệp `loadedFileName` và hiển thị badge tệp đang xử lý (`#fileBadge`).
+- Vá trực tiếp vào XML của tệp Word gốc (`patchDocxText`): Đạt. Khi người dùng áp dụng từng lỗi hoặc tất cả lỗi, hệ thống cập nhật chính xác text vào thẻ `<w:t>` bên trong cấu trúc XML của tệp gốc, giữ nguyên các thẻ thuộc tính định dạng (`w:pPr`, `w:rPr`, bảng biểu, margins).
+- Xuất tệp Word (.docx): Đạt. Nút chính `#downloadDocx` đóng gói lại tệp `loadedDocxZip` gốc hoặc sinh tệp DOCX chuẩn OpenXML (Times New Roman 13pt, A4) khi người dùng nhập văn bản thuần.
+- Xuất tệp .txt phụ: Đạt. Cung cấp nút `#downloadTxt` tải văn bản thuần khi cần.
 
 ## Test đã chạy
-- Kiểm tra tĩnh `api/helpers.php`: PASS (đầy đủ 3 khai báo trong `page_catalog`, `teacher_workspace_page_ids`, `teacher_feature_keys_for_pages`).
-- Kiểm tra tĩnh `admin.html`: PASS (đầy đủ trong `CLIENT_FEATURE_CHECKS` và checkbox `cfg_sualoichinhta`).
-- Kiểm tra cú pháp JavaScript nội tuyến của `admin.html` bằng Node.js: PASS.
+- Kiểm tra cú pháp JavaScript nội tuyến của `sualoichinhta.html` bằng Node.js: PASS.
+- Kiểm tra hợp đồng mã nguồn và sự hiện diện của các nút xuất Word/TXT, hàm vá XML và tạo fallback DOCX: PASS.
 - Kiểm tra diff và chuẩn whitespace (`git diff --check`): PASS.
 
 ## Pass / Fail từng tiêu chí
-- [PASS] Đăng ký `sualoichinhta` vào danh mục trang `page_catalog()` của backend.
-- [PASS] Đăng ký `sualoichinhta` vào danh sách trang workspace giáo viên `teacher_workspace_page_ids()`.
-- [PASS] Đăng ký `sualoichinhta` vào bảng ánh xạ cờ `teacher_feature_keys_for_pages()`.
-- [PASS] Bổ sung `sualoichinhta` vào mảng kiểm tra tính năng `CLIENT_FEATURE_CHECKS` trong `admin.html`.
-- [PASS] Bổ sung checkbox `cfg_sualoichinhta` trên giao diện cấu hình tính năng chung của Admin.
+- [PASS] Tải tệp .docx lên không bị vứt bỏ tệp gốc; lưu trữ đối tượng `JSZip` để vá sửa đổi.
+- [PASS] Áp dụng sửa lỗi cập nhật đồng thời trên khung văn bản và cấu trúc XML của tệp Word gốc.
+- [PASS] Xuất tệp Word `.docx` thành công với định dạng ban đầu được bảo toàn.
+- [PASS] Hỗ trợ tạo tệp `.docx` chuẩn A4 Times New Roman khi dán text trực tiếp.
+- [PASS] Cung cấp nút tải `.txt` phụ đáp ứng nhu cầu lưu văn bản thuần.
 
 ## Bug
 Không phát hiện lỗi.

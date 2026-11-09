@@ -51,3 +51,24 @@
 ## Lưu ý
 
 - Người dùng đã đăng nhập có thể cần tải lại trang hoặc đăng nhập lại để nhận danh sách quyền mới.
+
+---
+
+# IMPLEMENT: Xuất Word cho công cụ Sửa lỗi chính tả AI
+
+## Phạm vi đã thực hiện
+
+- `sualoichinhta.html`: giữ `JSZip`, XML hiện hành và tên tệp khi tải `.docx`; văn bản được đọc theo từng đoạn Word và hiển thị trạng thái tệp đang xử lý.
+- Khi áp dụng từng lỗi hoặc tất cả lỗi, nội dung trong `word/document.xml` được vá ở các node văn bản OpenXML trước khi đóng gói lại tệp gốc, nên các thành phần định dạng khác của DOCX vẫn được giữ nguyên.
+- Bổ sung nút tải Word là nút chính, nút tải TXT phụ, và bộ dựng DOCX tối thiểu cho văn bản nhập trực tiếp với Times New Roman 13 pt, giãn dòng 1.25 và khổ A4.
+
+## Kiểm thử
+
+- Kiểm tra cú pháp JavaScript nội tuyến của `sualoichinhta.html` bằng Node: đạt.
+- Kiểm tra tĩnh xác nhận trạng thái DOCX, vá XML, xuất DOCX, nút tải Word/TXT và badge tệp đều có mặt: đạt.
+- Kiểm tra JSZip đóng gói rồi đọc lại bốn thành phần DOCX tối thiểu (`[Content_Types].xml`, quan hệ gốc, quan hệ Word, `word/document.xml`): đạt.
+- `git diff --check`: đạt, không có lỗi khoảng trắng.
+
+## Lưu ý
+
+- Chưa thể chạy kiểm thử mở DOCX trong trình duyệt tại môi trường hiện tại; cần xác nhận thủ công bằng một DOCX có bảng biểu/định dạng trên giao diện.
