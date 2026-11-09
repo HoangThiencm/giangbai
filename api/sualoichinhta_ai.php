@@ -26,8 +26,14 @@ function spelling_rotatable(int $status, string $message): bool {
     $message = strtolower($message);
     return in_array($status, [403, 429], true) || str_contains($message, 'quota') || str_contains($message, 'resource exhausted') || str_contains($message, 'rate limit');
 }
-function spelling_gemini(array $keys, array $payload): array {
-    $models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+function spelling_supported_models(): array {
+    return ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+}
+function spelling_gemini(array $keys, array $payload, string $preferredModel = ''): array {
+    $models = spelling_supported_models();
+    if (in_array($preferredModel, $models, true)) {
+        $models = array_values(array_unique(array_merge([$preferredModel], $models)));
+    }
     $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE);
     $last = ['ok' => false, 'status' => 502, 'error' => 'Không gọi được Gemini.'];
     foreach ($models as $model) foreach ($keys as $keyIndex => $key) {
@@ -50,6 +56,8 @@ ensure_users_ai_key_columns($pdo);
 $keys = spelling_keys($pdo, (int)$_SESSION['user_id']);
 if (!$keys) { respond(['ok' => false, 'error' => 'Tài khoản chưa có Gemini API Key cá nhân.'], 422); }
 $options = is_array($body['options'] ?? null) ? $body['options'] : [];
+$requestedModel = (string)($body['model'] ?? '');
+if (!in_array($requestedModel, spelling_supported_models(), true)) $requestedModel = '';
 $checks = [];
 if (!empty($options['spelling'])) $checks[] = 'lỗi chính tả và lỗi gõ phím';
 if (!empty($options['context'])) $checks[] = 'từ dùng sai ngữ cảnh';
@@ -61,8 +69,8 @@ $schema = ['type' => 'OBJECT', 'properties' => [
         'explanation' => ['type' => 'STRING'], 'context' => ['type' => 'STRING']
     ], 'required' => ['original_text', 'suggested_text', 'error_type', 'explanation', 'context']]]
 ], 'required' => ['errors']];
-$prompt = "Bạn là trợ lý soát lỗi tiếng Việt. Chỉ tìm các lỗi: " . implode(', ', $checks) . ". KHÔNG viết lại câu, KHÔNG thay đổi văn phong, KHÔNG đề xuất nếu không chắc chắn. Với mỗi lỗi, original_text phải là đúng chuỗi xuất hiện nguyên văn, suggested_text chỉ thay phần lỗi. Trả JSON theo schema. Văn bản:\n---\n" . $text . "\n---";
-$result = spelling_gemini($keys, ['contents' => [['role' => 'user', 'parts' => [['text' => $prompt]]]], 'generationConfig' => ['temperature' => 0.1, 'responseMimeType' => 'application/json', 'responseSchema' => $schema]]);
+$prompt = "Bạn là trợ lý soát lỗi tiếng Việt. Chỉ tìm các lỗi: " . implode(', ', $checks) . ". KHÔNG viết lại câu, KHÔNG thay đổi văn phong, KHÔNG đề xuất nếu không chắc chắn. Với mỗi lỗi, original_text phải là đúng chuỗi xuất hiện nguyên văn, suggested_text chỉ thay phần lỗi. Với dấu phẩy, chấm, hai chấm, chấm phẩy, chấm than và dấu hỏi: dấu phải viết sát ký tự trước, có đúng một khoảng trắng sau dấu khi còn từ tiếp theo (ví dụ: 'vừa qua , ban' thành 'vừa qua, ban'). Giữ nguyên số thập phân như '3,14' khi đúng ngữ cảnh. Trả JSON theo schema. Văn bản:\n---\n" . $text . "\n---";
+$result = spelling_gemini($keys, ['contents' => [['role' => 'user', 'parts' => [['text' => $prompt]]]], 'generationConfig' => ['temperature' => 0.1, 'responseMimeType' => 'application/json', 'responseSchema' => $schema]], $requestedModel);
 if (!$result['ok']) respond(['ok' => false, 'error' => $result['error']], max(400, min(599, (int)$result['status'])));
 $parts = $result['body']['candidates'][0]['content']['parts'] ?? [];
 $raw = ''; foreach ($parts as $part) if (isset($part['text'])) $raw .= $part['text'];
@@ -71,8 +79,8 @@ if (!is_array($data)) respond(['ok' => false, 'error' => 'Gemini trả về dữ
 $errors = [];
 foreach (($data['errors'] ?? []) as $item) {
     if (!is_array($item)) continue;
-    $from = trim((string)($item['original_text'] ?? '')); $to = trim((string)($item['suggested_text'] ?? ''));
-    if ($from === '' || $to === '' || $from === $to || !str_contains($text, $from)) continue;
+    $from = (string)($item['original_text'] ?? ''); $to = (string)($item['suggested_text'] ?? '');
+    if ($from === '' || $from === $to || !str_contains($text, $from)) continue;
     $errors[] = ['original_text' => $from, 'suggested_text' => $to, 'error_type' => trim((string)($item['error_type'] ?? 'Lỗi chính tả')), 'explanation' => trim((string)($item['explanation'] ?? '')), 'context' => trim((string)($item['context'] ?? ''))];
 }
 respond(['ok' => true, 'errors' => $errors, 'model' => $result['model']]);

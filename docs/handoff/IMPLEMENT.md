@@ -72,3 +72,24 @@
 ## Lưu ý
 
 - Chưa thể chạy kiểm thử mở DOCX trong trình duyệt tại môi trường hiện tại; cần xác nhận thủ công bằng một DOCX có bảng biểu/định dạng trên giao diện.
+
+---
+
+# IMPLEMENT: Chọn mô hình Gemini và sửa khoảng trắng dấu câu
+
+## Phạm vi đã thực hiện
+
+- `sualoichinhta.html`: thêm lựa chọn Tự động cùng bốn mô hình Gemini được hỗ trợ; lựa chọn được gửi ở mọi phần văn bản và kết quả hiển thị mô hình thực tế đã phản hồi.
+- `api/sualoichinhta_ai.php`: chỉ chấp nhận danh sách mô hình cho phép, ưu tiên mô hình được chọn trước các phương án dự phòng, bổ sung `gemini-1.5-pro` và trả về mô hình đã sử dụng.
+- Prompt nêu rõ quy tắc khoảng trắng quanh dấu câu tiếng Việt và logic lọc giữ nguyên chuỗi nguồn/đề xuất, nhờ đó không loại bỏ sửa lỗi như `" , "` thành `", "`.
+
+## Kiểm thử
+
+- Kiểm tra cú pháp JavaScript nội tuyến của `sualoichinhta.html`: đạt.
+- Kiểm tra tĩnh xác nhận dropdown, payload model, whitelist, prompt dấu câu và lọc không `trim()` chuỗi thay thế: đạt.
+- Không chạy được PHP lint vì môi trường không có PHP trong `PATH`.
+- `git diff --check`: đạt, không có lỗi khoảng trắng.
+
+## Lưu ý
+
+- Kiểm thử Gemini thực tế cần phiên đăng nhập và Gemini API Key hợp lệ; nếu mô hình được chọn không khả dụng, giao diện sẽ hiển thị mô hình dự phòng thực tế.

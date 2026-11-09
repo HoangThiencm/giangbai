@@ -1,62 +1,58 @@
 # PLAN
 
 ## Hiện trạng
-- Trang `sualoichinhta.html` hiện tại khi xử lý sửa lỗi xong chỉ cung cấp nút tải file `.txt` (`van-ban-da-sua.txt`).
-- Khi người dùng tải lên tệp Word (`.docx`), trang chỉ trích xuất text thô bằng `JSZip` rồi bỏ tệp zip gốc, khiến người dùng không thể nhận lại tệp Word đã sửa với đầy đủ định dạng ban đầu (font chữ, cỡ chữ, căn lề, bảng biểu, màu sắc).
+- Trên giao diện `sualoichinhta.html`, chưa có dropdown để người dùng chủ động chọn mô hình AI (như `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro`). Backend đang chạy ngầm định danh sách cố định.
+- Lỗi dấu câu và khoảng cách (ví dụ `vừa qua , ban` thay vì `vừa qua, ban`) bị bỏ sót:
+  + Trong `api/sualoichinhta_ai.php`, việc sử dụng hàm `trim()` cho `original_text` và `suggested_text` trước khi so sánh `$from === $to` đã vô tình loại bỏ các lỗi dấu câu thuần túy khoảng cách (ví dụ `" , "` -> `", "` bị trim thành `","` và `","`, dẫn đến `$from === $to` trả về true và bị bỏ qua).
+  + Prompt chưa răn đe và hướng dẫn cụ thể về quy chuẩn khoảng trắng dấu câu tiếng Việt (dấu phẩy, chấm phải viết sát ký tự trước và có 1 khoảng trắng sau).
 
 ## Phạm vi
-1. Nâng cấp cơ chế quản lý tệp Word trong `sualoichinhta.html`:
-   - Lưu trữ đối tượng `loadedDocxZip` (`JSZip`) và `loadedFileName` khi người dùng tải lên tệp `.docx`.
-   - Giữ nguyên cấu trúc các đoạn văn `<w:p>` khi trích xuất hiển thị trên khung soạn thảo.
-2. Đồng bộ hóa việc sửa lỗi vào tệp Word gốc (Patch XML):
-   - Khi người dùng nhấn "Áp dụng" từng lỗi hoặc "Áp dụng tất cả", hệ thống thay thế chuỗi lỗi `original_text` bằng `suggested_text` đồng thời trên khung soạn thảo và trực tiếp vào tệp `word/document.xml` của `loadedDocxZip`.
-   - Đảm bảo việc thay thế không làm hỏng thẻ cấu trúc OpenXML (escape ký tự đặc biệt `&`, `<`, `>`).
-3. Chức năng xuất tệp Word (`.docx`):
-   - Nếu có tệp `.docx` gốc tải lên: Đóng gói lại `loadedDocxZip` thành tệp `.docx` (dùng `generateAsync({ type: 'blob' })`) và tải về với tên `<ten_file>_da_sua.docx`. Toàn bộ định dạng, bảng biểu, lề trang và bố cục gốc được giữ nguyên 100%.
-   - Nếu người dùng nhập/dán văn bản trực tiếp (hoặc file `.txt`): Tự động tạo tệp `.docx` chuẩn bằng OpenXML template (font Times New Roman 13pt, dãn dòng 1.25, lề chuẩn A4) thông qua `JSZip` để xuất file `.docx`.
-4. Cải tiến giao diện người dùng:
-   - Thêm nút "Tải file Word (.docx)" nổi bật kèm biểu tượng Word.
-   - Thêm nút phụ "Tải .txt" cho người dùng khi có nhu cầu lưu text trơn.
-   - Hiển thị badge trạng thái tệp gốc (ví dụ: `Đang xử lý: Van_Ban_Test_Loi_Chinh_Ta.docx`).
+1. Thêm dropdown lựa chọn mô hình Gemini trên giao diện `sualoichinhta.html`:
+   - Các tùy chọn: Tự động (Khuyên dùng), `gemini-2.5-flash`, `gemini-2.0-flash`, `gemini-1.5-flash`, `gemini-1.5-pro`.
+   - Gửi giá trị `model` được chọn lên backend qua payload kiểm tra.
+   - Hiển thị badge tên model thực tế đã xử lý kết quả kiểm tra.
+2. Nâng cấp backend `api/sualoichinhta_ai.php`:
+   - Tiếp nhận tham số `model` từ client, ưu tiên gọi đúng model được chọn trước khi fallback.
+   - Sửa thuật toán lọc lỗi dấu câu: Không `trim()` mù quáng làm mất các lỗi khoảng cách dấu câu; chỉ loại bỏ nếu chuỗi thực sự rỗng hoặc không xuất hiện trong văn bản nguồn.
+   - Bổ sung quy tắc dấu câu vào Prompt: Nêu rõ quy tắc viết liền sát ký tự trước của các dấu phẩy, chấm, hai chấm, chấm phẩy, chấm than, hỏi và có 1 khoảng trắng phân tách sau (ví dụ: `vừa qua , ban` -> `vừa qua, ban`).
+3. Đảm bảo hàm vá `patchDocxText` trong `sualoichinhta.html` xử lý chuẩn xác việc thay thế chuỗi có dấu câu và khoảng trắng.
 
 ## Ngoài phạm vi
-- Không thay đổi backend API `api/sualoichinhta_ai.php` (API chỉ tiếp nhận text và trả về JSON danh sách lỗi).
-- Không can thiệp vào cơ chế phân quyền trong `access-control.js` hay `admin.html`.
+- Không thay đổi các chức năng khác của hệ thống phân quyền trong `access-control.js` hay `admin.html`.
+- Không thay đổi schema cơ sở dữ liệu.
 
 ## File dự kiến tác động
 - `sualoichinhta.html`
+- `api/sualoichinhta_ai.php`
 
 ## Các bước thực hiện
-1. Bước 1: Khảo sát và nâng cấp hàm xử lý tệp trong `sualoichinhta.html`:
-   - Tạo biến trạng thái `loadedDocxZip`, `loadedDocxXml`, `loadedFileName`.
-   - Khi tải `.docx`: nạp qua `JSZip.loadAsync(file)`, lưu trữ XML gốc, trích xuất text có ngắt đoạn rõ ràng vào `#sourceText`, cập nhật nhãn tên tệp.
-2. Bước 2: Nâng cấp hàm `applyOne()` và `applyAll()`:
-   - Cập nhật `#sourceText` và mảng lỗi `errors`.
-   - Nếu có `loadedDocxZip`, cập nhật chuỗi thay thế tương ứng trong `word/document.xml`.
-3. Bước 3: Xây dựng hàm tạo file Word chuẩn từ văn bản thuần (Fallback generator):
-   - Dùng `JSZip` tạo cấu trúc docx gồm `[Content_Types].xml`, `_rels/.rels`, `word/_rels/document.xml.rels`, `word/document.xml` với style Times New Roman 13pt.
-4. Bước 4: Nâng cấp nút tải file:
-   - Đổi nút tải chính thành "Tải file Word (.docx)" (`#downloadDocx`).
-   - Thêm nút "Tải .txt" (`#downloadTxt`).
-5. Bước 5: Kiểm thử:
-   - Tải file Word mẫu `Van_Ban_Test_Loi_Chinh_Ta.docx` trên Desktop lên trang.
-   - Bấm quét lỗi và áp dụng sửa.
-   - Tải file Word về, mở và kiểm tra định dạng bảng biểu, font chữ được bảo toàn 100%.
+1. Bước 1: Cập nhật backend `api/sualoichinhta_ai.php`:
+   - Tiếp nhận `$body['model']`. Xây dựng danh sách `$models` với model người dùng chọn ở đầu danh sách.
+   - Bổ sung chỉ dẫn dấu câu tiếng Việt vào `$prompt`.
+   - Điều chỉnh logic lọc lỗi để bảo toàn các lỗi sửa khoảng trắng và dấu câu (không để `trim()` triệt tiêu sự khác biệt về khoảng trắng).
+2. Bước 2: Cập nhật giao diện `sualoichinhta.html`:
+   - Thêm dropdown `<select id="modelSelect">` cạnh tùy chọn kiểm tra với các model Gemini phổ biến.
+   - Gửi `model` lên trong hàm gọi API kiểm tra.
+   - Cập nhật hiển thị tên model xử lý trong `#resultSummary`.
+3. Bước 3: Kiểm thử:
+   - Kiểm tra đoạn văn có lỗi `vừa qua , ban`: Xác nhận AI phát hiện và gợi ý thành `vừa qua, ban`.
+   - Thử nghiệm chuyển đổi các model trong dropdown và xác nhận backend gọi đúng model tương ứng.
 
 ## Rủi ro
-- Từ lỗi bị ngắt giữa các thẻ run `<w:r>` trong Word XML (ví dụ: một phần in đậm, một phần thường): Xử lý thay thế an toàn trên cấp độ chuỗi văn bản và các thẻ `<w:t>`.
-- Ký tự đặc biệt XML (`&`, `<`, `>`): Cần escape chuẩn xác khi đưa vào XML để tránh làm hỏng file docx.
+- Một số model (như `gemini-1.5-pro`) có thể chậm hơn dòng flash đối với văn bản dài: Có thông báo trạng thái rõ ràng trên giao diện.
+- Tránh thay thế nhầm các dấu phẩy trong số thập phân (`3,14`): Đã có hướng dẫn ngữ cảnh trong prompt.
 
 ## Cách kiểm thử
 1. Kiểm tra cú pháp JavaScript của `sualoichinhta.html` bằng Node.js.
-2. Kiểm tra luồng tải lên `.docx`:
-   - Tải tệp `.docx` có bảng biểu và định dạng.
-   - Nhấn kiểm tra và áp dụng sửa.
-   - Nhấn tải file Word `.docx` và kiểm tra tệp sinh ra có thể giải nén/đọc được đầy đủ cấu trúc XML chuẩn.
-3. Kiểm tra luồng nhập văn bản thuần:
-   - Dán text vào ô nhập, nhấn tải file Word và xác nhận tải về được tệp `.docx` hợp lệ.
+2. Kiểm thử kiểm tra dấu câu với văn bản mẫu:
+   - Nhập `Trong năm học vừa qua , ban giám hiệu`.
+   - Nhấn kiểm tra: AI phải phát hiện lỗi tại `vừa qua , ban` và đề xuất `vừa qua, ban`.
+   - Nhấn áp dụng và tải file Word: Xác nhận file Word kết quả đã mất khoảng trắng trước dấu phẩy.
+3. Kiểm thử dropdown model:
+   - Chọn `gemini-2.5-flash` và kiểm tra response trả về đúng model `gemini-2.5-flash`.
+   - Chọn `gemini-2.0-flash` và xác nhận response trả về `gemini-2.0-flash`.
 
 ## Tiêu chí nghiệm thu
-- Tải lên tệp Word (`.docx`) ➔ Sửa lỗi ➔ Tải về tệp Word (`.docx`) giữ nguyên định dạng, bảng biểu, layout gốc.
-- Nhập text trực tiếp ➔ Vẫn có thể xuất ra file Word (`.docx`) chuẩn Times New Roman 13pt.
-- Giữ thêm tùy chọn tải file `.txt` cho người dùng cần văn bản thuần.
+- Trên giao diện có dropdown chọn mô hình AI trực quan, hoạt động chuẩn xác.
+- Lỗi khoảng cách dấu câu như `vừa qua , ban` hoặc `Tuy nhiên ,với` được AI phát hiện 100% và sửa thành `vừa qua, ban`, `Tuy nhiên, với`.
+- Sau khi áp dụng và tải file Word `.docx`, lỗi dấu câu được sửa sạch sẽ trong tài liệu.
