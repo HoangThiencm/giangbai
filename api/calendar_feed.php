@@ -69,14 +69,26 @@ function calendar_feed_cell(mixed $cell): ?array
 function calendar_feed_off(array $exceptions, string $date, array $row): bool
 {
     foreach ($exceptions as $ex) {
-        if (!is_array($ex) || ($ex['type'] ?? '') !== 'off' || (string)($ex['date'] ?? '') !== $date) {
+        if (!is_array($ex) || ($ex['type'] ?? '') !== 'off') {
+            continue;
+        }
+        $start = (string)($ex['start_date'] ?? ($ex['date'] ?? ''));
+        $end = (string)($ex['end_date'] ?? $start);
+        if ($start === '' || $date < $start || $date > $end) {
+            continue;
+        }
+        $session = (string)($ex['session'] ?? 'all_day');
+        if ($session !== '' && $session !== 'all_day' && $session !== (string)($row['session'] ?? '')) {
             continue;
         }
         $scope = (string)($ex['scope'] ?? 'all');
         if ($scope === 'all' || $scope === '') {
             return true;
         }
-        if (($scope === 'teacher' || $scope === 'self') && (string)($ex['teacher_id'] ?? '') === (string)$row['teacher_id']) {
+        $sameTeacher = ((string)($ex['teacher_id'] ?? '') !== '' && (string)($ex['teacher_id'] ?? '') === (string)($row['teacher_id'] ?? ''))
+            || ((string)($ex['teacher_name'] ?? '') !== '' && strcasecmp(trim((string)$ex['teacher_name']), trim((string)($row['teacher_name'] ?? ''))) === 0)
+            || ((string)($ex['target'] ?? '') !== '' && ((string)$ex['target'] === (string)($row['teacher_id'] ?? '') || strcasecmp(trim((string)$ex['target']), trim((string)($row['teacher_name'] ?? ''))) === 0));
+        if (($scope === 'teacher' || $scope === 'self') && $sameTeacher) {
             return true;
         }
         if ($scope === 'class' && strcasecmp((string)($ex['target'] ?? ''), (string)$row['class_name']) === 0) {
@@ -136,6 +148,7 @@ function calendar_feed_rows(array $data, string $teacherId): array
                     'subject' => $parsed['subject'],
                     'class_name' => $parsed['class_name'],
                     'teacher_id' => $teacherId,
+                    'teacher_name' => (string)($teacher['name'] ?? $teacher['full_name'] ?? ''),
                 ];
                 if (!calendar_feed_off($exceptions, $iso, $row)) {
                     $rows[] = $row;

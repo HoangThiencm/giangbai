@@ -4,26 +4,25 @@
 PASS
 
 ## Đối chiếu scope
-- `api/short_links.php`: Đã bổ sung trường `escape_inapp TINYINT(1) NOT NULL DEFAULT 1` vào schema và cơ chế tự động migration qua `SHOW COLUMNS`. Hỗ trợ đầy đủ tham số `escape_inapp` trong các action `list`, `create`, `update`.
-- `s.php`: Nhận diện chính xác User-Agent In-App Browser (Zalo, FB, Instagram...), hỗ trợ Android Intent tự động mở Chrome ngoài trên Android và màn hình đệm chỉ dẫn trực quan (mũi tên hướng dấu `...`, nút chép link, nút mở Chrome) trên iOS. Giữ nguyên HTTP 302 cho trình duyệt chuẩn hoặc link tắt Smart Bridge.
-- `rutgon.html`: Đã thêm checkbox "Tự động thoát Zalo / In-App Browser" trong modal tạo/sửa link; hiển thị huy hiệu "Thoát Zalo" trong danh sách; hiển thị ghi chú bảo vệ và nút xem thử màn hình Zalo trong modal QR Code.
+- Giao diện `sualoichinhta.html`: Đạt. Đã tích hợp `access-control.js`, giao diện quản lý Gemini API Key riêng biệt (thông qua `api/user_gemini_keys.php`), nạp file .txt/.docx, chia nhỏ văn bản theo khối an toàn, highlight lỗi trực quan, áp dụng sửa từng lỗi/tất cả, sao chép và tải về.
+- Backend `api/sualoichinhta_ai.php`: Đạt. Kiểm tra session đăng nhập, chỉ đọc `gemini_keys` của chính tài khoản trong CSDL, hỗ trợ xoay tua key, fallback model, cấu hình Structured Outputs JSON schema và prompt ràng buộc chặt chẽ không viết lại văn phong.
+- Phân quyền `access-control.js`: Đạt. Đã đăng ký `sualoichinhta.html` trong `pageKeys` và `pageUrls`.
+- Tích hợp trang chủ `index.html`: Đạt. Đã đăng ký `sualoichinhta` trong `TOOL_PAGE_LINKS`, CSS tile và thẻ card trong `#mainToolsGrid`.
+- Quản lý cấp quyền `admin.html`: Đạt. Đã đăng ký `sualoichinhta` trong `hostingPages` và nhóm `teacherFeatureGroups`.
 
 ## Test đã chạy
-1. Kiểm tra cú pháp JavaScript trong `rutgon.html` qua Node.js: Toàn bộ script inline parse thành công, không có lỗi cú pháp.
-2. Kiểm tra cấu trúc SQL và migration trong `s.php` và `api/short_links.php`: Các lệnh ALTER TABLE và schema definition đồng bộ, hợp lệ.
-3. Kiểm thử kịch bản chuyển hướng (Simulation Test):
-   - Desktop Chrome UA $\rightarrow$ HTTP 302 trực tiếp đến target URL.
-   - iOS Safari chuẩn UA $\rightarrow$ HTTP 302 trực tiếp đến target URL.
-   - Zalo Android UA + `escape_inapp=1` $\rightarrow$ Android Intent Bridge (Chrome package + generic browser fallback).
-   - Zalo iOS UA + `escape_inapp=1` $\rightarrow$ iOS Bridge UI (hướng dẫn bấm `...`, nút chép clipboard, `googlechromes://`).
-   - Zalo UA + `escape_inapp=0` $\rightarrow$ HTTP 302 trực tiếp (tôn trọng cấu hình người dùng).
+- Kiểm tra cú pháp JavaScript tĩnh của `access-control.js` bằng Node.js: PASS.
+- Kiểm tra cú pháp JavaScript nội tuyến của `sualoichinhta.html` bằng Node.js: PASS.
+- Kiểm tra liên kết phân quyền và hiển thị trên `index.html` và `admin.html`: PASS.
+- Kiểm tra tính toàn vẹn cấu trúc và logic đọc key người dùng của `api/sualoichinhta_ai.php`: PASS.
+- Kiểm tra diff và chuẩn whitespace (`git diff --check`): PASS.
 
 ## Pass / Fail từng tiêu chí
-- [x] Tiêu chí 1: Trình duyệt chuẩn (Desktop/Mobile Safari/Chrome) không bị ảnh hưởng, chuyển hướng 302 ngay lập tức. (PASS)
-- [x] Tiêu chí 2: Zalo Android tự động gọi Android Intent mở Chrome ngoài. (PASS)
-- [x] Tiêu chí 3: Zalo iOS hiển thị màn hình đệm chỉ dẫn bấm dấu `...`, có nút chép link và nút mở Chrome. (PASS)
-- [x] Tiêu chí 4: Giao diện `rutgon.html` cho phép bật/tắt tính năng, hiển thị nhãn và hỗ trợ xem thử mã QR. (PASS)
-- [x] Tiêu chí 5: CSDL tự động tương thích ngược cho dữ liệu cũ qua migration an toàn. (PASS)
+- [PASS] Tạo trang `sualoichinhta.html` chuẩn giao diện và tính năng.
+- [PASS] Tích hợp phân quyền trong `access-control.js` và hiển thị trên `index.html`.
+- [PASS] Tích hợp cấu hình cấp quyền trong `admin.html`.
+- [PASS] Tự động nạp và chỉ sử dụng Gemini API Key của chính tài khoản đăng nhập (`api/sualoichinhta_ai.php`).
+- [PASS] Đảm bảo cấu trúc dữ liệu JSON và chống biến dạng văn phong gốc.
 
 ## Bug
-Không phát hiện bug.
+Không phát hiện lỗi.
