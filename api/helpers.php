@@ -36,6 +36,7 @@ function page_catalog(): array
         'lotrinhtoan9' => ['title' => 'Lộ trình tự học Toán 9', 'url' => 'lotrinhtoan9.html'],
         'gslides' => ['title' => 'Trình chiếu Slides', 'url' => 'gslides.html'],
         'vehinh' => ['title' => 'Vẽ hình học AI', 'url' => 'vehinh.html'],
+        'sualoichinhta' => ['title' => 'Sửa lỗi chính tả AI', 'url' => 'sualoichinhta.html'],
         'smartquiz' => ['title' => 'Soạn câu hỏi/Game AI', 'url' => 'smartquiz.html'],
         'matrande' => ['title' => 'Đề từ ma trận', 'url' => 'matrande.html'],
         'soankhbd' => ['title' => 'Soạn Kế hoạch Bài dạy AI (KHBD)', 'url' => 'soankhbd.html'],
@@ -71,6 +72,7 @@ function teacher_workspace_page_ids(): array
         'theodoiai',
         'gslides',
         'vehinh',
+        'sualoichinhta',
         'smartquiz',
         'matrande',
         'soankhbd',
@@ -109,6 +111,7 @@ function teacher_feature_keys_for_pages(): array
     return [
         'gslides' => 'gslides',
         'vehinh' => 'vehinh',
+        'sualoichinhta' => 'sualoichinhta',
         'smartquiz' => 'smartquiz',
         'matrande' => 'matrande',
         'soankhbd' => 'soankhbd',

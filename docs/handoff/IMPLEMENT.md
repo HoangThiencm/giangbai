@@ -31,3 +31,23 @@
 - Đã kiểm tra cú pháp JavaScript nội tuyến của `sualoichinhta.html` bằng Node và kiểm tra whitespace của diff: đạt.
 - Không chạy được `php -l api/sualoichinhta_ai.php` vì môi trường hiện không có PHP trong `PATH`.
 - Chưa thể thực hiện kiểm thử Gemini end-to-end vì cần một phiên đăng nhập và Gemini API Key cá nhân hợp lệ.
+
+---
+
+# IMPLEMENT: Đồng bộ quyền Sửa lỗi chính tả AI
+
+## Phạm vi đã thực hiện
+
+- `api/helpers.php`: đăng ký `sualoichinhta` trong danh mục trang hợp lệ, danh sách trang workspace của giáo viên và ánh xạ cờ tính năng; nhờ đó quyền được lưu và trả về phiên đăng nhập không còn bị loại bỏ.
+- `admin.html`: bổ sung cờ `sualoichinhta` vào danh sách đồng bộ tính năng phía trình duyệt và thêm checkbox cấu hình toàn cục `cfg_sualoichinhta`.
+
+## Kiểm thử
+
+- Kiểm tra tĩnh xác nhận cả ba danh mục backend và hai khai báo frontend đều chứa `sualoichinhta`.
+- Không chạy được `php -l api/helpers.php` vì môi trường không có PHP trong `PATH`.
+- Kiểm tra cú pháp JavaScript nội tuyến của `admin.html`: đạt.
+- `git diff --check`: đạt, không có lỗi khoảng trắng.
+
+## Lưu ý
+
+- Người dùng đã đăng nhập có thể cần tải lại trang hoặc đăng nhập lại để nhận danh sách quyền mới.
