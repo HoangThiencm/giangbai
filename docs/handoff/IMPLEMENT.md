@@ -1,3 +1,30 @@
+# IMPLEMENT: Bot Telegram tiếp nhận văn bản
+
+## Phạm vi đã thực hiện
+
+- Tạo `api/telegram_vanban.php`: webhook Telegram chỉ nhận POST có secret token hợp lệ và chat ID nằm trong danh sách cho phép; lưu `update_id` để không tạo văn bản trùng khi Telegram gửi lại webhook.
+- Bot nhận PDF, DOCX và ảnh; tải tệp tối đa 20 MB, lấy text PDF (tối đa ba trang qua `pdftotext` khi hosting hỗ trợ), DOCX và OCR ảnh qua Tesseract khi được cài đặt; caption vẫn được dùng làm dữ liệu dự phòng.
+- Dùng lại bộ nhận diện và lưu trữ hiện có để tạo văn bản đến theo năm học hiện hành, upload tệp lên Google Drive hoặc local fallback, rồi trả tin nhắn có thông tin nhận diện và nút xác nhận/chuyển Hành chính, Chuyên môn, Đảng/mở web.
+- `api/vanban.php`: thêm nhận diện lĩnh vực theo quy tắc dự phòng, nhận `sector` từ Workers AI, xác định năm học hiện hành và helper lưu file do tích hợp máy chủ tải về.
+- `cloudflare-worker/worker.js`: prompt nhận diện văn bản nay trả thêm `sector`.
+- `api/config.sample.php`: thêm các cấu hình Telegram cần thiết. Không có token hay secret thật trong mã nguồn.
+- Tạo `tests/telegram-vanban-webhook-smoke.py` kiểm tra hợp đồng webhook, bảo mật, chống trùng, tệp PDF/ảnh, callback, cấu hình và AI sector.
+
+## Kiểm thử
+
+- `python tests/telegram-vanban-webhook-smoke.py`: đạt.
+- `node --check cloudflare-worker/worker.js`: đạt.
+- `git diff --check`: đạt.
+- Không chạy được `php -l` vì môi trường hiện không có PHP trong `PATH`; chưa thể thực hiện end-to-end do token Telegram, MySQL và Google Drive chỉ có trên hosting.
+
+## Việc cần làm khi triển khai hosting
+
+1. Điền token bot, secret webhook, ID nhóm được phép, ID giáo viên sở hữu và URL trang quản lý trong `api/config.php` theo `api/config.sample.php`.
+2. Đặt webhook Telegram tới `https://<ten-mien>/api/telegram_vanban.php` với cùng secret token; cấp bot quyền đọc tin nhắn trong nhóm.
+3. Để OCR ảnh hoạt động đầy đủ, cài `tesseract` kèm dữ liệu ngôn ngữ `vie`; PDF có text layer dùng `pdftotext` nếu hosting có Poppler. Không có các tiện ích này, bot vẫn lưu tệp và dùng caption nhưng nhận diện sẽ ở mức thấp hơn.
+
+---
+
 # IMPLEMENT: Nâng cấp quản lý ngày nghỉ / lịch nghỉ tổ chuyên môn
 
 ## Phạm vi đã thực hiện

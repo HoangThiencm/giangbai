@@ -43,8 +43,9 @@ function buildMessages(body) {
           '- document_date: NGÀY BAN HÀNH ở góc phải trên cùng ("Hồ Nai, ngày 22 tháng 6 năm 2026").',
           '- organization: Tên cơ quan ban hành (ỦY BAN NHÂN DÂN PHƯỜNG HỐ NAI...).',
           '- title: Sau "V/v" hoặc "Về việc".',
+          '- sector: chỉ một trong hanhchinh, chuyenmon, dang. dang cho Đảng ủy/Chi bộ/Ban Tuyên giáo; chuyenmon cho Sở/Phòng GDĐT, dạy học, kiểm tra; còn lại hanhchinh.',
           'Trả về DUY NHẤT JSON hợp lệ.',
-          'Fields: document_number, title, organization, document_type, summary_text, document_date (YYYY-MM-DD hoặc null), report_required, report_due_at, confidence, note.',
+          'Fields: document_number, title, organization, document_type, summary_text, document_date (YYYY-MM-DD hoặc null), report_required, report_due_at, sector, confidence, note.',
         ].join(' '),
       },
       {

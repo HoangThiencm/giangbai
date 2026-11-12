@@ -1,0 +1,48 @@
+Row 55: STT=HỌC KÌ II | Bai=HỌC KÌ II | SoTiet=HỌC KÌ II | TietCT=HỌC KÌ II | Tuan=HỌC KÌ II | Note=HỌC KÌ II
+Row 56: STT=CHƯƠNG VI: PHÂN SỐ ( 15 tiết) | Bai=CHƯƠNG VI: PHÂN SỐ ( 15 tiết) | SoTiet=CHƯƠNG VI: PHÂN SỐ ( 15 tiết) | TietCT=CHƯƠNG VI: PHÂN SỐ ( 15 tiết) | Tuan=CHƯƠNG VI: PHÂN SỐ ( 15 tiết) | Note=CHƯƠNG VI: PHÂN SỐ ( 15 tiết)
+Row 57: STT=47 | Bai=Bài 23: Mở rộng phân số. Phân số bằng nhau | SoTiet=2 | TietCT=51, 52 | Tuan=19 | Note=
+Row 58: STT=48 | Bai=Bài 24: So sánh phân số. Hỗn số dương | SoTiet=2 | TietCT=53, 54 | Tuan=19,20 | Note=
+Row 59: STT=49 | Bai=Luyện tập chung | SoTiet=1 | TietCT=55 | Tuan=20 | Note=
+Row 60: STT=50 | Bai=Bài 25: Phép cộng và phép trừ phân số | SoTiet=2 | TietCT=56, 57 | Tuan=20,21 | Note=
+Row 61: STT=51 | Bai=Bài 26: Phép nhân và phép chia phân số | SoTiet=2 | TietCT=58, 59 | Tuan=21,21 | Note=
+Row 62: STT=52 | Bai=Bài 27: Hai bài toán về phân số. | SoTiet=2 | TietCT=60, 61 | Tuan=22 | Note=
+Row 63: STT=53 | Bai=Luyện tập chung | SoTiet=2 | TietCT=62, 63 | Tuan=22, 23 | Note=
+Row 64: STT=54 | Bai=Bài tập cuối chương VI | SoTiet=2 | TietCT=64, 65 | Tuan=23 | Note=
+Row 65: STT=CHƯƠNG VII: SỐ THẬP PHÂN (12 tiết) | Bai=CHƯƠNG VII: SỐ THẬP PHÂN (12 tiết) | SoTiet=CHƯƠNG VII: SỐ THẬP PHÂN (12 tiết) | TietCT=CHƯƠNG VII: SỐ THẬP PHÂN (12 tiết) | Tuan=CHƯƠNG VII: SỐ THẬP PHÂN (12 tiết) | Note=CHƯƠNG VII: SỐ THẬP PHÂN (12 tiết)
+Row 66: STT=55 | Bai=Bài 28: Số thập phân | SoTiet=2 | TietCT=66, 67 | Tuan=24 | Note=
+Row 67: STT=56 | Bai=Bài 29: Tính toán với số thập phân | SoTiet=2 | TietCT=68, 69 | Tuan=24, 25 | Note=
+Row 68: STT=57 | Bai=Bài 30: Làm tròn và ước lượng. | SoTiet=1 | TietCT=70 | Tuan=25 | Note=- Năng lực số: 5.3.TC1a : Sử dụng các hàm ROUND, ROUNDUP trong phần mềm bảng tính để thực hành làm tròn số tự động và kiểm chứng quy tắc làm tròn.
+Row 69: STT=58 | Bai=Ôn tập giữa học kì II | SoTiet=2 | TietCT=71, 72 | Tuan=25, 26 | Note=
+Row 70: STT=59 | Bai=Kiểm tra giữa học kì II | SoTiet=1 | TietCT=73 | Tuan=26 | Note=
+Row 71: STT=60 | Bai=Bài 31: Một số bài toán về tỉ số và tỉ số % | SoTiet=3 | TietCT=74, 75, 76 | Tuan=26, 27 | Note=
+Row 72: STT=61 | Bai=Luyện tập chung | SoTiet=2 | TietCT=77, 78 | Tuan=27, 28 | Note=
+Row 73: STT=62 | Bai=Bài tập cuối chương VII | SoTiet=2 | TietCT=79, 80 | Tuan=28 | Note=
+Row 74: STT=CHƯƠNG VIII: HÌNH HỌC CƠ BẢN (12 tiết) | Bai=CHƯƠNG VIII: HÌNH HỌC CƠ BẢN (12 tiết) | SoTiet=CHƯƠNG VIII: HÌNH HỌC CƠ BẢN (12 tiết) | TietCT=CHƯƠNG VIII: HÌNH HỌC CƠ BẢN (12 tiết) | Tuan=CHƯƠNG VIII: HÌNH HỌC CƠ BẢN (12 tiết) | Note=CHƯƠNG VIII: HÌNH HỌC CƠ BẢN (12 tiết)
+Row 75: STT=63 | Bai=Bài 32: Điểm và đường thẳng | SoTiet=2 | TietCT=23,24 | Tuan=19,20 | Note=
+Row 76: STT=64 | Bai=Bài 33: Điểm nằm giữa hai điểm. Tia | SoTiet=1 | TietCT=25 | Tuan=21 | Note=- Năng lực số: 1.1.TC1a : Khai thác video mô phỏng tia laser để hình dung khái niệm tia có gốc và kéo dài vô tận về một phía.
+Row 77: STT=65 | Bai=Bài 34: Đoạn thẳng. Độ dài đoạn thẳng | SoTiet=2 | TietCT=26,27 | Tuan=22,23 | Note=
+Row 78: STT=66 | Bai=Bài 35: Trung điểm của đoạn thẳng Tích hợp AI (01 tiết) | SoTiet=1 | TietCT=28 | Tuan=24 | Note=- Năng lực số: 5.3.TC1a : Sử dụng công cụ 'Midpoint' trong phần mềm hình học động để xác định chính xác trung điểm và kiểm chứng tính chất cách đều.
+Row 79: STT=67 | Bai=Luyện tập chung | SoTiet=1 | TietCT=29 | Tuan=25 | Note=
+Row 80: STT=68 | Bai=Kiểm tra giữa học kì II | SoTiet=1 | TietCT=30 | Tuan=26 | Note=
+Row 81: STT=69 | Bai=Bài 36: Góc | SoTiet=1 | TietCT=31 | Tuan=27 | Note=- Năng lực số: 1.1.TC1a : Khai thác mô hình 3D về các loại góc trong kiến trúc để nhận diện góc trong thực tế.
+Row 82: STT=70 | Bai=Bài 37: Số đo góc | SoTiet=2 | TietCT=32,33 | Tuan=28,29 | Note=- Năng lực số: 5.3.TC1a : Sử dụng công cụ 'Angle' trong GeoGebra để đo và kiểm tra số đo các góc của một đa giác. - Năng lực AI: 6.B2.1 : Sử dụng ứng dụng AI nhận diện hình ảnh để xác định loại góc (nhọn, tù, vuông) từ ảnh chụp đồ vật thực tế (Áp dụng: tiết 1, 2).
+Row 83: STT=71 | Bai=Luyện tập chung | SoTiet=1 | TietCT=34 | Tuan=30 | Note=
+Row 84: STT=72 | Bai=Bài tập cuối chương VIII | SoTiet=1 | TietCT=35 | Tuan=31 | Note=
+Row 85: STT=73 | Bai=Hoạt động thực hành trải nghiệm: Vẽ hình đơn giản với phần mềm GeoGebra | SoTiet=1 | TietCT=36 | Tuan=32 | Note=- Năng lực số: 5.3.TC1a : Sử dụng các công cụ vẽ điểm, đường thẳng, góc trong GeoGebra để thiết kế một sơ đồ hình học đơn giản.
+Row 86: STT=74 | Bai=Ôn tập cuối HKII | SoTiet=1 | TietCT=37 | Tuan=33 | Note=
+Row 87: STT=75 | Bai=Kiểm tra đánh giá cuối HKII | SoTiet=1 | TietCT=38 | Tuan=34 | Note=
+Row 88: STT=76 | Bai=Hoạt động thực hành trải nghiệm: Vẽ hình đơn giản với phần mềm GeoGebra | SoTiet=1 | TietCT=39 | Tuan=35 | Note=- Năng lực số: 5.3.TC1a : Sử dụng GeoGebra để vẽ các hình có tính đối xứng và đo đạc các yếu tố cạnh, góc.
+Row 89: STT=CHƯƠNG IX: DỮ LIỆU & XÁC SUẤT( 13 tiết) | Bai=CHƯƠNG IX: DỮ LIỆU & XÁC SUẤT( 13 tiết) | SoTiet=CHƯƠNG IX: DỮ LIỆU & XÁC SUẤT( 13 tiết) | TietCT=CHƯƠNG IX: DỮ LIỆU & XÁC SUẤT( 13 tiết) | Tuan=CHƯƠNG IX: DỮ LIỆU & XÁC SUẤT( 13 tiết) | Note=CHƯƠNG IX: DỮ LIỆU & XÁC SUẤT( 13 tiết)
+Row 90: STT=77 | Bai=Bài 38: Dữ liệu và thu thập dữ liệu | SoTiet=2 | TietCT=81, 82 | Tuan=29 | Note=- Năng lực số: 1.2.TC1a : Đánh giá độ tin cậy của thông tin số thu thập được từ các trang web thống kê chính thống. - Năng lực AI: 6.B2.1 : Sử dụng công cụ AI để gợi ý cách phân loại các tập dữ liệu lớn và cấu trúc bảng dữ liệu khoa học (Áp dụng: tiết 1, 2).
+Row 91: STT=78 | Bai=Bài 39: Bảng thống kê và biểu đồ tranh | SoTiet=2 | TietCT=83, 84 | Tuan=29, 30 | Note=- Năng lực số: 3.1.TC1a : Sử dụng phần mềm bảng tính để tự động tạo biểu đồ tranh từ bảng số liệu đã thu thập. - Năng lực AI: 6.D1.1 : Thảo luận về việc kiểm chứng tính xác thực của các biểu đồ do AI tạo ra để tránh thông tin sai lệch (Áp dụng: tiết 1, 2).
+Row 92: STT=79 | Bai=Bài 40: Biểu đồ cột | SoTiet=2 | TietCT=85, 86 | Tuan=30 | Note=
+Row 93: STT=80 | Bai=Bài 41: Biểu đồ cột kép | SoTiet=2 | TietCT=87, 88 | Tuan=31 | Note=
+Row 94: STT=81 | Bai=Luyện tập chungEm sẽ làm gì trong tương lai? | SoTiet=1 | TietCT=89 | Tuan=31 | Note=
+Row 95: STT=82 | Bai=Bài 42: Kết quả có thể và sự kiện trong trò chơi, thí nghiệm | SoTiet=1 | TietCT=90 | Tuan=32 | Note=- Năng lực số: 1.2.TC1a : Sử dụng phần mềm mô phỏng gieo xúc xắc để thu thập dữ liệu về các kết quả có thể xảy ra.
+Row 96: STT=83 | Bai=Bài 43: Xác suất thực nghiệm | SoTiet=1 | TietCT=91 | Tuan=32 | Note=- Năng lực số: 5.3.TC1a : Sử dụng hàm RANDBETWEEN trong Excel để mô phỏng 1000 lần tung đồng xu và tính xác suất thực nghiệm mặt ngửa.
+Row 97: STT=84 | Bai=Luyện tập chung | SoTiet=1 | TietCT=92 | Tuan=32 | Note=
+Row 98: STT=85 | Bai=Ôn tập kiểm tra đánh giá cuối HKII | SoTiet=5 | TietCT=93, 94, 95,96, 97 | Tuan=33, 34 | Note=
+Row 99: STT=86 | Bai=Kiểm tra đánh giá cuối HKII | SoTiet=1 | TietCT=98 | Tuan=34 | Note=
+Row 100: STT=87 | Bai=Bài tập cuối chương IX | SoTiet=1 | TietCT=99 | Tuan=35 | Note=
+Row 101: STT=88 | Bai=Hoạt động thực hành trải nghiệm: Kế hoạch chi tiêu cá nhân và gia đình | SoTiet=1 | TietCT=100 | Tuan=35 | Note=- Năng lực số: 3.1.TC1a : Sử dụng bảng tính Excel để lập bảng kế hoạch thu chi và vẽ biểu đồ cơ cấu chi tiêu.
+Row 102: STT=89 | Bai=Hoạt động thực hành trải nghiệm: Hoạt động thể thao nào được yêu thích nhất trong hè | SoTiet=1 | TietCT=101 | Tuan=35 | Note=- Năng lực số: 2.2.TC1a : Sử dụng biểu mẫu trực tuyến (Google Forms) để khảo sát ý kiến bạn bè và chia sẻ kết quả báo cáo.
