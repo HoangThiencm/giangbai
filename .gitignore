@@ -53,3 +53,10 @@ dich_truyen/**/temp/*
 !dich_truyen/**/temp/.gitkeep
 dich_truyen/**/raw/*
 !dich_truyen/**/raw/.gitkeep
+
+dich_truyen/**/audio/*
+!dich_truyen/**/audio/.gitkeep
+dich_truyen/**/temp_audio/*
+!dich_truyen/**/temp_audio/.gitkeep
+*.mp3
+

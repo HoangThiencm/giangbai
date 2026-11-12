@@ -31,7 +31,7 @@ dich_truyen/
    - Tạo file `ho_so_dich_thuat.md` dựa theo `templates/ho_so_dich_thuat_mau.md`.
    - Thiết lập bảng nhân vật chính - phụ, quy tắc xưng hô (hiện đại: tôi - bạn, anh - em; cổ trang: ta - ngươi, huynh - đệ, sư đồ...), và cảnh giới/thuật ngữ cố định.
 
-2. **Dịch theo đợt (Batch 5 - 10 chương):**
+2. **Dịch theo đợt (Batch 5 - 10 chương)hoặc theo yêu cầu người dùng (có thể hết toàn bộ):**
    - Đọc văn bản nguồn tiếng Trung (đặt file thô vào `dich_truyen/<ten_truyen>/temp/` hoặc `dich_truyen/temp/` nếu cần).
    - Dịch sang tiếng Việt tự nhiên, văn phong tiểu thuyết mượt mà, thuần Việt, tuyệt đối không dịch kiểu convert thô cứng.
    - Đầu mỗi chương ghi rõ: `Chương X: [Tên chương]`.

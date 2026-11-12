@@ -1,0 +1,210 @@
+=== PAGE 1 ===
+TRƯỜNG THCS TRẦN PHÚ 
+TỔ TOÁN - TIN 
+   ĐỀ CƯƠNG ÔN TẬP   
+GIỮA HỌC KỲ I - TOÁN 6 
+NĂM HỌC: 2026-2027 
+ 
+A. Số học 
+Bài 1. Viết các tập hợp sau 
+a. Cho tập hợp 
+
+
+E
+x
+N /15
+x
+21
+=
+
+
+
+ Viết lại tập hợp E bằng cách liệt kê tất cả các 
+phần tử. 
+b. Tập hợp M các chữ cái có trong từ “XUÂN ĐÔNG” 
+c. Tập hợp N các số tự nhiên lẻ, lớn hơn 7 và nhỏ hơn 19 bằng 2 cách. 
+d. Tập hợp A các bội nhỏ hơn 50 của 6 
+e. Viết số tự nhiên biểu diễn cho các số La Mã sau: XIV, XXI, XXVI. 
+Bài 2.  
+a. Thế nào là số nguyên tố, hợp số. Viết 10 số nguyên tố và 10 hợp số 
+b. Trong các số sau, số nào chia hết cho 2, số nào chia hết cho 3, số nào chia hết cho 5, 
+và số nào chia hết cho 9? 
+324; 248; 123; 450; 2020; 2025 
+Bài 3. Thực hiện phép tính 
+a. 3200 : 40.2 
+ 
+b. 37.64 + 37.36 
+ 
+c. 56 + 45 + 44 + 55 
+Bài 4. Thực hiện phép tính 
+a. 5. 22 – 18:3 
+ 
+b. 2.52 + 24 : 8 
+c. 
+2
+180 [25
+3.(14
+3 )]
+−
++
+−
+  d. 94 – [(148-146)3 : 2 ] + 20250    
+Bài 5. Tìm x, biết 
+a. 6.x
+5
+613
+−
+=
+  
+ 
+ 
+ 
+ 
+b.(
+)
+x
+47
+115
+0
+−
+−
+=
+  
+c. 
+(
+)
+315
+146
+x
+401
++
+−
+=
+   
+ 
+ 
+d. 
+(
+)
+575
+6x
+70
+445
+−
++
+=
+  
+e. 
+2
+2
+2x
+5
+3
+−
+=
+  
+ 
+ 
+ 
+ 
+f. (
+)
+x
+105 : 21
+15
+−
+=
+  
+Bài 6. Cho các số 84; 72; 108 
+a. Phân tích các số 84; 72 và 108 ra thừa số nguyên tố  
+b. Tìm ƯCLN(84, 72, 108) 
+c. Tìm BCNN(84, 72) 
+d. Tìm số tự nhiên nhỏ nhất có 4 chữ số mà số đó chia hết cho cả 84 và 72 
+Bài 7. Số học sinh khối 6 của một trường THCS có khoảng từ 
+ đến 
+ em. Khi 
+tham gia đồng diễn thể dục, nếu xếp hàng 10, hàng 12 hay hàng 18 học sinh thì đều vừa 
+đủ hàng. Hỏi khối 6 của trường đó có tất cả bao nhiêu học sinh? 
+
+
+=== PAGE 2 ===
+Bài 8. Một thư viện nhận về một lượng sách tham khảo mới trong khoảng từ 500 đến 
+700 cuốn. Khi xếp số sách này thành từng bó 15 cuốn, 20 cuốn hoặc 25 cuốn thì đều 
+vừa khít không thừa cuốn nào. Tính chính xác số sách tham khảo mà thư viện nhận về. 
+Bài 9. Lớp 6A cần mua 16 chiếc bánh ngọt để liên hoan. Có hai cửa hàng bánh gần 
+trường với chính sách ưu đãi như sau:  
+• Cửa hàng 1: Bán với giá niêm yết 
+ đồng/chiếc, áp dụng khuyến mãi "Mua 4 
+chiếc tặng 1 chiếc cùng loại".  
+• Cửa hàng 2: Bán với giá 
+ đồng/chiếc; nếu khách mua từ 5 chiếc trở lên thì từ 
+chiếc thứ 6 trở đi giá chỉ còn 
+ đồng/chiếc. 
+Hỏi lớp 6A nên mua ở cửa hàng nào để chi phí bỏ ra là ít nhất?  
+B. Hình học 
+Bài 1.Mai dự định trang trí kệ hình bình 
+hành như hình bên bằng cách viền dây kim 
+tuyến xung quanh chiếc kệ. Tính số mét 
+kim tuyến bạn Mai cần mua để trang trí 
+chiếc kệ. Biết rằng hai hình bình hành trên 
+chiếc kệ có các cạnh là 40 cm và 60 cm 
+ 
+Bài 2. Ông An có mảnh đất được tô màu 
+theo hình bên dưới. Em hãy giúp ông An 
+tính diện tích và chu vi của mảnh đất đó? 
+ 
+ 
+Bài 3. Bạn Minh cắt một miếng bìa hình 
+tam giác(hình vẽ). Tính diện tích miếng bìa 
+đó 
+ 
+Bài 4. Bạn Cường có một sợi dây thép dài 
+. 
+a. Cường uốn sợi dây đó thành một khung hình vuông. Tính độ dài cạnh và diện tích hình 
+vuông tạo thành. 
+b. Nếu uốn sợi dây trên thành một tam giác đều thì độ dài mỗi cạnh của tam giác đều 
+bằng bao nhiêu? 
+Bài 5. Một sân trường hình chữ nhật có chiều dài là 50m, chiều rộng là 30m. Người ta đặt 8 
+bồn hoa hình vuông có cạnh là 2m khắp sân trường như hình vẽ. 
+a. Hãy tính chu vi sân trường. 
+b. Hãy tính diện tích phần sân chơi (phần còn lại của sân trường) 
+
+
+=== PAGE 3 ===
+ 
+ 
+Bài 6.  Bức tường phía trước một lớp học có dạng hình chữ nhật với chiều dài 
+ và 
+chiều cao 
+. Trên bức tường có lắp một cửa ra vào hình chữ nhật kích thước 
+ và hai ô cửa sổ hình vuông có cạnh 
+. 
+a. Tính diện tích bức tường và diện tích phần không cần sơn (gồm cửa ra vào và các 
+cửa sổ). 
+b. Nhà trường thuê thợ sơn lại mảng tường đó. Tiền công thợ là 45 000 đồng/m2 chi 
+phí mua vật liệu sơn là 
+ đồng. Hỏi tổng chi phí sơn lại bức tường là bao 
+nhiêu tiền? 
+ 
+ 
+Giáo viên ra đề cương 
+Tổ trưởng chuyên môn 
+1/ Hồ Đăng Danh 
+ 
+ 
+ 
+ 
+ 
+Hoàng Tấn Thiên 
+2/ Nguyễn Thị Thảo 
+3/ Trần Sáng 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+
