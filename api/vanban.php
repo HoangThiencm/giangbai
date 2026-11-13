@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/pdf_text_extractor.php';
 if (!defined('VBD_SKIP_BOOT')) {
     require_once __DIR__ . '/helpers.php';
     session_start();
@@ -150,7 +151,7 @@ function vbd_detect_sector(string $source): string
 {
     $raw = vbd_preprocess_source($source);
     $text = function_exists('mb_strtolower') ? mb_strtolower($raw, 'UTF-8') : strtolower($raw);
-    if (preg_match('/đảng\s*ủy|đảng\s*bộ|chi\s*bộ|chi\s*ủy|ban\s*tuyên\s*giáo|ủy\s*ban\s*kiểm\s*tra|\bubkt\b|\b\d+\s*[-/]\s*(?:nq|qđ|hd)\s*[-/]\s*(?:đu|cb)\b/ui', $text)) {
+    if (preg_match('/đảng\s*ủy|đảng\s*bộ|chi\s*bộ|chi\s*ủy|ban\s*tuyên\s*giáo|ủy\s*ban\s*kiểm\s*tra|\bubkt\b|\b\d+\s*[-\\/]\s*(?:nq|qđ|hd)\s*[-\\/]\s*(?:đu|cb)\b/ui', $text)) {
         return 'dang';
     }
     if (preg_match('/sở\s*(?:giáo dục|gd[& ]*đt)|phòng\s*(?:giáo dục|gd[& ]*đt)|tổ\s*chuyên\s*môn|dạy\s*học|kiểm\s*tra|thời\s*khóa\s*biểu|học\s*sinh|giáo\s*viên|thi\s*đua/ui', $text)) {
@@ -398,20 +399,95 @@ function vbd_is_reference_context(string $before): bool
 
 function vbd_find_document_number(string $head): string
 {
+    $sp = '[ \t\r\n]{0,3}';
+    $org = '[A-Za-zÀ-ỹ0-9.]+';
+    $code = '(?:Q[ \t]*Đ|QĐ|QD|KH|CV|TB|NQ|CT|NĐ|ND|HĐ|HD|BC|QC|TT|TTr)';
+    $partyCode = '(?:Q[ \t]*Đ|QĐ|QD|NQ|HD|KH|TB|BC|TTr|TT|KL)';
     $patterns = [
-        '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}[ \t]*\/[ \t]*(?:Q[ \t]*Đ|QĐ|QD|KH|CV|TB|NQ|CT|NĐ|ND|HĐ|HD|BC|QC|TT)(?:[ \t]*-[ \t]*[A-Za-zÀ-ỹ0-9.]+)+)/iu',
-        '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}[ \t]*\/[ \t]*[A-Za-zÀ-ỹ0-9.]+(?:[ \t]*-[ \t]*[A-Za-zÀ-ỹ0-9.]+)*)/iu',
-        '/\b([0-9]{1,6}[ \t]*\/[ \t]*(?:Q[ \t]*Đ|QĐ|QD|KH|CV|TB|NQ|CT|NĐ|ND|HĐ|HD|BC|QC|TT)(?:[ \t]*-[ \t]*[A-Za-zÀ-ỹ0-9.]+)+)/iu',
+        '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}' . $sp . '\/' . $sp . $code . '(?:' . $sp . '-' . $sp . $org . ')+)/iu',
+        '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}' . $sp . '-' . $sp . $partyCode . $sp . '\/' . $sp . $org . ')/iu',
+        '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}' . $sp . '\/' . $sp . $org . '(?:' . $sp . '-' . $sp . $org . ')*)/iu',
+        '/\b([0-9]{1,6}' . $sp . '\/' . $sp . $code . '(?:' . $sp . '-' . $sp . $org . ')+)/iu',
+        '/\b([0-9]{1,6}' . $sp . '-' . $sp . $partyCode . $sp . '\/' . $sp . $org . ')/iu',
     ];
     foreach ($patterns as $pattern) {
-        if (!preg_match($pattern, $head, $match)) continue;
-        $pos = function_exists('mb_strpos') ? mb_strpos($head, $match[0]) : strpos($head, $match[0]);
-        $before = $pos !== false
-            ? (function_exists('mb_substr') ? mb_substr($head, max(0, $pos - 100), 100) : substr($head, max(0, $pos - 100), 100))
-            : '';
-        if (vbd_is_reference_context($before)) continue;
-        $number = vbd_normalize_doc_number($match[1]);
-        if ($number !== '') return $number;
+        if (!preg_match_all($pattern, $head, $matches, PREG_OFFSET_CAPTURE)) continue;
+        foreach ($matches[1] as $index => $part) {
+            $pos = (int)$matches[0][$index][1];
+            $before = substr($head, max(0, $pos - 100), 100);
+            if (vbd_is_reference_context($before)) continue;
+            $number = vbd_normalize_doc_number((string)$part[0]);
+            if ($number !== '') return $number;
+        }
+    }
+    return '';
+}
+
+function vbd_document_type_labels(): array
+{
+    return [
+        'KẾ HOẠCH' => 'Kế hoạch',
+        'QUYẾT ĐỊNH' => 'Quyết định',
+        'THÔNG BÁO' => 'Thông báo',
+        'BÁO CÁO' => 'Báo cáo',
+        'TỜ TRÌNH' => 'Tờ trình',
+        'HƯỚNG DẪN' => 'Hướng dẫn',
+        'KẾT LUẬN' => 'Kết luận',
+        'NGHỊ QUYẾT' => 'Nghị quyết',
+        'QUY ĐỊNH' => 'Quy định',
+        'QUY CHẾ' => 'Quy chế',
+        'THÔNG TƯ' => 'Thông tư',
+        'CHỈ THỊ' => 'Chỉ thị',
+    ];
+}
+
+function vbd_match_type_line(string $head): ?array
+{
+    $parts = [];
+    foreach (array_keys(vbd_document_type_labels()) as $label) {
+        $parts[] = str_replace(' ', '\s+', preg_quote($label, '/'));
+    }
+    if (!preg_match('/^\s*(' . implode('|', $parts) . ')\s*$/uim', $head, $match, PREG_OFFSET_CAPTURE)) return null;
+    $normalized = preg_replace('/\s+/u', ' ', trim((string)$match[1][0])) ?? '';
+    if (function_exists('mb_strtoupper')) $normalized = mb_strtoupper($normalized, 'UTF-8');
+    $label = vbd_document_type_labels()[$normalized] ?? '';
+    if ($label === '') return null;
+    return ['label' => $label, 'end' => (int)$match[0][1] + strlen((string)$match[0][0])];
+}
+
+function vbd_type_from_number(string $number): string
+{
+    $map = [
+        'KH' => 'Kế hoạch',
+        'QĐ' => 'Quyết định',
+        'QD' => 'Quyết định',
+        'TB' => 'Thông báo',
+        'BC' => 'Báo cáo',
+        'TTR' => 'Tờ trình',
+        'HD' => 'Hướng dẫn',
+        'NQ' => 'Nghị quyết',
+        'TT' => 'Thông tư',
+        'KL' => 'Kết luận',
+    ];
+    if (!preg_match('/(?:^|[\/\-])(TTr|TT|KH|QĐ|QD|TB|BC|HD|NQ|KL)(?=[\/\-]|$)/iu', $number, $match)) return '';
+    $code = function_exists('mb_strtoupper') ? mb_strtoupper($match[1], 'UTF-8') : strtoupper($match[1]);
+    return $map[$code] ?? '';
+}
+
+function vbd_title_below_type(string $text, int $byteOffset): string
+{
+    $rest = substr($text, $byteOffset, 1500);
+    $lines = preg_split('/\R/u', $rest) ?: [];
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || $line === '-' || $line === '–' || $line === '—') continue;
+        if (preg_match('/^(Số|So)\b/iu', $line)) continue;
+        if (preg_match('/ngày\s+\d{1,2}\s+tháng|\b\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}\b/iu', $line)) continue;
+        if (preg_match('/^(Căn cứ|Điều\s*\d+|Nơi nhận|Kính gửi|Độc lập|Tự do|Hạnh phúc|CỘNG\s*HÒA|CỘNG\s*HOÀ|DỰ THẢO|\d+[\.\)])\b/iu', $line)) continue;
+        if (vbd_match_type_line($line)) continue;
+        $letters = preg_match_all('/\p{L}/u', $line);
+        if ($letters !== false && $letters < 4) continue;
+        return vbd_truncate($line, 500);
     }
     return '';
 }
@@ -559,12 +635,14 @@ function vbd_regex_extract(string $source): array
         }
     }
 
-    $types = ['Công văn', 'Thông báo', 'Quyết định', 'Kế hoạch', 'Đề án', 'Tờ trình', 'Báo cáo', 'Hướng dẫn', 'Thông tư', 'Quy định', 'Quy chế', 'Nghị định', 'Chỉ thị', 'Nghị quyết'];
-    foreach ($types as $type) {
-        if (stripos($head, $type) !== false) {
-            $result['document_type'] = $type;
-            break;
-        }
+    $typeLine = vbd_match_type_line($head);
+    if ($typeLine) {
+        $result['document_type'] = $typeLine['label'];
+        $result['title'] = vbd_title_below_type($head, (int)$typeLine['end']);
+    }
+    if ($result['document_type'] === '') $result['document_type'] = vbd_type_from_number($result['document_number']);
+    if ($result['document_type'] === '' && preg_match('/kính\s*gửi\s*:/iu', $head) && preg_match('/(?:V\/v|Về việc|VE VIEC)/iu', $head)) {
+        $result['document_type'] = 'Công văn';
     }
 
     // Tìm NGÀY BAN HÀNH ở header. Dòng chữ ký số chỉ dùng làm ngày dự phòng.
@@ -590,10 +668,15 @@ function vbd_regex_extract(string $source): array
         $result['document_date'] = $signatureDate;
     }
 
-    if (preg_match('/(?:V\/v|Về việc|Trích yếu|VE VIEC)\s*[:\.]?\s*([^\n]{8,300})/iu', $fullForTitle, $match)) {
-        $result['title'] = vbd_truncate(trim($match[1]), 500);
-    } elseif (preg_match('/(?:V\/v|Về việc)\s*([^\n]{8,300})/iu', $fullForTitle, $match)) {
-        $result['title'] = vbd_truncate(trim($match[1]), 500);
+    if ($result['title'] === '') {
+        $titleWindow = function_exists('mb_substr') ? mb_substr($fullForTitle, 0, 1500) : substr($fullForTitle, 0, 1500);
+        if (preg_match('/(?:V\/v|Về việc|Trích yếu|VE VIEC)\s*[:\.]?\s*([^\n]{8,300})/iu', $titleWindow, $match, PREG_OFFSET_CAPTURE)) {
+            $pos = (int)$match[0][1];
+            $before = substr($titleWindow, max(0, $pos - 40), 40);
+            if (!preg_match('/(?:Căn cứ|Nơi nhận)\s*$/iu', $before)) {
+                $result['title'] = vbd_truncate(trim((string)$match[1][0]), 500);
+            }
+        }
     }
 
     if (preg_match('/(?:báo cáo|bao cao|hoàn thành trước|hạn nộp|hạn báo cáo|đề nghị báo cáo)/iu', $text)) {

@@ -135,11 +135,17 @@ function tvb_extract_text(string $path, string $name, string $caption = ''): str
             $zip->close();
             if (is_string($xml)) $text .= "\n" . trim(preg_replace('/\s+/u', ' ', strip_tags(str_replace('</w:p>', "\n", $xml))));
         }
-    } elseif ($extension === 'pdf' && function_exists('exec')) {
-        $output = [];
-        $code = 1;
-        @exec('pdftotext -f 1 -l 3 -enc UTF-8 ' . escapeshellarg($path) . ' - 2>/dev/null', $output, $code);
-        if ($code === 0) $text .= "\n" . implode("\n", $output);
+    } elseif ($extension === 'pdf') {
+        if (function_exists('exec')) {
+            $output = [];
+            $code = 1;
+            @exec('pdftotext -f 1 -l 3 -enc UTF-8 ' . escapeshellarg($path) . ' - 2>/dev/null', $output, $code);
+            if ($code === 0) $text .= "\n" . implode("\n", $output);
+        }
+        if (vbd_text_len($text) < 30 && function_exists('vbd_pdf_extract_text')) {
+            $extracted = vbd_pdf_extract_text($path, 3);
+            if ($extracted !== '') $text .= "\n" . $extracted;
+        }
     }
     if (vbd_text_len($text) < 30 && in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true) && function_exists('exec')) {
         $output = [];
@@ -206,16 +212,49 @@ function tvb_summary(array $document, string $fileName, bool $confirmed = false)
     return implode("\n", $lines);
 }
 
-function tvb_keyboard(int $documentId): array
+function tvb_sector_button(string $sector, string $current, string $icon, string $label): string
 {
+    if ($sector === $current) return '[• ' . $icon . ' ' . $label . ' •]';
+    return $icon . ' ' . $label;
+}
+
+function tvb_keyboard(int $documentId, string $currentSector = 'hanhchinh'): array
+{
+    $currentSector = vbd_sector($currentSector);
     $rows = [[
-        ['text' => '🏛 Hành chính', 'callback_data' => 'sector:' . $documentId . ':hanhchinh'],
-        ['text' => '🎓 Chuyên môn', 'callback_data' => 'sector:' . $documentId . ':chuyenmon'],
-        ['text' => '🚩 Đảng', 'callback_data' => 'sector:' . $documentId . ':dang'],
+        ['text' => tvb_sector_button('hanhchinh', $currentSector, '🏛', 'Hành chính'), 'callback_data' => 'sector:' . $documentId . ':hanhchinh'],
+        ['text' => tvb_sector_button('chuyenmon', $currentSector, '🎓', 'Chuyên môn'), 'callback_data' => 'sector:' . $documentId . ':chuyenmon'],
+        ['text' => tvb_sector_button('dang', $currentSector, '🚩', 'Đảng'), 'callback_data' => 'sector:' . $documentId . ':dang'],
     ], [['text' => '✅ Xác nhận chính xác', 'callback_data' => 'confirm:' . $documentId]]];
     $web = trim((string)tvb_config('TELEGRAM_VANBAN_WEB_URL'));
     if ($web !== '') $rows[1][] = ['text' => '🔗 Mở trên Web', 'url' => rtrim($web, '/') . '?document_id=' . $documentId];
     return ['inline_keyboard' => $rows];
+}
+
+function tvb_answer_callback(array $callback, string $text): void
+{
+    try {
+        tvb_api('answerCallbackQuery', ['callback_query_id' => (string)($callback['id'] ?? ''), 'text' => $text]);
+    } catch (Throwable $error) {
+        if (stripos($error->getMessage(), 'query is too old') === false && stripos($error->getMessage(), 'query ID is invalid') === false) {
+            throw $error;
+        }
+    }
+}
+
+function tvb_edit_callback_message(int $chatId, array $callback, array $document, int $documentId, bool $confirmed): void
+{
+    try {
+        tvb_api('editMessageText', [
+            'chat_id' => $chatId,
+            'message_id' => (int)($callback['message']['message_id'] ?? 0),
+            'text' => tvb_summary($document, 'Tệp đã lưu', $confirmed),
+            'parse_mode' => 'HTML',
+            'reply_markup' => tvb_keyboard($documentId, (string)($document['sector'] ?? 'hanhchinh')),
+        ]);
+    } catch (Throwable $error) {
+        if (stripos($error->getMessage(), 'message is not modified') === false) throw $error;
+    }
 }
 
 function tvb_process_callback(PDO $pdo, array $callback): void
@@ -226,22 +265,30 @@ function tvb_process_callback(PDO $pdo, array $callback): void
     $owner = tvb_owner($pdo);
     $documentId = 0;
     $confirmed = false;
+    $popup = 'Đã cập nhật.';
+    $ownerClause = 'id=? AND (owner_id=? OR owner_id=0 OR owner_id IS NULL)';
     if (preg_match('/^sector:(\d+):(hanhchinh|chuyenmon|dang)$/', $data, $match)) {
         $documentId = (int)$match[1];
-        $pdo->prepare('UPDATE office_documents SET sector=? WHERE id=? AND owner_id=?')->execute([$match[2], $documentId, (int)$owner['id']]);
+        $labels = ['hanhchinh' => 'Hành chính', 'chuyenmon' => 'Chuyên môn', 'dang' => 'Đảng'];
+        $popup = 'Đã chọn ' . ($labels[$match[2]] ?? 'lĩnh vực');
+        $pdo->prepare('UPDATE office_documents SET sector=? WHERE ' . $ownerClause)->execute([$match[2], $documentId, (int)$owner['id']]);
     } elseif (preg_match('/^confirm:(\d+)$/', $data, $match)) {
         $documentId = (int)$match[1];
         $confirmed = true;
+        $popup = 'Đã xác nhận';
     } else {
-        tvb_api('answerCallbackQuery', ['callback_query_id' => (string)($callback['id'] ?? ''), 'text' => 'Thao tác không hợp lệ.']);
+        tvb_answer_callback($callback, 'Thao tác không hợp lệ.');
         return;
     }
-    $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE id=? AND owner_id=? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE ' . $ownerClause . ' LIMIT 1');
     $stmt->execute([$documentId, (int)$owner['id']]);
     $document = $stmt->fetch();
-    if (!$document) throw new RuntimeException('Không tìm thấy văn bản cần cập nhật.');
-    tvb_api('answerCallbackQuery', ['callback_query_id' => (string)($callback['id'] ?? ''), 'text' => $confirmed ? 'Đã xác nhận.' : 'Đã chuyển lĩnh vực.']);
-    tvb_api('editMessageText', ['chat_id' => $chatId, 'message_id' => (int)$callback['message']['message_id'], 'text' => tvb_summary($document, 'Tệp đã lưu', $confirmed), 'parse_mode' => 'HTML', 'reply_markup' => tvb_keyboard($documentId)]);
+    if (!$document) {
+        tvb_answer_callback($callback, 'Không tìm thấy văn bản cần cập nhật.');
+        return;
+    }
+    tvb_answer_callback($callback, $popup);
+    tvb_edit_callback_message($chatId, $callback, $document, $documentId, $confirmed);
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') tvb_reply(['error' => 'Method not allowed'], 405);
@@ -252,6 +299,7 @@ $payload = json_decode((string)file_get_contents('php://input'), true);
 if (!is_array($payload) || !isset($payload['update_id'])) tvb_reply(['ok' => true]);
 
 try {
+    $updateId = (int)($payload['update_id'] ?? 0);
     tvb_ensure_schema($pdo);
     if (!empty($payload['callback_query']) && is_array($payload['callback_query'])) {
         tvb_process_callback($pdo, $payload['callback_query']);
@@ -261,7 +309,6 @@ try {
     if (!is_array($message)) tvb_reply(['ok' => true]);
     $chatId = (int)($message['chat']['id'] ?? 0);
     if (!tvb_allowed_chat($chatId)) tvb_reply(['ok' => true]);
-    $updateId = (int)$payload['update_id'];
     if (!tvb_claim_update($pdo, $updateId, $chatId)) tvb_reply(['ok' => true]);
     $file = tvb_message_file($message);
     if (!$file || $file['id'] === '') {
@@ -286,7 +333,7 @@ try {
         ]);
         tvb_finish_update($pdo, $updateId, 'processing', (int)$document['id']);
         vbd_store_downloaded_document_file($pdo, $document, $temporary, $file['name'], $file['mime']);
-        tvb_api('editMessageText', ['chat_id' => $chatId, 'message_id' => (int)$processingMessage['message_id'], 'text' => tvb_summary($document, $file['name']), 'parse_mode' => 'HTML', 'reply_markup' => tvb_keyboard((int)$document['id'])]);
+        tvb_api('editMessageText', ['chat_id' => $chatId, 'message_id' => (int)$processingMessage['message_id'], 'text' => tvb_summary($document, $file['name']), 'parse_mode' => 'HTML', 'reply_markup' => tvb_keyboard((int)$document['id'], (string)($document['sector'] ?? 'hanhchinh'))]);
         tvb_finish_update($pdo, $updateId, 'completed', (int)$document['id']);
     } finally {
         if (isset($temporary) && is_string($temporary)) @unlink($temporary);
