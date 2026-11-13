@@ -56,7 +56,8 @@ async function accessControlMain() {
         'game-millionaire.html': 'smartquiz',
         'game-crossword.html': 'smartquiz',
         'game-racing.html': 'smartquiz',
-        'game-bell.html': 'smartquiz'
+        'game-bell.html': 'smartquiz',
+        'sualoichinhta.html': 'sualoichinhta'
     };
     const pageUrls = {
         lotrinh: 'lotrinhtoan6.html',
@@ -86,7 +87,7 @@ async function accessControlMain() {
         soankhbd: 'soankhbd.html',
         thoikhoabieu: 'thoikhoabieu.html',
         phancongtochuyenmon: 'phancongtochuyenmon.html',
-        xaydungphuluc: 'xaydungphuluc.html', duyetgiaoan: 'duyetgiaoan.html', duyetde: 'duyetde.html', nghiencuubaihoc: 'nghiencuubaihoc.html', taovideo: 'taovideo/index.html'
+        xaydungphuluc: 'xaydungphuluc.html', duyetgiaoan: 'duyetgiaoan.html', duyetde: 'duyetde.html', nghiencuubaihoc: 'nghiencuubaihoc.html', taovideo: 'taovideo/index.html', sualoichinhta: 'sualoichinhta.html'
     };
     const lotrinhPageKeys = new Set(['lotrinh', 'lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9']);
     const lotrinhRouteOrder = ['lotrinhtoan4', 'lotrinhtoan5', 'lotrinhtoan6', 'lotrinhtoan7', 'lotrinhtoan8', 'lotrinhtoan9'];

@@ -1,0 +1,110 @@
+ĐỀ CƯƠNG ÔN TẬP GIỮA HKI – TIN HỌC 6
+NĂM HỌC 2026 – 2027
+Câu 1. [NB] Phương án nào sau đây là thông tin?
+A. Các kiến thức về bài học mà ta đã ghi vào vở
+B. Các kiến thức về bài học mà ta đã ghi nhớ..
+C. Các kiến thức về bài học trong sách giáo khoa
+D. Các kiến thức về bài học mà giáo viên đã ghi lên bảng
+Câu 2. [NB] Xem thời khóa biểu tuần này, bạn Khoa kết luận: “Ngày mai có tiết thực hành tin học”. Phát biểu nào sau đây đúng?
+A. Thời khóa biểu là dữ liệu, kết luận của Khoa là thông tin.
+B. Thời khóa biểu là thông tin, kết luận của Khoa là dữ liệu.
+C. Những kí tự trong Thời khóa biểu là thông tin.
+D. Thời khóa biểu và kết luận của Khoa đều là dữ liệu
+Câu 3. [NB] Kết quả của việc nhìn thấy hoặc nghe thấy ở con người được xếp vào hoạt động nào trong quá trình xử lí thông tin?
+A. Thu nhận.          B. Lưu trữ                       C. xử lí                                   D. Truyền.
+Câu 4. [NB] Thao tác ghi nhớ và cất giữ tài liệu của con người được xếp vào hoạt động nào trong quá trình xử lí thông tin?
+A. Thu nhận.                       B. Lưu trữ                    C. xử lí                      D. Truyền.
+Câu 5. [TH] Bao nhiêu ‘byte’ tạo thành một ‘kilobyte’?
+A. 8.                                 B. 64.                               C. 1 024                                    D. 2 048.
+Câu 6. [NB] Đơn vị đo dữ liệu nào sau đây là lớn nhất?
+A. Gigabyte.                    B. Megabyte,                   C. Kilobyte                  D. Bít
+Câu 7. [NB] Mạng lnternet là gì?
+A. Là một mạng máy tính nối giữa 2 máy với nhau.
+B. Là sự kết nối các máy tính trong một cơ quan.
+C. Là sự kết nối các máy tính trên phạm vi toàn cầu.
+D. Câu a và b đúng.
+Câu 8. [NB] Em hãy chọn việc mà em không thể làm với internet
+A. Học ngoại ngữ trực tuyến với người nước ngoài.
+B. Nghe nhạc, xem phim trực tuyến.
+C. Đi bơi nâng cao sức khỏe.
+D. Tìm kiếm tài liệu học tập.
+Câu 9. [NB] Phát biểu nào sau đây không phài là lợi ích của việc sử dụng Internet đối với học sinh?
+A. Giúp tiết kiệm thời gian và cung cấp nhiều tư liệu làm bài tập dự án.
+B. Giúp nâng cao kiến thức bằng cách tham gia các khoá học trực tuyến.
+C. Giúp giải trí bằng cách xem phim trên Youtube suốt cả ngày.
+D. Giúp mở rộng giao lưu kết bạn với các bạn ở nước ngoài.
+Câu 10. [TH] Câu nào đúng trong các câu sau:
+A. Chúng ta có thể sử dụng bất kì thông tin nào trên Internet mà không cần xin phép.
+B. Thông tin trên Internet rất độc hại với học sinh nên cần cấm học sinh sử dụng Internet.
+C. Internet cung cấp môi trường học tập trực tuyến, giải trí từ xa.
+D. Trên Internet có đầy đủ những thứ chúng ta muốn mà không cần phải tìm kiếm ở bên ngoài
+Câu 11. [NB] Thông tin dạng âm thanh là thông tin nào bên dưới đây?
+A. Tiếng chim hót.                                               B. Đi học mang theo áo mưa.
+C. Ăn sáng trước khi đến trường.                        D. Hẹn bạn Hương cùng đi học.
+Câu 12. [TH] Trước khi sang đường theo em, con người phải xử lý những thông tin gì?
+A. Nghĩ về bài toán hôm qua trên lớp chưa làm được.
+B. Quan sát xem có chú công an hay không.
+C. Quan sát xem đèn tín hiệu giao thông đang bật màu gì.
+D. Kiểm tra lại đồ dùng học tập đã có đủ trong cặp sách chưa.
+Câu 13. [NB] Công cụ nào sau đây không phải là vật mang tin?
+A. Giấy.            B. Thẻ nhớ.            C. Đĩa CD, DVD.            D. Xô, chậu.
+Câu 14. [NB] Những khả năng to lớn nào đã làm cho máy tính trở thành một công cụ xử lý thông tin hữu hiệu?
+A. Làm việc không mệt mỏi.                       B. Khả năng tính toán nhanh, chính xác.
+C. Khả năng lưu trữ lớn.                              D. Tất cả các khả năng trên.
+Câu 15. [NB] Các thao tác nói, chia sẻ, thông báo, tuyên truyền, biểu đạt, trò chuyện, … của con người được xếp vào hoạt động nào trong quá trình xử lí thông tin?
+A. Thu nhận.          B. Lưu trữ.            C. Xử lí.                D. Truyền.
+Câu 16. [NB] Bàn phím, chuột, máy quét và webcam là những ví dụ về loại thiết bị nào của máy tính?
+A. Bộ nhớ.               B. Thiết bị lưu trữ.           C. Thiết bị vào.            D. Thiết bị ra.
+Câu 17. [TH] Đặc điểm nào sau đây không thuộc về máy tính?
+A. Thực hiện nhanh và chính xác.                   B. Suy nghĩ sáng tạo.
+C. Lưu trữ lớn.                                                 D. Hoạt động bền bỉ.
+Câu 18. [TH] Dữ liệu được máy tính lưu trữ dưới dạng:
+A. Số thập phân.         B. Dãy bit.           C. Thông tin.               D. Các kí tự.
+Câu 19. [NB] Dữ liệu trong máy tính được mã hóa thành dãy bit vì:
+A. Dãy bit chiếm ít dung lượng nhớ hơn.          B. Dãy bit được xử lí dễ dàng hơn.
+C. Dãy bit đáng tin cậy hơn.                              D. Máy tính chỉ làm việc với hai kí hiệu 0 và 1.
+Câu 20. [NB] Một bit được biểu diễn bằng:
+A. Chữ số bất kì.         B. Một chữ cái.          C. Kí hiệu 0 hoặc 1.    D. Một kí hiệu đặc biệt.
+Câu 21. [NB] Thiết bị nào sau đây không phải là thiết bị đầu cuối?
+A. Máy in.      B. Máy tính.        C. Bộ định tuyến.               D. Máy quét.
+Câu 22. [NB] Mạng máy tính gồm các thành phần:
+A. Máy tính và thiết bị kết nối.                                                B. Máy tính và phần mềm mạng.
+C. Thiết bị đầu cuối, thiết bị kết nối và phần mềm mạng.       D. Thiết bị đầu cuối và thiết bị kết nối.
+Câu 23. [TH] Phát biểu nào sau đây không phải là đặc điểm của Internet?
+A. Phạm vi hoạt động trên toàn cầu.                          B. Có nhiều dịch vụ đa dạng và phong phú.
+C. Không thuộc quyền sở hữu của ai.                        D. Thông tin chính xác tuyệt đối.
+Câu 24. [TH] Khi sử dụng lại các thông tin trên mạng cần lưu ý đến vấn đề là:
+A. Bản quyền.                               B. Các từ khóa liên quan đến trang web.
+C. Địa chỉ của trang web.             D. Các từ khóa liên quan đến thông tin cần tìm.
+Câu 25. [TH] Để kết nối với Internet, máy tính phải được cài đặt và cung cấp dịch vụ bởi:
+A. Một máy tính khác.                                   B. Người quản trị mạng xã hội.
+C. Nhà cung cấp dịch vụ Internet.                D. Người quản trị mạng máy tính.
+Câu 26. [TH] Mạng máy tính không cho phép người sử dụng chia sẻ
+A. Máy in.           B. Máy quét.               C. Bàn phím và chuột.          D. Dữ liệu.
+Câu 27. [TH] Phát biểu nào sau đây không chính xác?
+A. Mạng không dây thuận tiện cho những người di chuyển nhiều.
+B. Mạng không dây nhanh, ổn định va mạnh hơn mạng có dây.
+C. Mạng không đâyễ dàng lắp đặt hơn vì không cần khoan đục và lắp đặt đường dây.
+D. Mạng không dây thường được sử dụng cho các thiết bị di động như máy tính bảng, điện thoại, …
+Câu 28. [TH] Trong các nhận định sau, nhận định nào không phải là lợi ích của việc sử dụng mạng máy tính?
+A. Giảm chi phí khi dùng chung phần cứng.
+B. Giảm chi phí khi dùng chung phần mềm.
+C. Người sử dụng có quyền kiểm soát độc quyền đối với dữ liệu và ứng dụng của riêng họ.
+D. Cho phép chia sẻ dữ liệu, tăng hiệu quả sử dụng.
+Câu 29. [VD] Em hãy mã hóa bức tranh dưới thành các dãy bít
+Câu 30. Một thẻ nhớ 1 GB chứa được khoảng bao nhiêu bản nhạc? Biết rằng mỗi bản nhạc có dung lượng khoảng 4 MB.
+Đổi 1 GB = 1 024 MB
+Số bản nhạc có thể lưu trữ trong thẻ nhớ là: 1024: 4=256 (bản nhạc)
+Câu 31 Lợi ích của mạng máy tính:  Người sử dụng có thể liên lạc với nhau để trao đổi thông tin, chia sẻ dữ liệu và dùng chung các thiết bị trên mạng.
+Câu 32  Mã hóa số 7
+Theo quy tắc phải là 1, trái là 0. Vậy số 7 được mã hóa thành 111
+
+--- TABLE ---
+0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 
+ |  |  |  | 4 | 5 | 6 | 7 | Phải
+ |  |  |  |  |  | 6 | 7 | Phải
+ |  |  |  |  |  |  | 7 | Phải
+
+--- TABLE ---
+Tổ chuyên môn | Giáo viên ra đề
+BGH Duyệt | BGH Duyệt

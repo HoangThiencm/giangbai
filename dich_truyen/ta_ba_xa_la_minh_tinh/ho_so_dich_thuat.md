@@ -433,13 +433,157 @@
     * Trần Nhiên báo tin cho chú Trương khiến chú làm rơi vỡ cả tách trà vì quá xúc động; chú bắt tối phải qua uống rượu mừng con rể tương lai lên Vệ Tinh.
     * Trần Nhiên đề cử Lâm Phàm tiếp quản vị trí Tổng biên kịch của hai show ăn khách 《Tôi Yêu Ghi Nhớ Ca Từ》 và 《Khiêu Chiến Microphone》. Lưu chủ nhiệm Lưu Tiên Long chấp thuận thử việc 2 kỳ, và trước khi Trần Nhiên rời đi đã chân thành nói một câu: "Cảm ơn".
   + **Trạng thái:** Toàn bộ 117 chương đã được biên dịch hoàn thiện thuần Việt 100%, chất lượng văn học cao, đã cập nhật vào `doc_truyen.html`.
-
-
-
-
-
-
-
-
-
-
+- **Đợt 24 (Chương 118 - 122):** Hoàn thành ngày 03/11/2026.
+  + **Tên các chương:**
+    * Chương 118: Em cũng vậy *(我也是)*
+    * Chương 119: Không cam tâm cũng chẳng làm được gì *(不甘心也没辦法)*
+    * Chương 120: Tiền đồ như gấm *(前程似錦)*
+    * Chương 121: Tổ sản xuất mới *(新節目組)*
+    * Chương 122: Đạo diễn Lô *(盧導演)*
+  + **Tình tiết bước ngoặt:**
+    * Chú Trương mở tiệc rượu gia đình ấm cúng ăn mừng Trần Nhiên bước chân vào Kênh Vệ Tinh; dặn dò anh chuẩn bị tinh thần đón nhận áp lực cạnh tranh khốc liệt.
+    * Trương Phồn Chi tại Hoa Hải đọc tin nhắn báo tin vui của Trần Nhiên, mỉm cười dịu dàng và gửi ba chữ: "Em cũng vậy". Đào Lâm bắt gặp nụ cười hiếm thấy của Phồn Chi và tiếp tục lo lắng cây bắp cải trắng nhà mình sắp bị bứng đi.
+    * Vương Minh Nghĩa (á quân biên kịch toàn đài) thức trắng đêm làm đề án show đêm muộn mang lên nộp Mã tổng giám đốc Kênh Vệ Tinh, bàng hoàng khi biết ban giám đốc đã duyệt kịch bản của Trần Nhiên. Đọc xong kịch bản Talkshow độc thoại của Trần Nhiên, Vương Minh Nghĩa tâm phục khẩu phục trước tư duy đột phá và đành chua xót thốt lên: "Không cam tâm cũng chẳng làm được gì!".
+    * Trần Nhiên chính thức bàn giao công việc tại Kênh Giải Trí. Lâm Phàm nhận chức Quyền Tổng biên kịch của hai show ăn khách. Dương Khải Quân tổng giám đốc cùng cả tổ liên hoan chia tay và chúc Trần Nhiên "Tiền đồ như gấm, vạn dặm rực rỡ".
+    * Trần Nhiên đến Kênh Vệ Tinh nhận chức Tổng biên kịch tổ sản xuất mới tầng 15. Đạo diễn Lô Bỉnh Lỗi cùng các biên kịch trẻ (Cổ Nghị, Tiểu Lý, Hứa Thiến) ban đầu nghi ngại vì Trần Nhiên quá trẻ, nhưng sau khi đọc kịch bản phân cảnh số 1 của 《Đêm Nay Nói Chuyện Phiếm》 thì bị chinh phục hoàn toàn. Cả tổ bắt tay vào bài toán hóc búa nhất: Tuyển chọn MC/Host cho show hài độc thoại.
+  + **Nhân vật mới xuất hiện:**
+    * **Lô Bỉnh Lỗi (盧秉磊):** Đạo diễn tổ sản xuất mới Kênh Vệ Tinh, ngoài 40 tuổi, tính tình trầm mặc, chắc chắn, dày dặn kinh nghiệm hiện trường.
+    * **Cổ Nghị, Tiểu Lý, Hứa Thiến:** Các biên kịch trẻ của tổ sản xuất mới.
+  + **Trạng thái:** Đã hoàn thành 122 chương thuần Việt 100%, chất lượng văn học cao, đã biên tập vào `doc_truyen.html`.
+- **Đợt 25 (Chương 123 - 130):** Hoàn thành ngày 03/11/2026.
+  + **Tên các chương:**
+    * Chương 123: Bài hát mới *(新歌)*
+    * Chương 124: Lựa chọn *(選擇)*
+    * Chương 125: Quả thực rất có lễ phép *(的確很有禮貌)*
+    * Chương 126: Chu Chu *(周舟)*
+    * Chương 127: Phàm việc gì cũng có vạn nhất *(凡事有個萬一)*
+    * Chương 128: Một lời nói dối *(一個謊言)*
+    * Chương 129: Dũng khí *(勇氣)*
+    * Chương 130: Tôi cần chút thời gian *(我需要點時間)*
+  + **Tình tiết bước ngoặt:**
+    * Trương Phồn Chi tại Hoa Hải thẳng thừng từ chối bài hát thị trường kém chất lượng của nhạc sĩ Triệu Bác do công ty Phồn Tinh ép buộc. Cô gọi điện tâm sự với Trần Nhiên; Trần Nhiên khẳng định tôn trọng cá tính âm nhạc của cô và hứa sẽ viết tặng cô một ca khúc kinh điển độc quyền.
+    * Tại Kênh Vệ Tinh, Trần Nhiên và đạo diễn Lô rà soát danh sách MC toàn đài nhưng không ai hợp format Hài độc thoại. Trần Nhiên tình cờ phát hiện cuốn băng ghi hình cũ của Chu Chu (周舟) – cựu MC tài năng của Kênh Đô Thị bị chèn ép đóng băng suốt 4 năm trong phòng lưu trữ văn bản.
+    * Trần Nhiên đích thân sang Kênh Đô Thị gặp Chu Chu. Thái độ khiêm cung, nhã nhặn và lễ phép của Chu Chu củng cố niềm tin tuyệt đối của Trần Nhiên. Trần Nhiên đưa kịch bản phân cảnh 《Đêm Nay Nói Chuyện Phiếm》 và trao lời mời chân thành. Chu Chu sau một đêm suy nghĩ thấu đáo đã quyết định cùng vợ đánh cược một phen ("Phàm việc gì cũng có vạn nhất").
+    * Buổi diễn thử đầu tiên của Chu Chu tại trường quay phụ số 3 thành công rực rỡ khiến đạo diễn Lô và cả tổ thán phục; dù vậy bên ngoài hành lang vẫn dấy lên nhiều lời gièm pha nghi ngại.
+    * Chú Trương lo lắng gặng hỏi, Trần Nhiên giải thích thấu đáo giúp chú yên tâm. Dì Vân gọi điện cho Phồn Chi ở Hoa Hải, Phồn Chi nói dối mẹ rằng không nói chuyện với Trần Nhiên, bị người đại diện Đào Lâm bóc mẽ khiến cô ngượng ngùng đỏ mặt.
+    * Trần Nhiên gửi demo guitar ca khúc 《Dũng Khí》 (勇氣) tặng Trương Phồn Chi. Giai điệu và ca từ lay động sâu sắc khiến Phồn Chi rơi nước mắt vì rung động và hạnh phúc; Đào Lâm khẳng định đây là siêu phẩm kinh điển và là lời tỏ tình dũng cảm nhất.
+    * Trương Phồn Chi mang ca khúc 《Dũng Khí》 đến công ty Phồn Tinh khiến ban giám đốc và nhạc sĩ Triệu Bác choáng váng khuất phục; công ty đồng ý dồn toàn bộ nguồn lực phòng thu tốt nhất cho Phồn Chi.
+    * Giám đốc Kênh Vệ Tinh Mã Văn Long thị sát trường quay, cười nghiêng ngả trước màn diễn thử của Chu Chu và duyệt ghi hình chính thức tập 1. Chu Chu xin Trần Nhiên một đêm ở lại trường quay luyện tập để vượt qua nỗi sợ hãi tâm lý sau 4 năm xa cách sân khấu ("Tôi cần chút thời gian").
+  + **Nhân vật mới xuất hiện:**
+    * **Chu Chu (周舟):** Cựu MC xuất chúng của Kênh Đô Thị, từng bị đóng băng sự nghiệp 4 năm, được Trần Nhiên phát hiện và trao cơ hội làm Host chính của show hài độc thoại Kênh Vệ Tinh.
+    * **Triệu Bác (趙博):** Nhạc sĩ có quan hệ quen biết với lãnh đạo công ty Phồn Tinh, chuyên viết nhạc thị trường rập khuôn.
+    * **Lý Đức Hữu (李德友):** Giám đốc nghệ thuật công ty Phồn Tinh Âm Nhạc.
+  + **Trạng thái:** Đã hoàn thành trọn vẹn 130 chương thuần Việt 100%, chất lượng văn học cao, đã biên tập vào `doc_truyen.html`.
+- **Đợt 26 (Chương 131 - 135):** Hoàn thành ngày 03/11/2026.
+  + **Tên các chương:**
+    * Chương 131: Hả hê *(幸災樂禍)*
+    * Chương 132: Bước ngoặt *(轉機)*
+    * Chương 133: Cây khô gặp mùa xuân *(枯木逢春)*
+    * Chương 134: Dấu chấm hỏi *(問號)*
+    * Chương 135: Cơ trí *(機智)*
+  + **Tình tiết bước ngoặt:**
+    * Tập 1 của show 《Đêm Nay Nói Chuyện Phiếm》 chính thức lên sóng tối thứ Năm lúc 22h00 trên Kênh Vệ Tinh Triệu Nam. Vương Minh Nghĩa cùng một số người đố kỵ ngồi uống bia hả hê chờ show bị flop thảm hại khi rating mở màn chỉ đạt 0.41%.
+    * Chu Chu mở màn bằng câu chuyện tự trào cay đắng 4 năm thất sủng của chính mình, sau đó tung ra liên hoàn punchline sắc bén về áp lực công sở và nỗi sợ bị phụ huynh giục cưới. Khán giả cười sặc sụa, truyền tai nhau mở tivi. Đường cong rating tạo nên bước ngoặt chấn động, dựng đứng từ 0.41% lên 0.79%!
+    * Kết thúc tập 1, rating trung bình chốt lại ở mức **0.88%** (đỉnh điểm **0.95%**), xô đổ kỷ lục 5 năm qua của Kênh Vệ Tinh, leo thẳng lên vị trí số 3 toàn quốc! Vương Minh Nghĩa đánh rơi lon bia chết lặng. Chu Chu quỳ sụp khóc nức nở như "cây khô gặp mùa xuân" được tái sinh.
+    * Sáng hôm sau toàn đài xôn xao với những "Dấu chấm hỏi" khổng lồ trước kỳ tích của Trần Nhiên. Lãnh đạo Kênh Đô Thị xấu hổ tiếc nuối vì bỏ quên nhân tài. Mã Văn Long tổng giám đốc Kênh Vệ Tinh xuống tận phòng thưởng nóng 10 vạn tệ và duyệt ký hợp đồng chính thức loại A cho Chu Chu. Trần Nhiên khéo léo giữ nguyên bối cảnh ấm cúng của trường quay phụ số 3 để bảo tồn linh hồn của format.
+    * Trần Nhiên cơ trí triển khai chiến lược video ngắn viral mạng xã hội: Cắt các đoạn punchline đắt giá 30-45 giây đăng lên Weibo, bùng nổ hàng triệu lượt xem và tạo cơn sốt toàn quốc.
+    * Tại Hoa Hải, Trương Phồn Chi hoàn thành bản thu âm ca khúc 《Dũng Khí》 tại phòng thu số 1, giọng hát chạm tới đỉnh cao cảm xúc làm chấn động toàn bộ ê-kíp nhạc công. Cô gửi bản thu đầu tiên cho Trần Nhiên kèm lời nhắn: "Bài hát của hai chúng ta đã thu xong rồi!".
+  + **Trạng thái:** Đã hoàn thành trọn vẹn 135 chương thuần Việt 100%, chất lượng văn học cao, đã biên tập vào `doc_truyen.html`.
+- **Đợt 27 (Chương 136 - 150):** Hoàn thành ngày 03/11/2026.
+  + **Tên các chương:**
+    * Chương 136: Lâu ngày sinh tình *(日久生情 / 重視)*
+    * Chương 137: Tung chiêu lớn *(放大招)*
+    * Chương 138: Rất đúng phong cách chú Trương *(這很張叔)*
+    * Chương 139: Thở dài *(嘆氣)*
+    * Chương 140: Còn ngọt ngào hơn thế này *(比這還甜)*
+    * Chương 141: Muốn giành vị trí số một *(想拿第一)*
+    * Chương 142: Nụ cười *( /微笑 )*
+    * Chương 143: Phật hệ *(佛系)*
+    * Chương 144: Toan tính nhỏ *(小算盤)*
+    * Chương 145: Ai mà ngờ được chứ *(誰能想的到嘛)*
+    * Chương 146: Ngươi tụt, ta tăng *(你下降，我上漲)*
+    * Chương 147: Mừng công *(慶功)*
+    * Chương 148: Đổi khung giờ *(調檔)*
+    * Chương 149: Quyết định của Vương Minh Nghĩa *(王明義的決定)*
+    * Chương 150: Nho nhã tùy hòa *(儒雅隨和)*
+  + **Tình tiết bước ngoặt:**
+    * **Tình cảm bứt phá:** Trương Phồn Chi âm thầm đáp chuyến bay trưa Chủ nhật về Lâm Thị để tạo bất ngờ cho Trần Nhiên. Hai người cùng đi mua quà cho chú Trương và dì Vân, cùng dùng bữa cơm sum họp ấm cúng tràn ngập tiếng cười. Đĩa đơn 《Dũng Khí》 chính thức phát hành càn quét các bảng xếp hạng, Trần Nhiên gửi tin nhắn đắt giá: *"Sau này còn ngọt ngào hơn thế này nhiều"*. Khi Trần Nhiên bị báo chí viết bài vây quanh bởi các MC nữ, Phồn Chi gửi biểu tượng `/微笑` ghen tuông đáng yêu, khiến tình cảm hai người ngày càng thắt chặt.
+    * **Chiến tích truyền hình đỉnh cao:** Trần Nhiên đặt mục tiêu táo bạo cho Tập 2 《Đêm Nay Nói Chuyện Phiếm》: Đoạt ngôi vị số 1 toàn quốc! Kịch bản bóc trần lừa đảo bảo hiểm và đa cấp chạm đúng huyệt đạo bức xúc của xã hội. Dù bị Vương Minh Nghĩa cố tình giở trò câu giờ đẩy lùi lịch chiếu xuống sau 23:05, chương trình vẫn bùng nổ dữ dội, đạt rating kỷ lục **1.08%** — chính thức soán ngôi quán quân toàn quốc của đài Đông Hoằng!
+    * **Cục diện Kênh Vệ Tinh:** Trái ngược với phong thái "Phật hệ", "Nho nhã tùy hòa" của Trần Nhiên, show hẹn hò của Vương Minh Nghĩa tụt thảm hại xuống 0.38%. Đài truyền hình Triệu Nam quyết định: Điều chỉnh khung giờ phát sóng (调档), đưa show của Trần Nhiên lên thẳng Khung giờ vàng 21:30 tối thứ Bảy, đá văng show hẹn hò sang kênh Khoa Giáo. Vương Minh Nghĩa cay đắng đập bàn nộp đơn từ chức sang công ty truyền thông mạng Thịnh Thế.
+    * **Song hỷ lâm môn:** 《Đêm Nay Nói Chuyện Phiếm》 ngự trị ngôi vị Quán quân Rating toàn quốc; cùng lúc đó tại Hoa Hải ca khúc 《Dũng Khí》 của Trương Phồn Chi vượt qua Thiên vương để leo lên Quán quân Bảng xếp hạng âm nhạc quốc gia. Cả hai cùng hướng tới những đỉnh cao mới trong sự nghiệp và tình yêu.
+  + **Trạng thái:** Đã hoàn thành trọn vẹn 150 chương thuần Việt 100%, chất lượng văn học cao, đã biên tập vào `doc_truyen.html`.
+- **Đợt 28 (Chương 151 - 160):** Hoàn thành ngày 03/11/2026.
+  + **Tên các chương:**
+    * Chương 151: Bức tranh *(畫)*
+    * Chương 152: Ngân nga *(哼歌)*
+    * Chương 153: Vừa đàn vừa hát *(彈唱)*
+    * Chương 154: Bọn con có là gì của nhau đâu *(我們又沒什麼)*
+    * Chương 155: Nhất định có vấn đề *(肯定有問題)*
+    * Chương 156: Có cần truyền cảm hứng thế không *(要不要這麼勵志)*
+    * Chương 157: Manh mối *(線索)*
+    * Chương 158: Rắc rối nhỏ *(小麻煩)*
+    * Chương 159: Rắc rối lớn *(大麻煩)*
+    * Chương 160: Bắt được đuôi sam rồi *(逮住馬腳了)*
+  + **Tình tiết bước ngoặt:**
+    * **Tiến triển tình cảm riêng tư:** Trần Nhiên đón Trương Phồn Chi về căn hộ riêng của mình để tự tay nấu bữa cơm mừng công. Phồn Chi vô tình nhìn thấy cuốn sổ phác thảo bức tranh vẽ hình bóng cô nghe nhạc bên khung cửa sổ đầy cảm xúc; sau bữa cơm, cô thoải mái co chân trên sô pha ngân nga hát và cùng Trần Nhiên đàn hát mộc ca khúc 《Dũng Khí》 bên cây đàn guitar gỗ.
+    * **Màn bắt quả tang hài hước:** Khi Phồn Chi về nhà muộn, chiếc mũi thính như thám tử của chú Trương ngửi thấy mùi sườn xào chua ngọt đặc trưng của Trần Nhiên bám trên áo len con gái. Phồn Chi ngượng chín mặt giậm chân thốt lên *"Bọn con có là gì của nhau đâu"* rồi chạy trốn vào phòng. Chú Trương và dì Vân cười toe toét khẳng định *"Nhất định có vấn đề"*.
+    * **Oanh tạc Khung giờ vàng:** Tập 3 《Đêm Nay Nói Chuyện Phiếm》 lần đầu lên sóng Khung giờ vàng 21:30 tối thứ Bảy, kết hợp châm biếm sâu cay lối sống ảo "danh viện mạng" và câu chuyện vượt khó xúc động của Chu Chu ("Có cần truyền cảm hứng thế không?!"). Rating bùng nổ chạm mốc **1.35%**, đứng vững Top 2 toàn quốc, đánh bại cả đài Chiết Giang và bám sát nút đài Hồ Nam.
+    * **Đập tan âm mưu bẩn thỉu:** Vương Minh Nghĩa sang công ty Thịnh Thế cấu kết với Tôn Hạo, phát hiện "manh mối" kích động Hiệp hội Bảo hiểm gửi công văn ("Rắc rối nhỏ"), đồng thời mua chuộc 30 blogger và thủy quân tung tin đồn Trần Nhiên "đạo nhái format Mỹ" nhằm hủy hoại chương trình ("Rắc rối lớn"). Phồn Chi lo lắng gọi điện ngỏ ý nhờ công ty bảo vệ anh.
+    * **Bắt gọn đuôi sam:** Trần Nhiên phản công chớp nhoáng: Công khai Giấy chứng nhận Bản quyền Sở hữu Trí tuệ độc bản do Cục Bản quyền Quốc gia cấp từ trước; đồng thời lần theo địa chỉ IP và dòng tiền bẩn bắt quả tang Vương Minh Nghĩa và công ty Thịnh Thế. Đài Triệu Nam khởi kiện đòi bồi thường 50 triệu tệ. Thịnh Thế hoảng loạn sa thải Vương Minh Nghĩa ngay lập tức, gã cựu đạo diễn thân bại danh liệt hoàn toàn.
+  + **Trạng thái:** Đã hoàn thành trọn vẹn 160 chương thuần Việt 100%, chất lượng văn học cao, đã biên tập vào `doc_truyen.html`.
+- **Đợt 29 (Chương 161 - 170):** Hoàn thành ngày 03/11/2026.
+  + **Tên các chương:**
+    * Chương 161: Hồi đáp *(回應)*
+    * Chương 162: Sảng khoái *(舒服了)*
+    * Chương 163: Em không hiểu đâu *(你不懂)*
+    * Chương 164: Trần Nhiên là bảo bối lớn *(陳然是個大寶貝)*
+    * Chương 165: Con gà đẻ trứng vàng *(會下金蛋的雞)*
+    * Chương 166: Số một rồi! *(第一了)*
+    * Chương 167: Dở khóc dở cười *(哭笑不得)*
+    * Chương 168: Căng thẳng *(緊張)*
+    * Chương 169: Lại trẹo chân rồi *(又扭了)*
+    * Chương 170: Quá trẻ tuổi *(太年輕了)*
+  + **Tình tiết bước ngoặt:**
+    * **Hồi đáp đĩnh đạc & Cơn sốt thương mại:** Trần Nhiên đưa ra lời hồi đáp lịch thiệp, đĩnh đạc trên Weibo: "Lấy tác phẩm nói chuyện, sáng tạo từ hơi thở nhân dân", được Báo Thanh Niên và Nhân Dân Nhật Báo khen ngợi. Đài Triệu Nam rơi vào trạng thái vô cùng "sảng khoái"; các thương hiệu lớn thi nhau đổ xô tranh đoạt quảng cáo, đẩy giá lên 25 vạn tệ/15 giây và ký hợp đồng tài trợ 25 triệu tệ biến show thành "con gà đẻ trứng vàng".
+    * **Đặc cách lịch sử:** Ban Giám đốc Đài mở cuộc họp giao ban, Đài trưởng khẳng định Trần Nhiên chính là "đại bảo bối" của toàn đài; quyết định đặc cách bổ nhiệm Trần Nhiên giữ chức danh Phó Trưởng phòng Kế hoạch Nội dung kiêm Tổng biên kịch danh dự ở tuổi 24, cấp phòng làm việc riêng và toàn quyền duyệt kịch bản.
+    * **Quán quân khung giờ vàng toàn quốc:** Tập 4 về đề tài giục cưới bùng nổ mạng xã hội. Rating chính thức đạt **1.65%**, chính thức đánh bại đài Hồ Nam để đưa Đài Triệu Nam lần đầu tiên trong lịch sử đoạt Cúp Quán quân số 1 toàn quốc trên Khung giờ vàng!
+    * **Những khoảnh khắc ngọt ngào dở khóc dở cười:** Chú Trương gắt gỏng từ chối cả chục cuộc gọi đòi mai mối cho Trần Nhiên ("Tiểu Trần có chủ rồi, cấm cướp rể quý!"). Tại Đêm hội Âm nhạc Mùa Thu, Trương Phồn Chi dù dày dặn kinh nghiệm vẫn vô cùng "căng thẳng" khi biết Trần Nhiên ngồi xem dưới cánh gà. Biểu diễn xong, Phồn Chi bị bước hụt trẹo chân, Trần Nhiên lao tới bế bổng cô theo kiểu công chúa vào phòng nghỉ và ân cần chườm đá xoa bóp cho cô khiến cô xúc động nghẹn ngào.
+    * **Chấn động giới truyền hình:** Tại Trung tâm Truyền hình Hồ Nam, toàn bộ các tổng đạo diễn gạo cội bàng hoàng khi xem hồ sơ của Trần Nhiên và phải thốt lên *"Cậu ta quá trẻ tuổi!"* (mới tròn 24 tuổi). Đài Hồ Nam bắt đầu lên kế hoạch siêu dự án 100 triệu tệ để tái đấu; trong khi Trần Nhiên đã chuẩn bị sẵn trong đầu một dự án mới còn bùng nổ hơn nhiều.
+  + **Trạng thái:** Đã hoàn thành trọn vẹn 170 chương thuần Việt 100%, chất lượng văn học cao, đã biên tập vào `doc_truyen.html`.
+- **Đợt 30 (Chương 171 - 180):** Hoàn thành ngày 03/11/2026.
+  + **Tên các chương:**
+    * Chương 171: Cảm giác mình đã khai khiếu rồi *(感覺自己開竅了)*
+    * Chương 172: Lừa quỷ à *(騙鬼呢)*
+    * Chương 173: Bịt tai trộm chuông *(掩耳盜鈴)*
+    * Chương 174: Cùng chung ý nghĩ *(想一塊兒了)*
+    * Chương 175: Bất ngờ *(驚喜)*
+    * Chương 176: Nhớ nhà rồi *(想家了)*
+    * Chương 177: Con tự có chừng mực *(我有分寸)*
+    * Chương 178: Lời thỉnh cầu của Đào Lâm *(陶琳的請求)*
+    * Chương 179: Ân trọng như núi *(恩重如山呐)*
+    * Chương 180: Tiểu Cầm bối rối *(糾結的小琴)*
+  + **Tình tiết bước ngoặt:**
+    * **Bước chuyển tâm lý tình cảm:** Sau màn bế bổng công chúa, Trần Nhiên cảm thấy mình đã thực sự "khai khiếu" trong tình cảm, chủ động nhắn tin quan tâm ngọt ngào. Sáng hôm sau, Trương Sùng Ninh bóc mẽ màn bế bổng khiến Phồn Chi đỏ bừng mặt trốn vào phòng ("Lừa quỷ à!"). Đào Lâm khuyên Phồn Chi đừng "bịt tai trộm chuông" giả vờ bạn bè nữa mà hãy dũng cảm đón nhận tình yêu của Trần Nhiên.
+    * **Siêu dự án âm nhạc mới:** Trước sự đe dọa từ dự án 100 triệu tệ của đài Hồ Nam, Trần Nhiên đề xuất format gameshow âm nhạc mang tính cách mạng: 《Ca Sĩ Giấu Mặt》 (蒙面歌王) — ca sĩ đeo mặt nạ thi đấu bằng giọng hát thực lực. Đài trưởng và Kiều Vạn Xuân vỗ bàn khen ngợi vì ý tưởng "cùng chung ý nghĩ" với định hướng của Cục Phát thanh Truyền hình, cấp ngân sách 30 triệu tệ và giao Trần Nhiên toàn quyền chỉ đạo sản xuất.
+    * **Món quà bất ngờ & Lời ước hẹn:** Trước khi Phồn Chi bay về Hoa Hải, Trần Nhiên tặng cô chiếc lắc tay bạc thủ công đính đá ngọc bích khắc chữ "R & Z" cùng bản nhạc phổ tuyệt phẩm 《Hồng Đậu》 (Đậu Đỏ) và lời mời tham gia show mới. Phồn Chi xúc động rưng rưng, kiễng chân thì thầm: *"Em sẽ đợi anh ở Hoa Hải"*.
+    * **Chuyến về quê ấm áp & Ân trọng như núi:** Talkshow đạt đỉnh 1.68%, Trần Nhiên xin nghỉ phép 4 ngày về quê Gia Thị thăm mẹ vì "nhớ nhà rồi". Chú Trương và dì Vân gửi theo cả cốp xe quà quý gồm yến sào, hải sản khô và rượu Mao Đài. Chú Trương dặn dò chuyện trăm năm với Phồn Chi; Trần Nhiên hứa chắc nịch: *"Con tự có chừng mực, cả đời không phụ lòng Phồn Chi"*. Về đến quê, bà Chu Huệ và họ hàng xúc động rơi lệ trước tấm lòng "ân trọng như núi" của gia đình chú Trương.
+    * **Lời thỉnh cầu & Trợ lý bối rối:** Đào Lâm gọi điện thỉnh cầu Trần Nhiên viết thêm ca khúc chủ đề thứ ba cho album mới của Phồn Chi; Trần Nhiên vui vẻ đồng ý không tính thù lao (chuẩn bị tuyệt phẩm 《Ngộ Kiến / Gặp Gỡ》). Tại Hoa Hải, cô trợ lý nhỏ Tiểu Cầm bối rối nghi ngờ chị Chi Chi bí mật yêu đương, cuối cùng ngã ngửa khi biết cả người đại diện lẫn công ty đều đã biết và hết lòng ủng hộ chàng rể quý Trần Nhiên.
+  + **Trạng thái:** Đã hoàn thành trọn vẹn 180 chương thuần Việt 100%, chất lượng văn học cao, đã biên tập vào `doc_truyen.html`.
+- **Đợt 31 (Chương 181 - 190):** Hoàn thành ngày 03/11/2026.
+  + **Tên các chương:**
+    * Chương 181: Đã đi đến bước này rồi ư? *(都走到這一步了？)*
+    * Chương 182: Chuẩn bị *(準備)*
+    * Chương 183: Nghệ thuật gia công *(藝術加工)*
+    * Chương 184: Quá vô lý rồi *(就離譜)*
+    * Chương 185: Không có lần sau đâu *(沒有下次了)*
+    * Chương 186: Không phải chuyện gì to tát *(不是什麼大事兒)*
+    * Chương 187: Bài hát tuyên truyền *(宣傳曲)*
+    * Chương 188: Để sau hãy nói *(再說)*
+    * Chương 189: Đây là thật sao? *(這是真的？)*
+    * Chương 190: Cứng đờ người *(僵住了)*
+  + **Tình tiết bước ngoặt:**
+    * **Tra khảo ngọt ngào & Chuẩn bị đỉnh cao:** Ở quê Gia Thị, cô em họ Trần Dao bắt thóp anh họ chat với avatar hoa nhài, tra khảo: *"Hai người đã đi đến bước này rồi ư?!"*. Trong những ngày ở quê, Trần Nhiên hoàn thành kiệt tác 《Ngộ Kiến》 (Gặp Gỡ) và bản thiết kế kỹ thuật cho show 《Ca Sĩ Giấu Mặt》.
+    * **Bài học nghệ thuật & Kiệt tác thứ ba:** Trở lại đài, Trần Nhiên chỉ dạy các biên kịch trẻ bài học về "Nghệ thuật gia công" trong hài trào phúng, sửa kịch bản Tập 6 xuất thần. Bản nhạc 《Ngộ Kiến》 gửi sang Hoa Hải khiến Giám đốc Lý Đức Hữu và cả công ty Phồn Tinh rúng động gào lên: *"Quá vô lý rồi!"* (liên tục tạo ra 3 siêu phẩm 《Dũng Khí》, 《Hồng Đậu》, 《Ngộ Kiến》). Phồn Chi xúc động gọi điện mắng yêu Đào Lâm và dặn Trần Nhiên: *"Không có lần sau đâu, không được thức khuya viết nhạc nữa"*.
+    * **Đập tan hoài nghi & Chiến dịch PR bí ẩn:** Trước những lời xì xào nghi ngại về show mới, Trần Nhiên điềm tĩnh: *"Không phải chuyện gì to tát"*. Ngay sau đó, Tập đoàn Hằng Lợi đặt cọc ngay 15 triệu tệ giữ quyền tài trợ. Thay vì họp báo, Trần Nhiên tung ca khúc tuyên truyền bí ẩn 《Ánh Trăng Tàn Khốc》 do ca sĩ giấu mặt thể hiện, leo thẳng Top 3 BXH toàn quốc, tạo cơn sốt tò mò chưa từng có.
+    * **Xác lập tình yêu chính thức tại Hoa Hải:** Trần Nhiên dẫn đoàn sang Thượng Hải, từ chối tiệc rượu xa hoa ("Để sau hãy nói") để đến nhà hàng Pháp ăn tối dưới ánh nến với Phồn Chi. Anh trao chiếc mặt nạ "Bạch Hồ Điệp" và mời cô làm át chủ bài số 01 của show mới ("Đây là thật sao?"). Lúc đi dạo bên Bến Thượng Hải trong gió lạnh, Trần Nhiên cởi áo măng tô khoác cho cô và bất ngờ nắm chặt tay cô theo kiểu "mười ngón tay đan chặt". Phồn Chi ban đầu "cứng đờ người" vì rung động mãnh liệt, rồi dịu dàng siết chặt tay đáp lại. Tình yêu chính thức đơm hoa kết trái!
+  + **Trạng thái:** Đã hoàn thành trọn vẹn 190 chương thuần Việt 100%, chất lượng văn học cao, đã biên tập vào `doc_truyen.html`.

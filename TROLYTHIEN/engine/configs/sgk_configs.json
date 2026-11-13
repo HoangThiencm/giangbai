@@ -886,5 +886,707 @@
         "printed_range": "Trang 51 - Bìa sau"
       }
     ]
+  },
+  "toan_6_tap_2": {
+    "input_pdf_default": "TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/10.11/TOAN 6_TAP 2.pdf",
+    "output_dir_default": "TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/10.11/TOAN 6_TAP 2",
+    "lessons": [
+      {
+        "title": "00_Toan6_Trang_bia_Loi_noi_dau_Muc_luc_Trang_1-3",
+        "start_page": 1,
+        "end_page": 4,
+        "printed_range": "Trang 1 - 3"
+      },
+      {
+        "title": "Toan6_Chuong_6_Bai_23_Mo_rong_khai_niem_phan_so_Phan_so_bang_nhau_Trang_4-8",
+        "start_page": 5,
+        "end_page": 9,
+        "printed_range": "Trang 4 - 8"
+      },
+      {
+        "title": "Toan6_Chuong_6_Bai_24_So_sanh_phan_so_Hon_so_duong_Trang_9-12",
+        "start_page": 10,
+        "end_page": 13,
+        "printed_range": "Trang 9 - 12"
+      },
+      {
+        "title": "Toan6_Chuong_6_Luyen_tap_chung_Trang_13-14",
+        "start_page": 14,
+        "end_page": 15,
+        "printed_range": "Trang 13 - 14"
+      },
+      {
+        "title": "Toan6_Chuong_6_Bai_25_Phep_cong_va_phep_tru_phan_so_Trang_15-18",
+        "start_page": 16,
+        "end_page": 19,
+        "printed_range": "Trang 15 - 18"
+      },
+      {
+        "title": "Toan6_Chuong_6_Bai_26_Phep_nhan_va_phep_chia_phan_so_Trang_19-21",
+        "start_page": 20,
+        "end_page": 22,
+        "printed_range": "Trang 19 - 21"
+      },
+      {
+        "title": "Toan6_Chuong_6_Bai_27_Hai_bai_toan_ve_phan_so_Trang_22-24",
+        "start_page": 23,
+        "end_page": 25,
+        "printed_range": "Trang 22 - 24"
+      },
+      {
+        "title": "Toan6_Chuong_6_Luyen_tap_chung_Trang_25-26",
+        "start_page": 26,
+        "end_page": 27,
+        "printed_range": "Trang 25 - 26"
+      },
+      {
+        "title": "Toan6_Chuong_6_Bai_tap_cuoi_chuong_VI_Trang_27",
+        "start_page": 28,
+        "end_page": 28,
+        "printed_range": "Trang 27"
+      },
+      {
+        "title": "Toan6_Chuong_7_Bai_28_So_thap_phan_Trang_28-30",
+        "start_page": 29,
+        "end_page": 31,
+        "printed_range": "Trang 28 - 30"
+      },
+      {
+        "title": "Toan6_Chuong_7_Bai_29_Tinh_toan_voi_so_thap_phan_Trang_31-34",
+        "start_page": 32,
+        "end_page": 35,
+        "printed_range": "Trang 31 - 34"
+      },
+      {
+        "title": "Toan6_Chuong_7_Bai_30_Lam_tron_va_uoc_luong_Trang_35-37",
+        "start_page": 36,
+        "end_page": 38,
+        "printed_range": "Trang 35 - 37"
+      },
+      {
+        "title": "Toan6_Chuong_7_Bai_31_Mot_so_bai_toan_ve_ti_so_va_ti_so_phan_tram_Trang_38-40",
+        "start_page": 39,
+        "end_page": 41,
+        "printed_range": "Trang 38 - 40"
+      },
+      {
+        "title": "Toan6_Chuong_7_Luyen_tap_chung_Trang_41",
+        "start_page": 42,
+        "end_page": 42,
+        "printed_range": "Trang 41"
+      },
+      {
+        "title": "Toan6_Chuong_7_Bai_tap_cuoi_chuong_VII_Trang_42",
+        "start_page": 43,
+        "end_page": 43,
+        "printed_range": "Trang 42"
+      },
+      {
+        "title": "Toan6_Chuong_8_Bai_32_Diem_va_duong_thang_Trang_43-47",
+        "start_page": 44,
+        "end_page": 48,
+        "printed_range": "Trang 43 - 47"
+      },
+      {
+        "title": "Toan6_Chuong_8_Bai_33_Diem_nam_giua_hai_diem_Tia_Trang_48-50",
+        "start_page": 49,
+        "end_page": 51,
+        "printed_range": "Trang 48 - 50"
+      },
+      {
+        "title": "Toan6_Chuong_8_Bai_34_Doan_thang_Do_dai_doan_thang_Trang_51-54",
+        "start_page": 52,
+        "end_page": 55,
+        "printed_range": "Trang 51 - 54"
+      },
+      {
+        "title": "Toan6_Chuong_8_Bai_35_Trung_diem_cua_doan_thang_Trang_55-56",
+        "start_page": 56,
+        "end_page": 57,
+        "printed_range": "Trang 55 - 56"
+      },
+      {
+        "title": "Toan6_Chuong_8_Luyen_tap_chung_Trang_57",
+        "start_page": 58,
+        "end_page": 58,
+        "printed_range": "Trang 57"
+      },
+      {
+        "title": "Toan6_Chuong_8_Bai_36_Goc_Trang_58-60",
+        "start_page": 59,
+        "end_page": 61,
+        "printed_range": "Trang 58 - 60"
+      },
+      {
+        "title": "Toan6_Chuong_8_Bai_37_So_do_goc_Trang_61-64",
+        "start_page": 62,
+        "end_page": 65,
+        "printed_range": "Trang 61 - 64"
+      },
+      {
+        "title": "Toan6_Chuong_8_Luyen_tap_chung_Trang_65-66",
+        "start_page": 66,
+        "end_page": 67,
+        "printed_range": "Trang 65 - 66"
+      },
+      {
+        "title": "Toan6_Chuong_8_Bai_tap_cuoi_chuong_VIII_Trang_67",
+        "start_page": 68,
+        "end_page": 68,
+        "printed_range": "Trang 67"
+      },
+      {
+        "title": "Toan6_Chuong_9_Bai_38_Du_lieu_va_thu_thap_du_lieu_Trang_68-72",
+        "start_page": 69,
+        "end_page": 73,
+        "printed_range": "Trang 68 - 72"
+      },
+      {
+        "title": "Toan6_Chuong_9_Bai_39_Bang_thong_ke_va_bieu_do_tranh_Trang_73-76",
+        "start_page": 74,
+        "end_page": 77,
+        "printed_range": "Trang 73 - 76"
+      },
+      {
+        "title": "Toan6_Chuong_9_Bai_40_Bieu_do_cot_Trang_77-81",
+        "start_page": 78,
+        "end_page": 82,
+        "printed_range": "Trang 77 - 81"
+      },
+      {
+        "title": "Toan6_Chuong_9_Bai_41_Bieu_do_cot_kep_Trang_82-86",
+        "start_page": 83,
+        "end_page": 87,
+        "printed_range": "Trang 82 - 86"
+      },
+      {
+        "title": "Toan6_Chuong_9_Luyen_tap_chung_Trang_87-88",
+        "start_page": 88,
+        "end_page": 89,
+        "printed_range": "Trang 87 - 88"
+      },
+      {
+        "title": "Toan6_Chuong_9_Bai_42_Ket_qua_co_the_va_su_kien_trong_tro_choi_thi_nghiem_Trang_89-93",
+        "start_page": 90,
+        "end_page": 94,
+        "printed_range": "Trang 89 - 93"
+      },
+      {
+        "title": "Toan6_Chuong_9_Bai_43_Xac_suat_thuc_nghiem_Trang_94-96",
+        "start_page": 95,
+        "end_page": 97,
+        "printed_range": "Trang 94 - 96"
+      },
+      {
+        "title": "Toan6_Chuong_9_Luyen_tap_chung_Trang_97",
+        "start_page": 98,
+        "end_page": 98,
+        "printed_range": "Trang 97"
+      },
+      {
+        "title": "Toan6_Chuong_9_Bai_tap_cuoi_chuong_IX_Trang_98",
+        "start_page": 99,
+        "end_page": 99,
+        "printed_range": "Trang 98"
+      },
+      {
+        "title": "Toan6_Hoat_dong_thuc_hanh_trai_nghiem_Ke_hoach_chi_tieu_ca_nhan_va_gia_dinh_Trang_99-100",
+        "start_page": 100,
+        "end_page": 101,
+        "printed_range": "Trang 99 - 100"
+      },
+      {
+        "title": "Toan6_Hoat_dong_thuc_hanh_trai_nghiem_Hoat_dong_the_thao_duoc_yeu_thich_nhat_trong_he_Trang_101-104",
+        "start_page": 102,
+        "end_page": 105,
+        "printed_range": "Trang 101 - 104"
+      },
+      {
+        "title": "Toan6_Hoat_dong_thuc_hanh_trai_nghiem_Ve_hinh_don_gian_voi_GeoGebra_Trang_105-107",
+        "start_page": 106,
+        "end_page": 108,
+        "printed_range": "Trang 105 - 107"
+      },
+      {
+        "title": "Toan6_Bai_tap_on_tap_cuoi_nam_Trang_108-109",
+        "start_page": 109,
+        "end_page": 110,
+        "printed_range": "Trang 108 - 109"
+      },
+      {
+        "title": "Toan6_Bang_tra_cuu_va_giai_thich_thuat_ngu_Trang_110-111",
+        "start_page": 111,
+        "end_page": 112,
+        "printed_range": "Trang 110 - 111"
+      },
+      {
+        "title": "Toan6_Trang_xuat_ban_va_bia_sau_Trang_112-Bia4",
+        "start_page": 113,
+        "end_page": 114,
+        "printed_range": "Trang 112 - Bìa 4"
+      }
+    ]
+  },
+  "toan_8_tap_2": {
+    "input_pdf_default": "TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/10.11/TOAN 8_TAP 2.pdf",
+    "output_dir_default": "TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/10.11/TOAN 8_TAP 2",
+    "lessons": [
+      {
+        "title": "00_Toan8_Trang_bia_Loi_noi_dau_Muc_luc_Trang_1-3",
+        "start_page": 1,
+        "end_page": 4,
+        "printed_range": "Trang 1 - 3"
+      },
+      {
+        "title": "Toan8_Chuong_6_Bai_21_Phan_thuc_dai_so_Trang_4-7",
+        "start_page": 5,
+        "end_page": 8,
+        "printed_range": "Trang 4 - 7"
+      },
+      {
+        "title": "Toan8_Chuong_6_Bai_22_Tinh_chat_co_ban_cua_phan_thuc_dai_so_Trang_8-12",
+        "start_page": 9,
+        "end_page": 13,
+        "printed_range": "Trang 8 - 12"
+      },
+      {
+        "title": "Toan8_Chuong_6_Luyen_tap_chung_Trang_13-14",
+        "start_page": 14,
+        "end_page": 15,
+        "printed_range": "Trang 13 - 14"
+      },
+      {
+        "title": "Toan8_Chuong_6_Bai_23_Phep_cong_va_phep_tru_phan_thuc_dai_so_Trang_15-19",
+        "start_page": 16,
+        "end_page": 20,
+        "printed_range": "Trang 15 - 19"
+      },
+      {
+        "title": "Toan8_Chuong_6_Bai_24_Phep_nhan_va_phep_chia_phan_thuc_dai_so_Trang_20-22",
+        "start_page": 21,
+        "end_page": 23,
+        "printed_range": "Trang 20 - 22"
+      },
+      {
+        "title": "Toan8_Chuong_6_Luyen_tap_chung_Trang_23-24",
+        "start_page": 24,
+        "end_page": 25,
+        "printed_range": "Trang 23 - 24"
+      },
+      {
+        "title": "Toan8_Chuong_6_Bai_tap_cuoi_chuong_VI_Trang_25-26",
+        "start_page": 26,
+        "end_page": 27,
+        "printed_range": "Trang 25 - 26"
+      },
+      {
+        "title": "Toan8_Chuong_7_Bai_25_Phuong_trinh_bac_nhat_mot_an_Trang_27-32",
+        "start_page": 28,
+        "end_page": 33,
+        "printed_range": "Trang 27 - 32"
+      },
+      {
+        "title": "Toan8_Chuong_7_Bai_26_Giai_bai_toan_bang_cach_lap_phuong_trinh_Trang_33-36",
+        "start_page": 34,
+        "end_page": 37,
+        "printed_range": "Trang 33 - 36"
+      },
+      {
+        "title": "Toan8_Chuong_7_Luyen_tap_chung_Trang_37-39",
+        "start_page": 38,
+        "end_page": 40,
+        "printed_range": "Trang 37 - 39"
+      },
+      {
+        "title": "Toan8_Chuong_7_Bai_27_Khai_niem_ham_so_va_do_thi_cua_ham_so_Trang_40-46",
+        "start_page": 41,
+        "end_page": 47,
+        "printed_range": "Trang 40 - 46"
+      },
+      {
+        "title": "Toan8_Chuong_7_Bai_28_Ham_so_bac_nhat_va_do_thi_cua_ham_so_bac_nhat_Trang_47-50",
+        "start_page": 48,
+        "end_page": 51,
+        "printed_range": "Trang 47 - 50"
+      },
+      {
+        "title": "Toan8_Chuong_7_Bai_29_He_so_goc_cua_duong_thang_Trang_51-54",
+        "start_page": 52,
+        "end_page": 55,
+        "printed_range": "Trang 51 - 54"
+      },
+      {
+        "title": "Toan8_Chuong_7_Luyen_tap_chung_Trang_55-56",
+        "start_page": 56,
+        "end_page": 57,
+        "printed_range": "Trang 55 - 56"
+      },
+      {
+        "title": "Toan8_Chuong_7_Bai_tap_cuoi_chuong_VII_Trang_57-58",
+        "start_page": 58,
+        "end_page": 59,
+        "printed_range": "Trang 57 - 58"
+      },
+      {
+        "title": "Toan8_Chuong_8_Bai_30_Ket_qua_co_the_va_ket_qua_thuan_loi_Trang_59-62",
+        "start_page": 60,
+        "end_page": 63,
+        "printed_range": "Trang 59 - 62"
+      },
+      {
+        "title": "Toan8_Chuong_8_Bai_31_Cach_tinh_xac_suat_cua_bien_co_bang_ti_so_Trang_63-66",
+        "start_page": 64,
+        "end_page": 67,
+        "printed_range": "Trang 63 - 66"
+      },
+      {
+        "title": "Toan8_Chuong_8_Bai_32_Moi_lien_he_giua_xac_suat_thuc_nghiem_voi_xac_suat_va_ung_dung_Trang_67-73",
+        "start_page": 68,
+        "end_page": 74,
+        "printed_range": "Trang 67 - 73"
+      },
+      {
+        "title": "Toan8_Chuong_8_Luyen_tap_chung_Trang_74-75",
+        "start_page": 75,
+        "end_page": 76,
+        "printed_range": "Trang 74 - 75"
+      },
+      {
+        "title": "Toan8_Chuong_8_Bai_tap_cuoi_chuong_VIII_Trang_76-77",
+        "start_page": 77,
+        "end_page": 78,
+        "printed_range": "Trang 76 - 77"
+      },
+      {
+        "title": "Toan8_Chuong_9_Bai_33_Hai_tam_giac_dong_dang_Trang_78-82",
+        "start_page": 79,
+        "end_page": 83,
+        "printed_range": "Trang 78 - 82"
+      },
+      {
+        "title": "Toan8_Chuong_9_Bai_34_Ba_truong_hop_dong_dang_cua_hai_tam_giac_Trang_83-90",
+        "start_page": 84,
+        "end_page": 91,
+        "printed_range": "Trang 83 - 90"
+      },
+      {
+        "title": "Toan8_Chuong_9_Luyen_tap_chung_Trang_91-92",
+        "start_page": 92,
+        "end_page": 93,
+        "printed_range": "Trang 91 - 92"
+      },
+      {
+        "title": "Toan8_Chuong_9_Bai_35_Dinh_li_Pythagore_va_ung_dung_Trang_93-97",
+        "start_page": 94,
+        "end_page": 98,
+        "printed_range": "Trang 93 - 97"
+      },
+      {
+        "title": "Toan8_Chuong_9_Bai_36_Cac_truong_hop_dong_dang_cua_hai_tam_giac_vuong_Trang_98-103",
+        "start_page": 99,
+        "end_page": 104,
+        "printed_range": "Trang 98 - 103"
+      },
+      {
+        "title": "Toan8_Chuong_9_Bai_37_Hinh_dong_dang_Trang_104-107",
+        "start_page": 105,
+        "end_page": 108,
+        "printed_range": "Trang 104 - 107"
+      },
+      {
+        "title": "Toan8_Chuong_9_Luyen_tap_chung_Trang_108-109",
+        "start_page": 109,
+        "end_page": 110,
+        "printed_range": "Trang 108 - 109"
+      },
+      {
+        "title": "Toan8_Chuong_9_Bai_tap_cuoi_chuong_IX_Trang_110-111",
+        "start_page": 111,
+        "end_page": 112,
+        "printed_range": "Trang 110 - 111"
+      },
+      {
+        "title": "Toan8_Chuong_10_Bai_38_Hinh_chop_tam_giac_deu_Trang_112-116",
+        "start_page": 113,
+        "end_page": 117,
+        "printed_range": "Trang 112 - 116"
+      },
+      {
+        "title": "Toan8_Chuong_10_Bai_39_Hinh_chop_tu_giac_deu_Trang_117-120",
+        "start_page": 118,
+        "end_page": 121,
+        "printed_range": "Trang 117 - 120"
+      },
+      {
+        "title": "Toan8_Chuong_10_Luyen_tap_chung_Trang_121-122",
+        "start_page": 122,
+        "end_page": 123,
+        "printed_range": "Trang 121 - 122"
+      },
+      {
+        "title": "Toan8_Chuong_10_Bai_tap_cuoi_chuong_X_Trang_123-124",
+        "start_page": 124,
+        "end_page": 125,
+        "printed_range": "Trang 123 - 124"
+      },
+      {
+        "title": "Toan8_Hoat_dong_thuc_hanh_trai_nghiem_Mot_vai_ung_dung_cua_ham_so_bac_nhat_trong_tai_chinh_Trang_125-127",
+        "start_page": 126,
+        "end_page": 128,
+        "printed_range": "Trang 125 - 127"
+      },
+      {
+        "title": "Toan8_Hoat_dong_thuc_hanh_trai_nghiem_Ung_dung_dinh_li_Thales_Pythagore_va_tam_giac_dong_dang_Trang_128-129",
+        "start_page": 129,
+        "end_page": 130,
+        "printed_range": "Trang 128 - 129"
+      },
+      {
+        "title": "Toan8_Hoat_dong_thuc_hanh_trai_nghiem_Thuc_hanh_tinh_toan_tren_phan_thuc_dai_so_va_GeoGebra_Trang_130-132",
+        "start_page": 131,
+        "end_page": 133,
+        "printed_range": "Trang 130 - 132"
+      },
+      {
+        "title": "Toan8_Hoat_dong_thuc_hanh_trai_nghiem_Mo_ta_thi_nghiem_ngau_nhien_voi_Excel_Trang_133-134",
+        "start_page": 134,
+        "end_page": 135,
+        "printed_range": "Trang 133 - 134"
+      },
+      {
+        "title": "Toan8_Bai_tap_on_tap_cuoi_nam_Trang_135-137",
+        "start_page": 136,
+        "end_page": 138,
+        "printed_range": "Trang 135 - 137"
+      },
+      {
+        "title": "Toan8_Bang_tra_cuu_va_giai_thich_thuat_ngu_Trang_138-139",
+        "start_page": 139,
+        "end_page": 140,
+        "printed_range": "Trang 138 - 139"
+      },
+      {
+        "title": "Toan8_Trang_xuat_ban_va_bia_sau_Trang_140-Bia4",
+        "start_page": 141,
+        "end_page": 142,
+        "printed_range": "Trang 140 - Bìa 4"
+      }
+    ]
+  },
+  "toan_9_tap_2": {
+    "input_pdf_default": "TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/10.11/TOAN 9_TAP 2.pdf",
+    "output_dir_default": "TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/10.11/TOAN 9_TAP 2",
+    "lessons": [
+      {
+        "title": "00_Toan9_Trang_bia_Loi_noi_dau_Muc_luc_Trang_1-3",
+        "start_page": 1,
+        "end_page": 4,
+        "printed_range": "Trang 1 - 3"
+      },
+      {
+        "title": "Toan9_Chuong_6_Bai_18_Ham_so_y_ax2_Trang_4-9",
+        "start_page": 5,
+        "end_page": 10,
+        "printed_range": "Trang 4 - 9"
+      },
+      {
+        "title": "Toan9_Chuong_6_Bai_19_Phuong_trinh_bac_hai_mot_an_Trang_10-17",
+        "start_page": 11,
+        "end_page": 18,
+        "printed_range": "Trang 10 - 17"
+      },
+      {
+        "title": "Toan9_Chuong_6_Luyen_tap_chung_Trang_18-20",
+        "start_page": 19,
+        "end_page": 21,
+        "printed_range": "Trang 18 - 20"
+      },
+      {
+        "title": "Toan9_Chuong_6_Bai_20_Dinh_li_Viete_va_ung_dung_Trang_21-24",
+        "start_page": 22,
+        "end_page": 25,
+        "printed_range": "Trang 21 - 24"
+      },
+      {
+        "title": "Toan9_Chuong_6_Bai_21_Giai_bai_toan_bang_cach_lap_phuong_trinh_Trang_25-27",
+        "start_page": 26,
+        "end_page": 28,
+        "printed_range": "Trang 25 - 27"
+      },
+      {
+        "title": "Toan9_Chuong_6_Luyen_tap_chung_Trang_28-29",
+        "start_page": 29,
+        "end_page": 30,
+        "printed_range": "Trang 28 - 29"
+      },
+      {
+        "title": "Toan9_Chuong_6_Bai_tap_cuoi_chuong_VI_Trang_30-31",
+        "start_page": 31,
+        "end_page": 32,
+        "printed_range": "Trang 30 - 31"
+      },
+      {
+        "title": "Toan9_Chuong_7_Bai_22_Bang_tan_so_va_bieu_do_tan_so_Trang_32-37",
+        "start_page": 33,
+        "end_page": 38,
+        "printed_range": "Trang 32 - 37"
+      },
+      {
+        "title": "Toan9_Chuong_7_Bai_23_Bang_tan_so_tuong_doi_va_bieu_do_tan_so_tuong_doi_Trang_38-42",
+        "start_page": 39,
+        "end_page": 43,
+        "printed_range": "Trang 38 - 42"
+      },
+      {
+        "title": "Toan9_Chuong_7_Luyen_tap_chung_Trang_43-45",
+        "start_page": 44,
+        "end_page": 46,
+        "printed_range": "Trang 43 - 45"
+      },
+      {
+        "title": "Toan9_Chuong_7_Bai_24_Bang_tan_so_tan_so_tuong_doi_ghep_nhom_va_bieu_do_Trang_46-53",
+        "start_page": 47,
+        "end_page": 54,
+        "printed_range": "Trang 46 - 53"
+      },
+      {
+        "title": "Toan9_Chuong_7_Bai_tap_cuoi_chuong_VII_Trang_54-55",
+        "start_page": 55,
+        "end_page": 56,
+        "printed_range": "Trang 54 - 55"
+      },
+      {
+        "title": "Toan9_Chuong_8_Bai_25_Phep_thu_ngau_nhien_va_khong_gian_mau_Trang_56-59",
+        "start_page": 57,
+        "end_page": 60,
+        "printed_range": "Trang 56 - 59"
+      },
+      {
+        "title": "Toan9_Chuong_8_Bai_26_Xac_suat_cua_bien_co_lien_quan_toi_phep_thu_Trang_60-63",
+        "start_page": 61,
+        "end_page": 64,
+        "printed_range": "Trang 60 - 63"
+      },
+      {
+        "title": "Toan9_Chuong_8_Luyen_tap_chung_Trang_64-65",
+        "start_page": 65,
+        "end_page": 66,
+        "printed_range": "Trang 64 - 65"
+      },
+      {
+        "title": "Toan9_Chuong_8_Bai_tap_cuoi_chuong_VIII_Trang_66",
+        "start_page": 67,
+        "end_page": 67,
+        "printed_range": "Trang 66"
+      },
+      {
+        "title": "Toan9_Chuong_9_Bai_27_Goc_noi_tiep_Trang_67-71",
+        "start_page": 68,
+        "end_page": 72,
+        "printed_range": "Trang 67 - 71"
+      },
+      {
+        "title": "Toan9_Chuong_9_Bai_28_Duong_tron_ngoai_tiep_va_duong_tron_noi_tiep_cua_mot_tam_giac_Trang_72-77",
+        "start_page": 73,
+        "end_page": 78,
+        "printed_range": "Trang 72 - 77"
+      },
+      {
+        "title": "Toan9_Chuong_9_Luyen_tap_chung_Trang_78-79",
+        "start_page": 79,
+        "end_page": 80,
+        "printed_range": "Trang 78 - 79"
+      },
+      {
+        "title": "Toan9_Chuong_9_Bai_29_Tu_giac_noi_tiep_Trang_80-83",
+        "start_page": 81,
+        "end_page": 84,
+        "printed_range": "Trang 80 - 83"
+      },
+      {
+        "title": "Toan9_Chuong_9_Bai_30_Da_giac_deu_Trang_84-89",
+        "start_page": 85,
+        "end_page": 90,
+        "printed_range": "Trang 84 - 89"
+      },
+      {
+        "title": "Toan9_Chuong_9_Luyen_tap_chung_Trang_90-91",
+        "start_page": 91,
+        "end_page": 92,
+        "printed_range": "Trang 90 - 91"
+      },
+      {
+        "title": "Toan9_Chuong_9_Bai_tap_cuoi_chuong_IX_Trang_92",
+        "start_page": 93,
+        "end_page": 93,
+        "printed_range": "Trang 92"
+      },
+      {
+        "title": "Toan9_Chuong_10_Bai_31_Hinh_tru_va_hinh_non_Trang_93-100",
+        "start_page": 94,
+        "end_page": 101,
+        "printed_range": "Trang 93 - 100"
+      },
+      {
+        "title": "Toan9_Chuong_10_Bai_32_Hinh_cau_Trang_101-105",
+        "start_page": 102,
+        "end_page": 106,
+        "printed_range": "Trang 101 - 105"
+      },
+      {
+        "title": "Toan9_Chuong_10_Luyen_tap_chung_Trang_106-107",
+        "start_page": 107,
+        "end_page": 108,
+        "printed_range": "Trang 106 - 107"
+      },
+      {
+        "title": "Toan9_Chuong_10_Bai_tap_cuoi_chuong_X_Trang_108-110",
+        "start_page": 109,
+        "end_page": 111,
+        "printed_range": "Trang 108 - 110"
+      },
+      {
+        "title": "Toan9_Hoat_dong_thuc_hanh_trai_nghiem_Giai_pt_he_pt_va_ve_do_thi_ham_so_voi_GeoGebra_Trang_111-114",
+        "start_page": 112,
+        "end_page": 115,
+        "printed_range": "Trang 111 - 114"
+      },
+      {
+        "title": "Toan9_Hoat_dong_thuc_hanh_trai_nghiem_Ve_hinh_don_gian_voi_GeoGebra_Trang_115-119",
+        "start_page": 116,
+        "end_page": 120,
+        "printed_range": "Trang 115 - 119"
+      },
+      {
+        "title": "Toan9_Hoat_dong_thuc_hanh_trai_nghiem_Xac_dinh_tan_so_va_bieu_do_bang_Excel_Trang_120-124",
+        "start_page": 121,
+        "end_page": 125,
+        "printed_range": "Trang 120 - 124"
+      },
+      {
+        "title": "Toan9_Hoat_dong_thuc_hanh_trai_nghiem_Gene_troi_trong_cac_the_he_lai_Trang_125-126",
+        "start_page": 126,
+        "end_page": 127,
+        "printed_range": "Trang 125 - 126"
+      },
+      {
+        "title": "Toan9_Bai_tap_on_tap_cuoi_nam_Trang_127-129",
+        "start_page": 128,
+        "end_page": 130,
+        "printed_range": "Trang 127 - 129"
+      },
+      {
+        "title": "Toan9_Bang_tra_cuu_va_giai_thich_thuat_ngu_Trang_130-131",
+        "start_page": 131,
+        "end_page": 132,
+        "printed_range": "Trang 130 - 131"
+      },
+      {
+        "title": "Toan9_Trang_xuat_ban_va_bia_sau_Trang_132-Bia4",
+        "start_page": 133,
+        "end_page": 134,
+        "printed_range": "Trang 132 - Bìa 4"
+      }
+    ]
   }
 }

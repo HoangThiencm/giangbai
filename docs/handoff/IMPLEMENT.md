@@ -1,16 +1,122 @@
-# IMPLEMENT: Smart Bridge thoát Zalo / In-App Browser
+# IMPLEMENT: Bot Telegram tiếp nhận văn bản
 
 ## Phạm vi đã thực hiện
 
-- `api/short_links.php`: thêm và tự nâng cấp cột `escape_inapp`; API danh sách, tạo và cập nhật link đều đọc/ghi thuộc tính này, mặc định bật.
-- `s.php`: nhận diện In-App Browser; giữ chuyển hướng 302 cho trình duyệt thường hoặc link đã tắt Smart Bridge; trả Android Intent cho Android và màn hình hướng dẫn/sao chép/mở Chrome cho iOS.
-- `rutgon.html`: bổ sung tùy chọn bật/tắt, huy hiệu “Thoát Zalo”, thông tin Smart Bridge và nút xem thử trong hộp QR.
+- Tạo `api/telegram_vanban.php`: webhook Telegram chỉ nhận POST có secret token hợp lệ và chat ID nằm trong danh sách cho phép; lưu `update_id` để không tạo văn bản trùng khi Telegram gửi lại webhook.
+- Bot nhận PDF, DOCX và ảnh; tải tệp tối đa 20 MB, lấy text PDF (tối đa ba trang qua `pdftotext` khi hosting hỗ trợ), DOCX và OCR ảnh qua Tesseract khi được cài đặt; caption vẫn được dùng làm dữ liệu dự phòng.
+- Dùng lại bộ nhận diện và lưu trữ hiện có để tạo văn bản đến theo năm học hiện hành, upload tệp lên Google Drive hoặc local fallback, rồi trả tin nhắn có thông tin nhận diện và nút xác nhận/chuyển Hành chính, Chuyên môn, Đảng/mở web.
+- `api/vanban.php`: thêm nhận diện lĩnh vực theo quy tắc dự phòng, nhận `sector` từ Workers AI, xác định năm học hiện hành và helper lưu file do tích hợp máy chủ tải về.
+- `cloudflare-worker/worker.js`: prompt nhận diện văn bản nay trả thêm `sector`.
+- `api/config.sample.php`: thêm các cấu hình Telegram cần thiết. Không có token hay secret thật trong mã nguồn.
+- Tạo `tests/telegram-vanban-webhook-smoke.py` kiểm tra hợp đồng webhook, bảo mật, chống trùng, tệp PDF/ảnh, callback, cấu hình và AI sector.
 
 ## Kiểm thử
 
+- `python tests/telegram-vanban-webhook-smoke.py`: đạt.
+- `node --check cloudflare-worker/worker.js`: đạt.
+- `git diff --check`: đạt.
+- Không chạy được `php -l` vì môi trường hiện không có PHP trong `PATH`; chưa thể thực hiện end-to-end do token Telegram, MySQL và Google Drive chỉ có trên hosting.
+
+## Việc cần làm khi triển khai hosting
+
+1. Điền token bot, secret webhook, ID nhóm được phép, ID giáo viên sở hữu và URL trang quản lý trong `api/config.php` theo `api/config.sample.php`.
+2. Đặt webhook Telegram tới `https://<ten-mien>/api/telegram_vanban.php` với cùng secret token; cấp bot quyền đọc tin nhắn trong nhóm.
+3. Để OCR ảnh hoạt động đầy đủ, cài `tesseract` kèm dữ liệu ngôn ngữ `vie`; PDF có text layer dùng `pdftotext` nếu hosting có Poppler. Không có các tiện ích này, bot vẫn lưu tệp và dùng caption nhưng nhận diện sẽ ở mức thấp hơn.
+
+---
+
+# IMPLEMENT: Nâng cấp quản lý ngày nghỉ / lịch nghỉ tổ chuyên môn
+
+## Phạm vi đã thực hiện
+
+- `phancongtochuyenmon.html`: thay ngày đơn lẻ bằng khoảng từ ngày–đến ngày, thêm buổi nghỉ, lý do có gợi ý và danh sách chọn giáo viên; hiển thị ngoại lệ theo thẻ với khoảng ngày, số ngày, buổi, đối tượng, lý do và nút xóa.
+- `phancongtochuyenmon.html`: dữ liệu mới lưu `start_date`, `end_date`, `session`, `teacher_id`, `teacher_name`, `target`, `reason`, đồng thời giữ `date` bằng ngày bắt đầu để đọc tương thích dữ liệu cũ. Bộ lọc lịch báo giảng áp dụng đúng khoảng ngày, buổi và giáo viên.
+- `api/calendar_feed.php`: feed iCal/web kiểm tra ngoại lệ theo khoảng ngày bao gồm hai đầu mút, buổi và giáo viên theo mã hoặc tên.
+
+## Kiểm thử
+
+- Kiểm tra cú pháp JavaScript nội tuyến của `phancongtochuyenmon.html` bằng Node: đạt.
 - `git diff --check`: đạt, không có lỗi khoảng trắng.
-- Đã thử chạy `php -l api/short_links.php` và `php -l s.php`, nhưng môi trường hiện không có lệnh PHP trong `PATH`.
+- Không chạy được `php -l api/calendar_feed.php` vì môi trường hiện không có PHP trong `PATH`.
 
 ## Lưu ý
 
-- Chưa kiểm thử end-to-end vì cần cơ sở dữ liệu và thiết bị/WebView Zalo thực tế.
+- Chưa có kiểm thử end-to-end với dữ liệu TKB và thiết bị lịch thực tế; cần xác nhận thêm trên giao diện sau khi nạp danh sách giáo viên và TKB.
+
+---
+
+# IMPLEMENT: Công cụ Sửa lỗi chính tả AI
+
+## Phạm vi đã thực hiện
+
+- Tạo `sualoichinhta.html`: giao diện responsive, dùng `access-control.js`, quản lý Gemini API Key cá nhân, nhập/dán văn bản, đọc `.txt`/`.docx`, chia tuần tự văn bản dài thành đoạn an toàn, highlight lỗi, áp dụng từng lỗi/tất cả, sao chép và tải tệp kết quả.
+- Tạo `api/sualoichinhta_ai.php`: chỉ dùng Gemini API Key mã hóa của tài khoản trong session; xoay key với lỗi quota/quyền hoặc model không khả dụng, fallback ba model Gemini, Structured Output JSON và lọc đề xuất không khớp văn bản nguồn.
+- Đăng ký quyền `sualoichinhta` trong `access-control.js`, thêm card công cụ và liên kết vào `index.html`, cùng lựa chọn phân quyền trong `admin.html`.
+
+## Kiểm thử
+
+- Đã kiểm tra cú pháp JavaScript nội tuyến của `sualoichinhta.html` bằng Node và kiểm tra whitespace của diff: đạt.
+- Không chạy được `php -l api/sualoichinhta_ai.php` vì môi trường hiện không có PHP trong `PATH`.
+- Chưa thể thực hiện kiểm thử Gemini end-to-end vì cần một phiên đăng nhập và Gemini API Key cá nhân hợp lệ.
+
+---
+
+# IMPLEMENT: Đồng bộ quyền Sửa lỗi chính tả AI
+
+## Phạm vi đã thực hiện
+
+- `api/helpers.php`: đăng ký `sualoichinhta` trong danh mục trang hợp lệ, danh sách trang workspace của giáo viên và ánh xạ cờ tính năng; nhờ đó quyền được lưu và trả về phiên đăng nhập không còn bị loại bỏ.
+- `admin.html`: bổ sung cờ `sualoichinhta` vào danh sách đồng bộ tính năng phía trình duyệt và thêm checkbox cấu hình toàn cục `cfg_sualoichinhta`.
+
+## Kiểm thử
+
+- Kiểm tra tĩnh xác nhận cả ba danh mục backend và hai khai báo frontend đều chứa `sualoichinhta`.
+- Không chạy được `php -l api/helpers.php` vì môi trường không có PHP trong `PATH`.
+- Kiểm tra cú pháp JavaScript nội tuyến của `admin.html`: đạt.
+- `git diff --check`: đạt, không có lỗi khoảng trắng.
+
+## Lưu ý
+
+- Người dùng đã đăng nhập có thể cần tải lại trang hoặc đăng nhập lại để nhận danh sách quyền mới.
+
+---
+
+# IMPLEMENT: Xuất Word cho công cụ Sửa lỗi chính tả AI
+
+## Phạm vi đã thực hiện
+
+- `sualoichinhta.html`: giữ `JSZip`, XML hiện hành và tên tệp khi tải `.docx`; văn bản được đọc theo từng đoạn Word và hiển thị trạng thái tệp đang xử lý.
+- Khi áp dụng từng lỗi hoặc tất cả lỗi, nội dung trong `word/document.xml` được vá ở các node văn bản OpenXML trước khi đóng gói lại tệp gốc, nên các thành phần định dạng khác của DOCX vẫn được giữ nguyên.
+- Bổ sung nút tải Word là nút chính, nút tải TXT phụ, và bộ dựng DOCX tối thiểu cho văn bản nhập trực tiếp với Times New Roman 13 pt, giãn dòng 1.25 và khổ A4.
+
+## Kiểm thử
+
+- Kiểm tra cú pháp JavaScript nội tuyến của `sualoichinhta.html` bằng Node: đạt.
+- Kiểm tra tĩnh xác nhận trạng thái DOCX, vá XML, xuất DOCX, nút tải Word/TXT và badge tệp đều có mặt: đạt.
+- Kiểm tra JSZip đóng gói rồi đọc lại bốn thành phần DOCX tối thiểu (`[Content_Types].xml`, quan hệ gốc, quan hệ Word, `word/document.xml`): đạt.
+- `git diff --check`: đạt, không có lỗi khoảng trắng.
+
+## Lưu ý
+
+- Chưa thể chạy kiểm thử mở DOCX trong trình duyệt tại môi trường hiện tại; cần xác nhận thủ công bằng một DOCX có bảng biểu/định dạng trên giao diện.
+
+---
+
+# IMPLEMENT: Chọn mô hình Gemini và sửa khoảng trắng dấu câu
+
+## Phạm vi đã thực hiện
+
+- `sualoichinhta.html`: thêm lựa chọn Tự động cùng bốn mô hình Gemini được hỗ trợ; lựa chọn được gửi ở mọi phần văn bản và kết quả hiển thị mô hình thực tế đã phản hồi.
+- `api/sualoichinhta_ai.php`: chỉ chấp nhận danh sách mô hình cho phép, ưu tiên mô hình được chọn trước các phương án dự phòng, bổ sung `gemini-1.5-pro` và trả về mô hình đã sử dụng.
+- Prompt nêu rõ quy tắc khoảng trắng quanh dấu câu tiếng Việt và logic lọc giữ nguyên chuỗi nguồn/đề xuất, nhờ đó không loại bỏ sửa lỗi như `" , "` thành `", "`.
+
+## Kiểm thử
+
+- Kiểm tra cú pháp JavaScript nội tuyến của `sualoichinhta.html`: đạt.
+- Kiểm tra tĩnh xác nhận dropdown, payload model, whitelist, prompt dấu câu và lọc không `trim()` chuỗi thay thế: đạt.
+- Không chạy được PHP lint vì môi trường không có PHP trong `PATH`.
+- `git diff --check`: đạt, không có lỗi khoảng trắng.
+
+## Lưu ý
+
+- Kiểm thử Gemini thực tế cần phiên đăng nhập và Gemini API Key hợp lệ; nếu mô hình được chọn không khả dụng, giao diện sẽ hiển thị mô hình dự phòng thực tế.

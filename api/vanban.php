@@ -142,6 +142,31 @@ function vbd_sector_label(string $sector): string
     return 'Hành chính';
 }
 
+/**
+ * Phân loại nhanh trước khi gọi AI. Kết quả này là dự phòng để các nguồn nhập
+ * tự động (Telegram) vẫn vào đúng khu vực khi file không có text layer.
+ */
+function vbd_detect_sector(string $source): string
+{
+    $raw = vbd_preprocess_source($source);
+    $text = function_exists('mb_strtolower') ? mb_strtolower($raw, 'UTF-8') : strtolower($raw);
+    if (preg_match('/đảng\s*ủy|đảng\s*bộ|chi\s*bộ|chi\s*ủy|ban\s*tuyên\s*giáo|ủy\s*ban\s*kiểm\s*tra|\bubkt\b|\b\d+\s*[-/]\s*(?:nq|qđ|hd)\s*[-/]\s*(?:đu|cb)\b/ui', $text)) {
+        return 'dang';
+    }
+    if (preg_match('/sở\s*(?:giáo dục|gd[& ]*đt)|phòng\s*(?:giáo dục|gd[& ]*đt)|tổ\s*chuyên\s*môn|dạy\s*học|kiểm\s*tra|thời\s*khóa\s*biểu|học\s*sinh|giáo\s*viên|thi\s*đua/ui', $text)) {
+        return 'chuyenmon';
+    }
+    return 'hanhchinh';
+}
+
+function vbd_current_academic_year(?DateTimeInterface $date = null): string
+{
+    $date ??= new DateTimeImmutable('now');
+    $year = (int)$date->format('Y');
+    // Năm học Việt Nam bắt đầu từ tháng 8.
+    return ((int)$date->format('n') >= 8 ? $year : $year - 1) . '-' . ((int)$date->format('n') >= 8 ? $year + 1 : $year);
+}
+
 function vbd_sector_drive_name(string $sector): string
 {
     if ($sector === 'dang') return 'DANG';
@@ -454,6 +479,7 @@ function vbd_regex_extract(string $source): array
         'document_date' => null,
         'report_required' => false,
         'report_due_at' => null,
+        'sector' => vbd_detect_sector($text),
     ];
 
     // Tìm số văn bản CHÍNH ở phần rất đầu.
@@ -622,6 +648,9 @@ function vbd_parse_document(string $source): array
             $parsed['model'] = $aiResult['model'] ?? 'document';
             $parsed['note'] = 'Tự nhận diện bằng AI (đã sửa header bị lỗi do ký số / text layer).';
         }
+        if (in_array(($aiResult['sector'] ?? ''), ['hanhchinh', 'chuyenmon', 'dang'], true)) {
+            $parsed['sector'] = $aiResult['sector'];
+        }
     }
 
     $parsed['document_date'] = vbd_date($parsed['document_date'] ?? null);
@@ -725,6 +754,7 @@ function vbd_try_ai_document_extract(string $source): ?array
         'document_type' => trim((string)($json['document_type'] ?? '')),
         'document_date' => $json['document_date'] ?? null,
         'summary_text' => trim((string)($json['summary_text'] ?? '')),
+        'sector' => vbd_sector((string)($json['sector'] ?? 'hanhchinh')),
         'model' => $resp['model'] ?? 'document',
     ];
 }
@@ -1695,6 +1725,44 @@ function vbd_process_document_upload(PDO $pdo, int $id, array $document, array $
             'error' => $e->getMessage(),
             'upload_backend' => 'vanban-local-fallback-v3',
         ], 502);
+    }
+}
+
+/** Store a file already downloaded by a trusted server integration (for example Telegram). */
+function vbd_store_downloaded_document_file(PDO $pdo, array $document, string $path, string $originalName, string $declaredMime = ''): array
+{
+    $id = (int)($document['id'] ?? 0);
+    if ($id < 1 || !is_file($path) || !is_readable($path)) throw new RuntimeException('Tệp tích hợp không hợp lệ.');
+    $size = (int)filesize($path);
+    $maxBytes = (defined('SUBMISSION_MAX_FILE_MB') ? max(1, (int)SUBMISSION_MAX_FILE_MB) : 25) * 1024 * 1024;
+    if ($size < 1 || $size > $maxBytes) throw new RuntimeException('Tệp vượt giới hạn lưu trữ của hệ thống.');
+    require_once __DIR__ . '/google_drive.php';
+    if ($invalid = drive_validate_upload($path, $originalName)) throw new RuntimeException($invalid);
+    $mime = drive_detect_mime($path, $originalName, $declaredMime);
+    $storedName = drive_safe_name(
+        ((string)($document['document_number'] ?? '') ?: 'VB-' . $id) . ' - ' . (string)($document['title'] ?? 'Van ban') . ' - 1 - ' . $originalName,
+        'van-ban'
+    );
+    $insert = $pdo->prepare('INSERT INTO office_document_files (document_id, drive_file_id, original_name, stored_name, mime_type, size_bytes, view_url, download_url) VALUES (?,?,?,?,?,?,?,?)');
+    try {
+        $folderId = trim((string)($document['drive_folder_id'] ?? '')) ?: vbd_drive_folder($document);
+        if (empty($document['drive_folder_id'])) {
+            $pdo->prepare('UPDATE office_documents SET drive_folder_id=? WHERE id=?')->execute([$folderId, $id]);
+        }
+        $drive = drive_upload_file($folderId, $storedName, $mime, $path);
+        $insert->execute([$id, $drive['file_id'], $originalName, $drive['stored_name'], $drive['mime_type'] ?? $mime, $size, $drive['view_url'], $drive['download_url']]);
+        return ['storage' => 'drive'] + $drive;
+    } catch (Throwable $error) {
+        if (!vbd_local_storage_enabled()) throw $error;
+        $dir = vbd_local_file_dir($id, $document);
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) throw new RuntimeException('Không tạo được thư mục lưu tệp trên hosting.');
+        $destination = vbd_local_file_path($id, $document, $storedName);
+        if (!@copy($path, $destination)) throw new RuntimeException('Không lưu được tệp Telegram trên hosting.');
+        $fileId = 'local:' . $id . ':' . rawurlencode($storedName);
+        $viewUrl = vbd_local_file_url($id, $storedName);
+        $downloadUrl = vbd_local_file_url($id, $storedName, true);
+        $insert->execute([$id, $fileId, $originalName, $storedName, $mime, $size, $viewUrl, $downloadUrl]);
+        return ['storage' => 'local', 'file_id' => $fileId, 'stored_name' => $storedName, 'mime_type' => $mime, 'view_url' => $viewUrl, 'download_url' => $downloadUrl, 'drive_error' => $error->getMessage()];
     }
 }
 

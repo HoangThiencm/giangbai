@@ -138,6 +138,26 @@ def latex_to_omml(latex_code):
                         pos.set('{http://schemas.openxmlformats.org/officeDocument/2006/math}val', 'top')
                         bar.append(e_elms[0])
                         acc.getparent().replace(acc, bar)
+        # KHẮC PHỤC TRIỆT ĐỂ LỖI HỆ PHƯƠNG TRÌNH (\begin{cases}) BỊ RỜI RẠC DẤU NGOẶC NHỌN:
+        # MML2OMML mặc định tách dấu { thành <m:r><m:t>{</m:t></m:r> đứng riêng trước <m:eqArr>,
+        # khiến dấu ngoặc nhọn bị lùn tịt, không ôm trọn các phương trình của hệ.
+        # Tự động gom vào thẻ delimiter <m:d> với begChr="{" và grow="1".
+        for r_elm in omml.xpath('//m:r[normalize-space(m:t)="{"]', namespaces=ns):
+            next_elm = r_elm.getnext()
+            if next_elm is not None and next_elm.tag.endswith('eqArr'):
+                parent = r_elm.getparent()
+                d = ET.Element('{http://schemas.openxmlformats.org/officeDocument/2006/math}d')
+                dPr = ET.SubElement(d, '{http://schemas.openxmlformats.org/officeDocument/2006/math}dPr')
+                begChr = ET.SubElement(dPr, '{http://schemas.openxmlformats.org/officeDocument/2006/math}begChr')
+                begChr.set('{http://schemas.openxmlformats.org/officeDocument/2006/math}val', '{')
+                endChr = ET.SubElement(dPr, '{http://schemas.openxmlformats.org/officeDocument/2006/math}endChr')
+                endChr.set('{http://schemas.openxmlformats.org/officeDocument/2006/math}val', '')
+                grow = ET.SubElement(dPr, '{http://schemas.openxmlformats.org/officeDocument/2006/math}grow')
+                grow.set('{http://schemas.openxmlformats.org/officeDocument/2006/math}val', '1')
+                e = ET.SubElement(d, '{http://schemas.openxmlformats.org/officeDocument/2006/math}e')
+                e.append(next_elm)
+                parent.replace(r_elm, d)
+
                         
         omml_str = ET.tostring(omml, encoding='unicode')
         return parse_xml(omml_str)

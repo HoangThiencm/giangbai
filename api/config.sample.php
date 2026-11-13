@@ -36,6 +36,15 @@ define('CLOUDFLARE_API_TOKEN', '');
 // Worker script name (subdomain before .workers.dev), e.g. late-bird-fe3b
 define('CLOUDFLARE_WORKER_SCRIPT_NAME', 'late-bird-fe3b');
 
+// Telegram bot nhận văn bản. Tạo bot qua @BotFather, giữ token/secret chỉ trên hosting.
+// Allowed chats có thể là mảng số hoặc chuỗi ngăn cách bằng dấu phẩy, ví dụ '-1001234567890,123456'.
+define('TELEGRAM_VANBAN_BOT_TOKEN', '');
+define('TELEGRAM_VANBAN_WEBHOOK_SECRET', 'replace-with-a-long-random-secret');
+define('TELEGRAM_VANBAN_ALLOWED_CHATS', []);
+define('TELEGRAM_VANBAN_DEFAULT_OWNER_ID', 0);
+// URL công khai của trang quản lý văn bản, dùng cho nút “Mở trên Web”.
+define('TELEGRAM_VANBAN_WEB_URL', '');
+
 // Optional fallback via ShopAIKey (OpenAI-compatible API).
 define('SHOPAIKEY_API_KEY', '');
 define('SHOPAIKEY_MODEL', 'deepseek-v4-flash');
