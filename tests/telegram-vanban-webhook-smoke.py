@@ -30,6 +30,7 @@ for value in [
     'owner_id=? OR owner_id=0 OR owner_id IS NULL',
     '[• ', '<b>Thể loại:</b>', 'show_alert',
     'Đã chuyển lĩnh vực sang', 'Đã xác nhận thông tin văn bản #',
+    'Sửa từng mục', 'office_telegram_edits', 'Giữ đề xuất',
 ]:
     assert value in webhook, f'Missing webhook contract: {value}'
 

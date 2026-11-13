@@ -27,6 +27,10 @@
 - PDF mẫu `KH THI GIÁO VIÊN DẠY GỎI THCS - 2026-2027 pH.pdf`: số `/KH-SGDĐT`, thể loại `Kế hoạch`, trích yếu đủ câu hội thi, ngày `2026-11-12`.
 - Chưa gọi webhook Telegram thật. Chưa commit.
 
+## Bổ sung sau plan, theo yêu cầu người dùng
+
+Khi nhận diện thiếu thể loại, số hiệu, hoặc trích yếu chỉ còn tên tệp, bot hỏi lần lượt 5 mục: Thể loại, Số/Ký hiệu, Ngày ban hành, Cơ quan ban hành, Trích yếu. Mỗi mục hiện giá trị bot đang đề xuất. Người dùng bấm **Giữ đề xuất**, chọn thể loại, gõ giá trị mới, gõ `xóa`, hoặc `hủy`. Nút **Sửa từng mục** luôn có trên phiếu văn bản, kể cả khi nhận diện đã đủ. Phiên sửa nằm ở bảng `office_telegram_edits`, một phiên cho mỗi cuộc trò chuyện.
+
 ## Việc tiếp theo
 
 Antigravity IDE, chat mới: `/verify`.
