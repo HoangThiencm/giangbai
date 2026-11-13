@@ -20,7 +20,21 @@ function vbd_pdf_extract_text(string $pdfPath, int $maxPages = 3): string
         $text = vbd_pdf_page_text($objects, $pageId);
         if ($text !== '') $chunks[] = $text;
     }
-    return vbd_pdf_clean_text(implode("\n", $chunks));
+    $text = vbd_pdf_clean_text(implode("\n", $chunks));
+    $signature = vbd_pdf_signature_hint($data);
+    if ($signature !== '') $text = $signature . "\n" . $text;
+    return trim($text);
+}
+
+function vbd_pdf_signature_hint(string $data): string
+{
+    if (!preg_match_all('/\/M\s*\(\s*D:(\d{4})(\d{2})(\d{2})/', $data, $matches, PREG_SET_ORDER)) return '';
+    $best = '';
+    foreach ($matches as $match) {
+        $stamp = $match[1] . $match[2] . $match[3];
+        if ($stamp > $best) $best = $stamp;
+    }
+    return $best === '' ? '' : '/M(D:' . $best . ')';
 }
 
 function vbd_pdf_index_objects(string $data): array
@@ -591,7 +605,8 @@ function vbd_pdf_render_content(string $content, array $fonts): string
             $stack = [];
             continue;
         }
-        if ($op === 'ET') {
+        if ($op === 'BT' || $op === 'ET') {
+            $newline();
             $stack = [];
             continue;
         }

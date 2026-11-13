@@ -1,26 +1,20 @@
-# VERIFY: Sửa lỗi Build GitHub Actions (Deploy website to hosting)
+# VERIFY: Bot Telegram Quản lý văn bản (ngày ban hành, thể loại, trích yếu, phản hồi menu)
 
-## Kết quả kiểm tra: PASS
+## Kết quả kiểm tra local của Coder: PASS
 
-### 1. Chi tiết xác minh các tệp sửa đổi
-- **`build_all_khbd_5512.js`:**
-  - Dòng 198: Các ký tự backtick thô trong template string đã được thay thế thành `\"`.
-  - Phân tích cú pháp: 100% template literals trong tệp đều đóng mở cân bằng, không còn bất kỳ unescaped backtick nào gây `SyntaxError: Unexpected token`.
-- **`tools/build-obfuscate.js`:**
-  - Đã thêm `build_all_khbd_5512.js` và `compile_9_khbd_docx.js` vào `SKIP_FILE_NAMES`.
-  - Kiểm tra mô phỏng bộ thu thập file: 2 script này hoàn toàn không bị đưa vào danh sách làm rối mã nguồn.
-- **`.github/workflows/ftp-deploy.yml`:**
-  - Đã thêm `build_all_khbd_5512.js`, `compile_9_khbd_docx.js` và `*.py` vào cấu hình `exclude` của action `FTP-Deploy-Action@v4.4.0`.
+Bản PASS cũ (sửa GitHub Actions / obfuscate) không còn là kết quả của plan hiện tại.
 
-### 2. Trạng thái Git & Phạm vi can thiệp
-- Không sửa file nào ngoài phạm vi `PLAN.md`.
-- Các file thay đổi:
-  - `build_all_khbd_5512.js`
-  - `tools/build-obfuscate.js`
-  - `.github/workflows/ftp-deploy.yml`
-  - `docs/handoff/IMPLEMENT.md`
-  - `docs/handoff/PLAN.md`
-  - `docs/handoff/.lock`
+### Đã chạy
 
-### 3. Kết luận
-Đã khắc phục triệt để lỗi khiến GitHub Actions bị fail tại Step 7 (`Obfuscate first-party JavaScript`). Sẵn sàng commit và push.
+- `php -l` với PHP 8.3.36 và mbstring: `api/pdf_text_extractor.php`, `api/vanban.php`, `api/telegram_vanban.php`. Không lỗi cú pháp.
+- `python tests/telegram-vanban-webhook-smoke.py` in `telegram-vanban-webhook smoke: OK`.
+- Ca synthetic và PDF `KH THI GIÁO VIÊN DẠY GỎI THCS - 2026-2027 pH.pdf`: thể loại `Kế hoạch`, trích yếu hội thi đủ câu, số `/KH-SGDĐT`, ngày `2026-11-12`. Không còn `4200/SGDĐT-GDPT` hay `2019-12-20`.
+
+### Chưa kiểm
+
+- Webhook Telegram thật (đổi lĩnh vực, modal xác nhận).
+- `/verify` độc lập của Antigravity IDE.
+
+## Việc tiếp theo
+
+Antigravity IDE, chat mới: `/verify`.

@@ -1,22 +1,31 @@
-# IMPLEMENT: Sửa lỗi Build GitHub Actions (Workflow Deploy website to hosting)
+# IMPLEMENT: Bot Telegram Quản lý văn bản (ngày ban hành, thể loại, trích yếu, phản hồi menu)
 
 ## Phạm vi đã thực hiện
 
-1. **Sửa cú pháp trong `build_all_khbd_5512.js`:**
-   - Tại dòng 198, thay thế các backtick thô chưa được escape bên trong template literal (`"Toán 6 Kết nối tri thức"` và `""`) thành chuỗi chuẩn có escape `\"` nhằm ngăn việc template string bị đóng sớm và loại bỏ hoàn toàn `SyntaxError: Unexpected token`.
+1. **`api/pdf_text_extractor.php`**
+   - `BT` và `ET` đều xuống dòng, nên `KẾ HOẠCH` không dính vào câu trích yếu.
+   - Ghép gợi ý chữ ký số mới nhất `/M(D:YYYYMMDD)` lên đầu text để còn nằm trong cửa sổ 2500 ký tự.
 
-2. **Cập nhật `tools/build-obfuscate.js`:**
-   - Thêm `build_all_khbd_5512.js` và `compile_9_khbd_docx.js` vào tập hợp `SKIP_FILE_NAMES` để tiến trình obfuscate tự động bỏ qua hai script biên dịch KHBD offline ở thư mục gốc.
+2. **`api/vanban.php`**
+   - `vbd_find_document_number()` nhận số khuyết chữ số đầu (`/KH-SGDĐT`), bỏ số chỉ toàn chữ số (`22/2019`), và bỏ số nằm sau căn cứ/dẫn chiếu (`4200/SGDĐT-GDPT`, `1170/SGDĐT-GDPT`, `2019/TT-BGDĐT`).
+   - Cửa sổ ngữ cảnh chỉ lấy phần đứng trước số và được làm sạch UTF-8 trước khi kiểm tra dẫn chiếu.
+   - Tiêu ngữ `ngày tháng 11 năm 2026` lấy ngày ký số cùng tháng (`2026-11-12`), nếu không có thì ngày 01. Phần `Căn cứ` / `Thực hiện Công văn` / `Theo Quyết định` bị cắt trước khi đọc ngày.
+   - Thể loại lấy từ dòng in hoa (`KẾ HOẠCH`). Trích yếu nối tối đa 3 dòng, gồm dòng tiếp viết thường.
 
-3. **Cập nhật `.github/workflows/ftp-deploy.yml`:**
-   - Thêm `build_all_khbd_5512.js`, `compile_9_khbd_docx.js` và `*.py` vào danh sách `exclude` của action `SamKirkland/FTP-Deploy-Action@v4.4.0` để không tải các công cụ/script biên dịch offline lên hosting FTP.
+3. **`api/telegram_vanban.php`**
+   - `tvb_summary()` có dòng `Thể loại` ngay sau `Lĩnh vực`.
+   - Đổi lĩnh vực: trả lời callback không alert, rồi gửi tin `Đã chuyển lĩnh vực sang`.
+   - Xác nhận: `show_alert` true, rồi gửi tin `Đã xác nhận thông tin văn bản #...`.
 
-## Kiểm thử & Xác minh
+4. **`tests/telegram-vanban-webhook-smoke.py`**
+   - Thêm ca số khuyết, ngày ký số, và PDF hội thi trên Desktop.
 
-- Đã phân tích AST/cặp backtick trong `build_all_khbd_5512.js`: toàn bộ 7 khối template literal đều cân bằng, không còn backtick unescaped hay lỗi cú pháp.
-- Đã chạy kiểm thử mô phỏng logic lọc tệp của `tools/build-obfuscate.js`: kết quả 33 tệp JS được thu thập, 2 tệp `build_all_khbd_5512.js` và `compile_9_khbd_docx.js` được bỏ qua hoàn toàn.
-- Kiểm tra `git status` và `git diff`: chỉ đúng 3 tệp thuộc phạm vi quy định trong `docs/handoff/PLAN.md` được sửa đổi.
-- Đã khôi phục tệp `docs/handoff/.lock`.
+## Kiểm thử
+
+- `php -l` (PHP 8.3.36, bật mbstring): `api/pdf_text_extractor.php`, `api/vanban.php`, `api/telegram_vanban.php` — không lỗi cú pháp.
+- `python tests/telegram-vanban-webhook-smoke.py` — in `telegram-vanban-webhook smoke: OK`.
+- PDF mẫu `KH THI GIÁO VIÊN DẠY GỎI THCS - 2026-2027 pH.pdf`: số `/KH-SGDĐT`, thể loại `Kế hoạch`, trích yếu đủ câu hội thi, ngày `2026-11-12`.
+- Chưa gọi webhook Telegram thật. Chưa commit.
 
 ## Việc tiếp theo
 

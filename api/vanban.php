@@ -394,7 +394,13 @@ function vbd_normalize_doc_number(string $raw): string
 
 function vbd_is_reference_context(string $before): bool
 {
-    return (bool)preg_match('/(Căn cứ|Trên cơ sở|theo\s*Công văn|Công văn\s*số)\s*[^0-9]{0,40}$/iu', $before);
+    // Cửa sổ byte có thể cắt giữa ký tự UTF-8; /u sẽ bỏ cả chuỗi nếu còn byte thừa.
+    $before = preg_replace('/^[\x80-\xBF]+/', '', $before) ?? $before;
+    if (function_exists('mb_check_encoding') && !mb_check_encoding($before, 'UTF-8')) {
+        $before = function_exists('mb_convert_encoding') ? (mb_convert_encoding($before, 'UTF-8', 'UTF-8') ?: '') : '';
+    }
+    $tail = function_exists('mb_substr') ? mb_substr($before, -90) : substr($before, -180);
+    return (bool)preg_match('/(Căn cứ|Trên cơ sở|Thực hiện|Thuc hien|Thông tư\s*số|Công văn\s*số|Quyết định\s*số|Nghị quyết\s*số|Hướng dẫn\s*số|theo\s*Công văn|Theo|Tại|V\/v|về việc).{0,80}$/ius', $tail);
 }
 
 function vbd_find_document_number(string $head): string
@@ -407,17 +413,20 @@ function vbd_find_document_number(string $head): string
         '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}' . $sp . '\/' . $sp . $code . '(?:' . $sp . '-' . $sp . $org . ')+)/iu',
         '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}' . $sp . '-' . $sp . $partyCode . $sp . '\/' . $sp . $org . ')/iu',
         '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}' . $sp . '\/' . $sp . $org . '(?:' . $sp . '-' . $sp . $org . ')*)/iu',
+        '/(?:Số|So)\s*[:\.]?\s*([0-9]*' . $sp . '[\/\-]' . $sp . $org . '(?:' . $sp . '-' . $sp . $org . ')*)/iu',
         '/\b([0-9]{1,6}' . $sp . '\/' . $sp . $code . '(?:' . $sp . '-' . $sp . $org . ')+)/iu',
         '/\b([0-9]{1,6}' . $sp . '-' . $sp . $partyCode . $sp . '\/' . $sp . $org . ')/iu',
     ];
     foreach ($patterns as $pattern) {
         if (!preg_match_all($pattern, $head, $matches, PREG_OFFSET_CAPTURE)) continue;
         foreach ($matches[1] as $index => $part) {
-            $pos = (int)$matches[0][$index][1];
-            $before = substr($head, max(0, $pos - 100), 100);
+            $pos = (int)$part[1];
+            $start = max(0, $pos - 120);
+            $before = substr($head, $start, $pos - $start);
             if (vbd_is_reference_context($before)) continue;
             $number = vbd_normalize_doc_number((string)$part[0]);
-            if ($number !== '') return $number;
+            if ($number === '' || !preg_match('/\p{L}/u', $number)) continue;
+            return $number;
         }
     }
     return '';
@@ -447,12 +456,12 @@ function vbd_match_type_line(string $head): ?array
     foreach (array_keys(vbd_document_type_labels()) as $label) {
         $parts[] = str_replace(' ', '\s+', preg_quote($label, '/'));
     }
-    if (!preg_match('/^\s*(' . implode('|', $parts) . ')\s*$/uim', $head, $match, PREG_OFFSET_CAPTURE)) return null;
+    if (!preg_match('/^\s*(' . implode('|', $parts) . ')(?:\s*[:\.\-–—]|\s*$|\s+(?=[A-ZÀ-Ỹ]))/uim', $head, $match, PREG_OFFSET_CAPTURE)) return null;
     $normalized = preg_replace('/\s+/u', ' ', trim((string)$match[1][0])) ?? '';
     if (function_exists('mb_strtoupper')) $normalized = mb_strtoupper($normalized, 'UTF-8');
     $label = vbd_document_type_labels()[$normalized] ?? '';
     if ($label === '') return null;
-    return ['label' => $label, 'end' => (int)$match[0][1] + strlen((string)$match[0][0])];
+    return ['label' => $label, 'end' => (int)$match[1][1] + strlen((string)$match[1][0])];
 }
 
 function vbd_type_from_number(string $number): string
@@ -469,27 +478,40 @@ function vbd_type_from_number(string $number): string
         'TT' => 'Thông tư',
         'KL' => 'Kết luận',
     ];
-    if (!preg_match('/(?:^|[\/\-])(TTr|TT|KH|QĐ|QD|TB|BC|HD|NQ|KL)(?=[\/\-]|$)/iu', $number, $match)) return '';
+    if (!preg_match('/(?:^|[\/\-])(TTr|TT|KH|QĐ|QD|TB|BC|HD|NQ|KL)(?=[\/\-]|$)/iu', $number, $match)
+        && !preg_match('/\/(TTr|TT|KH|QĐ|QD|TB|BC|HD|NQ|KL)-/iu', $number, $match)) return '';
     $code = function_exists('mb_strtoupper') ? mb_strtoupper($match[1], 'UTF-8') : strtoupper($match[1]);
     return $map[$code] ?? '';
+}
+
+function vbd_title_line_skipped(string $line): bool
+{
+    if ($line === '' || $line === '-' || $line === '–' || $line === '—') return true;
+    if (preg_match('/^(Số|So)\b/iu', $line)) return true;
+    if (preg_match('/ngày\s*(?:\d{1,2}\s*)?tháng|\b\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}\b/iu', $line)) return true;
+    if (preg_match('/^(Căn cứ|Thực hiện|Điều\s*\d+|Nơi nhận|Kính gửi|Độc lập|Tự do|Hạnh phúc|CỘNG\s*HÒA|CỘNG\s*HOÀ|DỰ THẢO|\d+[\.\)])/iu', $line)) return true;
+    if (vbd_match_type_line($line)) return true;
+    $letters = preg_match_all('/\p{L}/u', $line);
+    return $letters !== false && $letters < 4;
 }
 
 function vbd_title_below_type(string $text, int $byteOffset): string
 {
     $rest = substr($text, $byteOffset, 1500);
     $lines = preg_split('/\R/u', $rest) ?: [];
+    $picked = [];
     foreach ($lines as $line) {
         $line = trim($line);
-        if ($line === '' || $line === '-' || $line === '–' || $line === '—') continue;
-        if (preg_match('/^(Số|So)\b/iu', $line)) continue;
-        if (preg_match('/ngày\s+\d{1,2}\s+tháng|\b\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{4}\b/iu', $line)) continue;
-        if (preg_match('/^(Căn cứ|Điều\s*\d+|Nơi nhận|Kính gửi|Độc lập|Tự do|Hạnh phúc|CỘNG\s*HÒA|CỘNG\s*HOÀ|DỰ THẢO|\d+[\.\)])\b/iu', $line)) continue;
-        if (vbd_match_type_line($line)) continue;
-        $letters = preg_match_all('/\p{L}/u', $line);
-        if ($letters !== false && $letters < 4) continue;
-        return vbd_truncate($line, 500);
+        if (vbd_title_line_skipped($line)) {
+            if ($picked) break;
+            continue;
+        }
+        if ($picked && !preg_match('/^\p{Ll}/u', $line)) break;
+        $picked[] = $line;
+        if (count($picked) >= 3) break;
     }
-    return '';
+    if (!$picked) return '';
+    return vbd_truncate(trim(preg_replace('/\s+/u', ' ', implode(' ', $picked)) ?? ''), 500);
 }
 
 function vbd_valid_ymd(int $year, int $month, int $day): ?string
@@ -574,8 +596,8 @@ function vbd_regex_extract(string $source): array
             $num = trim(preg_replace('/\s+/u', '', $match[1]) ?? $match[1]);
             // Kiểm tra context: nếu trước số không có từ dẫn chiếu thì lấy
             $pos = mb_strpos($head, $match[0]);
-            $contextBefore = $pos !== false ? mb_substr($head, max(0, $pos - 80), 80) : '';
-            if (!preg_match('/(Căn cứ|Trên cơ sở|theo\s*Công văn|Công văn\s*số)\s*$/iu', $contextBefore)) {
+            $contextBefore = $pos !== false ? mb_substr($head, max(0, $pos - 100), min(100, $pos)) : '';
+            if (!vbd_is_reference_context($contextBefore)) {
                 $result['document_number'] = $num;
                 break;
             }
@@ -589,8 +611,8 @@ function vbd_regex_extract(string $source): array
             $num = $match[1];
             // Kiểm tra không nằm sau tham chiếu
             $pos = mb_strpos($head, $num);
-            $before = $pos !== false ? mb_substr($head, max(0, $pos-100), 100) : '';
-            if (!preg_match('/(Căn cứ|Trên cơ sở|theo\s*Công văn|Công văn\s*số)\s*[^0-9]{0,40}$/iu', $before)) {
+            $before = $pos !== false ? mb_substr($head, max(0, $pos - 100), min(100, $pos)) : '';
+            if (!vbd_is_reference_context($before)) {
                 $result['document_number'] = $num;
             }
         }
@@ -645,19 +667,26 @@ function vbd_regex_extract(string $source): array
         $result['document_type'] = 'Công văn';
     }
 
-    // Tìm NGÀY BAN HÀNH ở header. Dòng chữ ký số chỉ dùng làm ngày dự phòng.
+    // Tìm NGÀY BAN HÀNH ở header, trước mọi căn cứ dẫn chiếu.
     $headerForDate = vbd_without_signature_lines($text);
     $dateHead = mb_substr($headerForDate, 0, 900);
+    if (preg_match('/Căn cứ|Thực hiện\s+Công văn|Theo\s+Quyết định/iu', $dateHead, $cut, PREG_OFFSET_CAPTURE)) {
+        $dateHead = substr($dateHead, 0, (int)$cut[0][1]);
+    }
 
     // Ưu tiên pattern có "Hồ Nai, ngày" hoặc tương tự ngay đầu
     if (preg_match('/[A-Za-zÀ-ỹ\.\s]+\s*,\s*ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $m)) {
         $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$m[3], (int)$m[2], (int)$m[1]);
     } elseif (preg_match('/ngày\s*(\d{1,2})\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $m)) {
-        // Kiểm tra không nằm sau dòng tham chiếu
-        $pos = mb_strpos($dateHead, $m[0]);
-        $before = $pos !== false ? mb_substr($dateHead, 0, $pos) : '';
-        if (!preg_match('/(Căn cứ|Trên cơ sở|theo|Công văn số)/iu', $before)) {
-            $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$m[3], (int)$m[2], (int)$m[1]);
+        $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$m[3], (int)$m[2], (int)$m[1]);
+    } elseif (preg_match('/ngày\s*tháng\s*(\d{1,2})\s*năm\s*(\d{4})/iu', $dateHead, $m)) {
+        $month = (int)$m[1];
+        $year = (int)$m[2];
+        $monthKey = sprintf('%04d-%02d', $year, $month);
+        if (is_string($signatureDate) && str_starts_with($signatureDate, $monthKey)) {
+            $result['document_date'] = $signatureDate;
+        } else {
+            $result['document_date'] = sprintf('%04d-%02d-01', $year, $month);
         }
     }
 

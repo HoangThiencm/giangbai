@@ -202,6 +202,7 @@ function tvb_summary(array $document, string $fileName, bool $confirmed = false)
     $lines = [
         $confirmed ? '✅ <b>ĐÃ XÁC NHẬN VĂN BẢN</b>' : '📄 <b>ĐÃ TIẾP NHẬN VĂN BẢN</b>',
         '<b>Lĩnh vực:</b> ' . tvb_html(vbd_sector_label(vbd_sector((string)($document['sector'] ?? 'hanhchinh')))),
+        '<b>Thể loại:</b> ' . tvb_html((string)($document['document_type'] ?: 'Chưa nhận diện')),
         '<b>Số/Ký hiệu:</b> ' . tvb_html((string)($document['document_number'] ?: 'Chưa nhận diện')),
         '<b>Ngày ban hành:</b> ' . tvb_html((string)($document['document_date'] ?: 'Chưa nhận diện')),
         '<b>Cơ quan:</b> ' . tvb_html((string)($document['organization'] ?: 'Chưa nhận diện')),
@@ -231,10 +232,14 @@ function tvb_keyboard(int $documentId, string $currentSector = 'hanhchinh'): arr
     return ['inline_keyboard' => $rows];
 }
 
-function tvb_answer_callback(array $callback, string $text): void
+function tvb_answer_callback(array $callback, string $text, bool $showAlert = false): void
 {
     try {
-        tvb_api('answerCallbackQuery', ['callback_query_id' => (string)($callback['id'] ?? ''), 'text' => $text]);
+        tvb_api('answerCallbackQuery', [
+            'callback_query_id' => (string)($callback['id'] ?? ''),
+            'text' => $text,
+            'show_alert' => $showAlert,
+        ]);
     } catch (Throwable $error) {
         if (stripos($error->getMessage(), 'query is too old') === false && stripos($error->getMessage(), 'query ID is invalid') === false) {
             throw $error;
@@ -266,11 +271,13 @@ function tvb_process_callback(PDO $pdo, array $callback): void
     $documentId = 0;
     $confirmed = false;
     $popup = 'Đã cập nhật.';
+    $sectorName = '';
     $ownerClause = 'id=? AND (owner_id=? OR owner_id=0 OR owner_id IS NULL)';
     if (preg_match('/^sector:(\d+):(hanhchinh|chuyenmon|dang)$/', $data, $match)) {
         $documentId = (int)$match[1];
         $labels = ['hanhchinh' => 'Hành chính', 'chuyenmon' => 'Chuyên môn', 'dang' => 'Đảng'];
-        $popup = 'Đã chọn ' . ($labels[$match[2]] ?? 'lĩnh vực');
+        $sectorName = $labels[$match[2]] ?? 'lĩnh vực';
+        $popup = 'Đã chọn ' . $sectorName;
         $pdo->prepare('UPDATE office_documents SET sector=? WHERE ' . $ownerClause)->execute([$match[2], $documentId, (int)$owner['id']]);
     } elseif (preg_match('/^confirm:(\d+)$/', $data, $match)) {
         $documentId = (int)$match[1];
@@ -287,7 +294,13 @@ function tvb_process_callback(PDO $pdo, array $callback): void
         tvb_answer_callback($callback, 'Không tìm thấy văn bản cần cập nhật.');
         return;
     }
-    tvb_answer_callback($callback, $popup);
+    if ($confirmed) {
+        tvb_answer_callback($callback, $popup, true);
+        tvb_api('sendMessage', ['chat_id' => $chatId, 'text' => "✅ Đã xác nhận thông tin văn bản #{$documentId}.", 'parse_mode' => 'HTML']);
+    } else {
+        tvb_answer_callback($callback, $popup, false);
+        tvb_api('sendMessage', ['chat_id' => $chatId, 'text' => "🔄 Đã chuyển lĩnh vực sang: <b>{$sectorName}</b>", 'parse_mode' => 'HTML']);
+    }
     tvb_edit_callback_message($chatId, $callback, $document, $documentId, $confirmed);
 }
 
