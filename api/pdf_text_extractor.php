@@ -397,15 +397,68 @@ function vbd_pdf_content_bytes(array $objects, string $pageDict): string
     return implode("\n", $parts);
 }
 
+function vbd_pdf_xobject_texts(array $objects, int $id, array &$texts, array &$seen, int $depth): void
+{
+    if ($depth > 6 || $id < 1 || isset($seen[$id]) || !isset($objects[$id])) return;
+    $seen[$id] = true;
+    $body = $objects[$id];
+    $dict = vbd_pdf_dict($body);
+    $fonts = vbd_pdf_font_maps($objects, $dict);
+    $stream = vbd_pdf_stream($body, $dict);
+    if ($stream !== '' && strlen($stream) <= 200000) {
+        $text = trim(vbd_pdf_render_content($stream, $fonts));
+        if ($text !== '') $texts[] = $text;
+    }
+    $resourceDict = $dict;
+    if (preg_match('#/Resources\s+(\d+)\s+0\s+R#', $dict, $resource) && isset($objects[(int)$resource[1]])) {
+        $resourceDict = vbd_pdf_dict($objects[(int)$resource[1]]);
+    }
+    $xobjects = vbd_pdf_inner_dict($resourceDict, 'XObject');
+    if ($xobjects !== '' && preg_match_all('#/[A-Za-z][A-Za-z0-9]*\s+(\d+)\s+0\s+R#', $xobjects, $refs)) {
+        foreach ($refs[1] as $ref) vbd_pdf_xobject_texts($objects, (int)$ref, $texts, $seen, $depth + 1);
+    }
+}
+
+function vbd_pdf_annot_texts(array $objects, string $pageDict): array
+{
+    $ids = [];
+    if (preg_match('#/Annots\s*\[(.*?)\]#s', $pageDict, $match) && preg_match_all('#(\d+)\s+0\s+R#', $match[1], $refs)) {
+        foreach ($refs[1] as $id) $ids[] = (int)$id;
+    } elseif (preg_match('#/Annots\s+(\d+)\s+0\s+R#', $pageDict, $match) && isset($objects[(int)$match[1]])) {
+        if (preg_match_all('#(\d+)\s+0\s+R#', $objects[(int)$match[1]], $refs)) {
+            foreach ($refs[1] as $id) $ids[] = (int)$id;
+        }
+    }
+    $texts = [];
+    $seen = [];
+    foreach ($ids as $id) {
+        if (!isset($objects[$id])) continue;
+        $dict = vbd_pdf_dict($objects[$id]);
+        if (!preg_match('#/N\s+(\d+)\s+0\s+R#', $dict, $normal)) continue;
+        vbd_pdf_xobject_texts($objects, (int)$normal[1], $texts, $seen, 0);
+    }
+    $clean = [];
+    foreach ($texts as $text) {
+        $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+        if ($text !== '') $clean[] = $text;
+    }
+    return $clean;
+}
+
 function vbd_pdf_page_text(array $objects, int $pageId): string
 {
     if (!isset($objects[$pageId])) return '';
     $dict = vbd_pdf_dict($objects[$pageId]);
     $fonts = vbd_pdf_font_maps($objects, $dict);
     $content = vbd_pdf_content_bytes($objects, $dict);
-    if ($content === '') return '';
-    if (strlen($content) > 500000) $content = substr($content, 0, 500000);
-    return vbd_pdf_render_content($content, $fonts);
+    $rendered = '';
+    if ($content !== '') {
+        if (strlen($content) > 500000) $content = substr($content, 0, 500000);
+        $rendered = vbd_pdf_render_content($content, $fonts);
+    }
+    $annots = vbd_pdf_annot_texts($objects, $dict);
+    if ($annots) $rendered = 'ANNOT_TEXT: ' . implode(' | ', $annots) . "\n" . $rendered;
+    return trim($rendered);
 }
 
 function vbd_pdf_read_literal(string $content, int &$index, int $length): string

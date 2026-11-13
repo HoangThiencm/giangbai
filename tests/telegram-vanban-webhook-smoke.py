@@ -30,9 +30,12 @@ for value in [
     'owner_id=? OR owner_id=0 OR owner_id IS NULL',
     '[• ', '<b>Thể loại:</b>', 'show_alert',
     'Đã chuyển lĩnh vực sang', 'Đã xác nhận thông tin văn bản #',
-    'Sửa từng mục', 'office_telegram_edits', 'Giữ đề xuất',
+    'merge:(\\d+):(\\d+)', 'Ghép vào VB trước', 'INTERVAL 30 MINUTE',
+    'Đã ghép tệp vào Văn bản #', 'Đã chuyển tệp sang làm phụ lục',
 ]:
     assert value in webhook, f'Missing webhook contract: {value}'
+for value in ['office_telegram_edits', 'Sửa từng mục', 'tvb_needs_manual', 'tvb_edit_begin']:
+    assert value not in webhook, f'Wizard còn sót: {value}'
 
 for value in [
     'function vbd_detect_sector', 'function vbd_current_academic_year',
@@ -198,7 +201,7 @@ contest_pdf = payload.get('contest') or {}
 assert contest_pdf.get('separated') is True, contest_pdf
 assert contest_pdf.get('type') == 'Kế hoạch', contest_pdf
 assert contest_pdf.get('title') == 'Tổ chức Hội thi giáo viên dạy giỏi cơ sở giáo dục Trung học cơ sở cấp thành phố năm học 2026 - 2027', contest_pdf
-assert contest_pdf.get('number') == '/KH-SGDĐT', contest_pdf
+assert contest_pdf.get('number') == '7400/KH-SGDĐT', contest_pdf
 assert contest_pdf.get('date') == '2026-11-12', contest_pdf
 assert '4200' not in str(contest_pdf.get('number'))
 assert contest_pdf.get('date') != '2019-12-20'

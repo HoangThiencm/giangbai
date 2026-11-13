@@ -403,6 +403,22 @@ function vbd_is_reference_context(string $before): bool
     return (bool)preg_match('/(Căn cứ|Trên cơ sở|Thực hiện|Thuc hien|Thông tư\s*số|Công văn\s*số|Quyết định\s*số|Nghị quyết\s*số|Hướng dẫn\s*số|theo\s*Công văn|Theo|Tại|V\/v|về việc).{0,80}$/ius', $tail);
 }
 
+function vbd_annot_numbers(string $text): array
+{
+    if (!preg_match('/ANNOT_TEXT:\s*([^\n]+)/u', $text, $match)) return [];
+    if (!preg_match_all('/\b(\d{1,6})\b/u', $match[1], $numbers)) return [];
+    return $numbers[1];
+}
+
+function vbd_apply_annot_number(string $number, string $head): string
+{
+    if ($number === '' || !str_starts_with($number, '/')) return $number;
+    foreach (vbd_annot_numbers($head) as $digits) {
+        if (strlen($digits) >= 3) return $digits . $number;
+    }
+    return $number;
+}
+
 function vbd_find_document_number(string $head): string
 {
     $sp = '[ \t\r\n]{0,3}';
@@ -426,7 +442,7 @@ function vbd_find_document_number(string $head): string
             if (vbd_is_reference_context($before)) continue;
             $number = vbd_normalize_doc_number((string)$part[0]);
             if ($number === '' || !preg_match('/\p{L}/u', $number)) continue;
-            return $number;
+            return vbd_apply_annot_number($number, $head);
         }
     }
     return '';
@@ -683,7 +699,17 @@ function vbd_regex_extract(string $source): array
         $month = (int)$m[1];
         $year = (int)$m[2];
         $monthKey = sprintf('%04d-%02d', $year, $month);
-        if (is_string($signatureDate) && str_starts_with($signatureDate, $monthKey)) {
+        $annotDay = 0;
+        foreach (vbd_annot_numbers($text) as $digits) {
+            $day = (int)$digits;
+            if ($day >= 1 && $day <= 31 && strlen($digits) <= 2 && checkdate($month, $day, $year)) {
+                $annotDay = $day;
+                break;
+            }
+        }
+        if ($annotDay > 0) {
+            $result['document_date'] = sprintf('%04d-%02d-%02d', $year, $month, $annotDay);
+        } elseif (is_string($signatureDate) && str_starts_with($signatureDate, $monthKey)) {
             $result['document_date'] = $signatureDate;
         } else {
             $result['document_date'] = sprintf('%04d-%02d-01', $year, $month);

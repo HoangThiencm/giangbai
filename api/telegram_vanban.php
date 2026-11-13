@@ -45,12 +45,6 @@ function tvb_ensure_schema(PDO $pdo): void
         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_office_telegram_updates_document (document_id)
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-    $pdo->exec("CREATE TABLE IF NOT EXISTS office_telegram_edits (
-        chat_id BIGINT NOT NULL PRIMARY KEY,
-        document_id INT NOT NULL,
-        field_key VARCHAR(40) NOT NULL,
-        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 }
 
 function tvb_claim_update(PDO $pdo, int $updateId, int $chatId): bool
@@ -225,18 +219,30 @@ function tvb_sector_button(string $sector, string $current, string $icon, string
     return $icon . ' ' . $label;
 }
 
-function tvb_keyboard(int $documentId, string $currentSector = 'hanhchinh'): array
+function tvb_recent_previous_document(PDO $pdo, int $ownerId, int $excludeId): ?array
+{
+    if ($ownerId < 1 || $excludeId < 1) return null;
+    $stmt = $pdo->prepare('SELECT id FROM office_documents WHERE owner_id=? AND id<>? AND created_at >= DATE_SUB(NOW(), INTERVAL 30 MINUTE) ORDER BY created_at DESC, id DESC LIMIT 1');
+    $stmt->execute([$ownerId, $excludeId]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+function tvb_keyboard(int $documentId, string $currentSector = 'hanhchinh', ?int $prevId = null): array
 {
     $currentSector = vbd_sector($currentSector);
     $rows = [[
         ['text' => tvb_sector_button('hanhchinh', $currentSector, '🏛', 'Hành chính'), 'callback_data' => 'sector:' . $documentId . ':hanhchinh'],
         ['text' => tvb_sector_button('chuyenmon', $currentSector, '🎓', 'Chuyên môn'), 'callback_data' => 'sector:' . $documentId . ':chuyenmon'],
         ['text' => tvb_sector_button('dang', $currentSector, '🚩', 'Đảng'), 'callback_data' => 'sector:' . $documentId . ':dang'],
-    ], [
-        ['text' => '✏️ Sửa từng mục', 'callback_data' => 'e:' . $documentId . ':s'],
-    ], [['text' => '✅ Xác nhận chính xác', 'callback_data' => 'confirm:' . $documentId]]];
+    ]];
+    if ($prevId) {
+        $rows[] = [['text' => '📎 Ghép vào VB trước (#' . $prevId . ')', 'callback_data' => 'merge:' . $documentId . ':' . $prevId]];
+    }
+    $actions = [['text' => '✅ Xác nhận chính xác', 'callback_data' => 'confirm:' . $documentId]];
     $web = trim((string)tvb_config('TELEGRAM_VANBAN_WEB_URL'));
-    if ($web !== '') $rows[2][] = ['text' => '🔗 Mở trên Web', 'url' => rtrim($web, '/') . '?document_id=' . $documentId];
+    if ($web !== '') $actions[] = ['text' => '🔗 Mở trên Web', 'url' => rtrim($web, '/') . '?document_id=' . $documentId];
+    $rows[] = $actions;
     return ['inline_keyboard' => $rows];
 }
 
@@ -255,358 +261,20 @@ function tvb_answer_callback(array $callback, string $text, bool $showAlert = fa
     }
 }
 
-function tvb_edit_callback_message(int $chatId, array $callback, array $document, int $documentId, bool $confirmed): void
+function tvb_edit_callback_message(PDO $pdo, int $chatId, array $callback, array $document, int $documentId, bool $confirmed, int $ownerId): void
 {
+    $prev = tvb_recent_previous_document($pdo, $ownerId, $documentId);
     try {
         tvb_api('editMessageText', [
             'chat_id' => $chatId,
             'message_id' => (int)($callback['message']['message_id'] ?? 0),
             'text' => tvb_summary($document, 'Tệp đã lưu', $confirmed),
             'parse_mode' => 'HTML',
-            'reply_markup' => tvb_keyboard($documentId, (string)($document['sector'] ?? 'hanhchinh')),
+            'reply_markup' => tvb_keyboard($documentId, (string)($document['sector'] ?? 'hanhchinh'), $prev ? (int)$prev['id'] : null),
         ]);
     } catch (Throwable $error) {
         if (stripos($error->getMessage(), 'message is not modified') === false) throw $error;
     }
-}
-
-function tvb_lower(string $text): string
-{
-    return function_exists('mb_strtolower') ? mb_strtolower($text, 'UTF-8') : strtolower($text);
-}
-
-function tvb_edit_steps(): array
-{
-    return ['document_type', 'document_number', 'document_date', 'organization', 'title'];
-}
-
-function tvb_edit_labels(): array
-{
-    return [
-        'document_type' => 'Thể loại',
-        'document_number' => 'Số/Ký hiệu',
-        'document_date' => 'Ngày ban hành',
-        'organization' => 'Cơ quan ban hành',
-        'title' => 'Trích yếu',
-    ];
-}
-
-function tvb_type_choices(): array
-{
-    return [
-        'kh' => 'Kế hoạch',
-        'qd' => 'Quyết định',
-        'cv' => 'Công văn',
-        'tb' => 'Thông báo',
-        'bc' => 'Báo cáo',
-        'hd' => 'Hướng dẫn',
-    ];
-}
-
-function tvb_normalize_type(string $text): string
-{
-    $clean = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
-    $key = tvb_lower($clean);
-    $map = [
-        'kh' => 'Kế hoạch', 'kế hoạch' => 'Kế hoạch', 'ke hoach' => 'Kế hoạch',
-        'qd' => 'Quyết định', 'qđ' => 'Quyết định', 'quyết định' => 'Quyết định', 'quyet dinh' => 'Quyết định',
-        'cv' => 'Công văn', 'công văn' => 'Công văn', 'cong van' => 'Công văn',
-        'tb' => 'Thông báo', 'thông báo' => 'Thông báo', 'thong bao' => 'Thông báo',
-        'bc' => 'Báo cáo', 'báo cáo' => 'Báo cáo', 'bao cao' => 'Báo cáo',
-        'hd' => 'Hướng dẫn', 'hướng dẫn' => 'Hướng dẫn', 'huong dan' => 'Hướng dẫn',
-        'nq' => 'Nghị quyết', 'nghị quyết' => 'Nghị quyết', 'nghi quyet' => 'Nghị quyết',
-        'ttr' => 'Tờ trình', 'tờ trình' => 'Tờ trình', 'to trinh' => 'Tờ trình',
-    ];
-    return $map[$key] ?? vbd_truncate($clean, 120);
-}
-
-function tvb_normalize_date(string $text): ?string
-{
-    $text = trim($text);
-    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $text, $match) && checkdate((int)$match[2], (int)$match[3], (int)$match[1])) {
-        return sprintf('%04d-%02d-%02d', (int)$match[1], (int)$match[2], (int)$match[3]);
-    }
-    $ymd = vbd_parse_vn_date($text);
-    if (!$ymd || !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $ymd, $match)) return null;
-    return checkdate((int)$match[2], (int)$match[3], (int)$match[1]) ? $ymd : null;
-}
-
-function tvb_edit_command(string $text): string
-{
-    $key = tvb_lower(trim($text));
-    if (in_array($key, ['giữ', 'giu', 'giữ nguyên', 'giu nguyen', '.', '-'], true)) return 'keep';
-    if (in_array($key, ['xóa', 'xoa', 'xoá'], true)) return 'clear';
-    if (in_array($key, ['hủy', 'huy', 'huỷ', 'hủy sửa', 'huy sua'], true)) return 'cancel';
-    return '';
-}
-
-function tvb_load_document(PDO $pdo, int $documentId, int $ownerId): ?array
-{
-    $stmt = $pdo->prepare('SELECT * FROM office_documents WHERE id=? AND (owner_id=? OR owner_id=0 OR owner_id IS NULL) LIMIT 1');
-    $stmt->execute([$documentId, $ownerId]);
-    $row = $stmt->fetch();
-    return $row ?: null;
-}
-
-function tvb_edit_load(PDO $pdo, int $chatId): ?array
-{
-    $stmt = $pdo->prepare('SELECT chat_id, document_id, field_key FROM office_telegram_edits WHERE chat_id=? LIMIT 1');
-    $stmt->execute([$chatId]);
-    $row = $stmt->fetch();
-    return $row ?: null;
-}
-
-function tvb_edit_save(PDO $pdo, int $chatId, int $documentId, string $field): void
-{
-    $pdo->prepare('INSERT INTO office_telegram_edits (chat_id, document_id, field_key) VALUES (?,?,?) ON DUPLICATE KEY UPDATE document_id=VALUES(document_id), field_key=VALUES(field_key)')
-        ->execute([$chatId, $documentId, $field]);
-}
-
-function tvb_edit_clear(PDO $pdo, int $chatId): void
-{
-    $pdo->prepare('DELETE FROM office_telegram_edits WHERE chat_id=?')->execute([$chatId]);
-}
-
-function tvb_needs_manual(array $document): bool
-{
-    if (trim((string)($document['document_type'] ?? '')) === '') return true;
-    if (trim((string)($document['document_number'] ?? '')) === '') return true;
-    $title = trim((string)($document['title'] ?? ''));
-    return $title === '' || str_starts_with($title, 'Văn bản Telegram:');
-}
-
-function tvb_edit_current(array $document, string $field): string
-{
-    $value = trim((string)($document[$field] ?? ''));
-    if ($value === '' || $value === 'Chưa nhận diện') return 'Chưa có';
-    return $value;
-}
-
-function tvb_edit_prompt(array $document, string $field, string $ack = ''): string
-{
-    $steps = tvb_edit_steps();
-    $index = array_search($field, $steps, true);
-    $n = ($index === false ? 0 : (int)$index) + 1;
-    $label = tvb_edit_labels()[$field] ?? 'Mục';
-    $hint = 'Gửi nội dung đúng, gõ <b>giữ</b> để nhận đề xuất, <b>xóa</b> để bỏ trống, hoặc <b>hủy</b> để dừng.';
-    if ($field === 'document_date') $hint = 'Gửi ngày dạng <b>12/11/2026</b>. ' . $hint;
-    if ($field === 'document_type') $hint = 'Bấm một thể loại bên dưới, hoặc gõ thể loại khác. ' . $hint;
-    $body = '✏️ <b>Mục ' . $n . '/' . count($steps) . ': ' . tvb_html($label) . '</b>'
-        . "\n" . 'Bot đang đề xuất: <b>' . tvb_html(tvb_edit_current($document, $field)) . '</b>'
-        . "\n" . $hint;
-    return $ack === '' ? $body : $ack . "\n\n" . $body;
-}
-
-function tvb_edit_keyboard(int $documentId, string $field): array
-{
-    $rows = [];
-    if ($field === 'document_type') {
-        $rows[] = [
-            ['text' => 'Kế hoạch', 'callback_data' => 'e:' . $documentId . ':t:kh'],
-            ['text' => 'Quyết định', 'callback_data' => 'e:' . $documentId . ':t:qd'],
-            ['text' => 'Công văn', 'callback_data' => 'e:' . $documentId . ':t:cv'],
-        ];
-        $rows[] = [
-            ['text' => 'Thông báo', 'callback_data' => 'e:' . $documentId . ':t:tb'],
-            ['text' => 'Báo cáo', 'callback_data' => 'e:' . $documentId . ':t:bc'],
-            ['text' => 'Hướng dẫn', 'callback_data' => 'e:' . $documentId . ':t:hd'],
-        ];
-    }
-    $rows[] = [
-        ['text' => 'Giữ đề xuất', 'callback_data' => 'e:' . $documentId . ':k'],
-        ['text' => 'Xóa mục', 'callback_data' => 'e:' . $documentId . ':c'],
-        ['text' => 'Hủy sửa', 'callback_data' => 'e:' . $documentId . ':x'],
-    ];
-    return ['inline_keyboard' => $rows];
-}
-
-function tvb_edit_send(int $chatId, array $document, string $field, string $ack = ''): void
-{
-    tvb_api('sendMessage', [
-        'chat_id' => $chatId,
-        'text' => tvb_edit_prompt($document, $field, $ack),
-        'parse_mode' => 'HTML',
-        'reply_markup' => tvb_edit_keyboard((int)$document['id'], $field),
-    ]);
-}
-
-function tvb_edit_begin(PDO $pdo, int $chatId, array $document, string $lead): void
-{
-    $field = tvb_edit_steps()[0];
-    tvb_edit_save($pdo, $chatId, (int)$document['id'], $field);
-    tvb_edit_send($chatId, $document, $field, $lead);
-}
-
-function tvb_edit_apply(PDO $pdo, int $ownerId, int $documentId, string $field, ?string $value): void
-{
-    $ownerClause = 'id=? AND (owner_id=? OR owner_id=0 OR owner_id IS NULL)';
-    if ($field === 'title') {
-        $stored = trim((string)($value ?? ''));
-        if ($stored === '') $stored = 'Chưa nhận diện';
-        $pdo->prepare('UPDATE office_documents SET title=?, summary_text=? WHERE ' . $ownerClause)->execute([$stored, $stored, $documentId, $ownerId]);
-        return;
-    }
-    $columns = [
-        'document_type' => 'document_type',
-        'document_number' => 'document_number',
-        'document_date' => 'document_date',
-        'organization' => 'organization',
-    ];
-    $column = $columns[$field] ?? '';
-    if ($column === '') return;
-    $stored = $field === 'document_date' ? ($value ?: null) : (($value ?? '') !== '' ? $value : null);
-    $pdo->prepare('UPDATE office_documents SET ' . $column . '=? WHERE ' . $ownerClause)->execute([$stored, $documentId, $ownerId]);
-}
-
-function tvb_edit_finish(PDO $pdo, int $chatId, array $document): void
-{
-    tvb_edit_clear($pdo, $chatId);
-    tvb_api('sendMessage', [
-        'chat_id' => $chatId,
-        'text' => '✅ Đã sửa xong văn bản #' . (int)$document['id'] . ".\n" . tvb_summary($document, 'Tệp đã lưu'),
-        'parse_mode' => 'HTML',
-        'reply_markup' => tvb_keyboard((int)$document['id'], (string)($document['sector'] ?? 'hanhchinh')),
-    ]);
-}
-
-function tvb_edit_advance(PDO $pdo, int $chatId, array $document, string $field, string $ack): void
-{
-    $steps = tvb_edit_steps();
-    $index = array_search($field, $steps, true);
-    $next = $index === false ? null : ($steps[$index + 1] ?? null);
-    if ($next === null) {
-        tvb_edit_finish($pdo, $chatId, $document);
-        return;
-    }
-    tvb_edit_save($pdo, $chatId, (int)$document['id'], $next);
-    tvb_edit_send($chatId, $document, $next, $ack);
-}
-
-function tvb_edit_value(string $field, string $text): ?string
-{
-    $text = trim($text);
-    if ($text === '') return null;
-    if ($field === 'document_type') return tvb_normalize_type($text);
-    if ($field === 'document_number') {
-        $number = vbd_normalize_doc_number($text);
-        return $number === '' ? null : vbd_truncate($number, 160);
-    }
-    if ($field === 'document_date') return tvb_normalize_date($text);
-    if ($field === 'organization') return vbd_truncate(trim(preg_replace('/\s+/u', ' ', $text) ?? $text), 300);
-    if ($field === 'title') return vbd_truncate(trim(preg_replace('/\s+/u', ' ', $text) ?? $text), 500);
-    return null;
-}
-
-function tvb_process_edit_callback(PDO $pdo, array $callback, int $documentId, string $action, string $code = ''): void
-{
-    $chatId = (int)($callback['message']['chat']['id'] ?? 0);
-    $owner = tvb_owner($pdo);
-    $document = tvb_load_document($pdo, $documentId, (int)$owner['id']);
-    if (!$document) {
-        tvb_answer_callback($callback, 'Không tìm thấy văn bản cần sửa.');
-        return;
-    }
-    if ($action === 's') {
-        tvb_answer_callback($callback, 'Bắt đầu sửa từng mục');
-        tvb_edit_begin($pdo, $chatId, $document, 'Sửa từng mục. Mục nào đúng thì bấm <b>Giữ đề xuất</b>.');
-        return;
-    }
-    if ($action === 'x') {
-        tvb_answer_callback($callback, 'Đã dừng sửa');
-        tvb_edit_clear($pdo, $chatId);
-        tvb_api('sendMessage', [
-            'chat_id' => $chatId,
-            'text' => 'Đã dừng sửa. Các mục đã nhập vẫn được giữ.' . "\n" . tvb_summary($document, 'Tệp đã lưu'),
-            'parse_mode' => 'HTML',
-            'reply_markup' => tvb_keyboard($documentId, (string)($document['sector'] ?? 'hanhchinh')),
-        ]);
-        return;
-    }
-    $edit = tvb_edit_load($pdo, $chatId);
-    if (!$edit || (int)$edit['document_id'] !== $documentId) {
-        tvb_answer_callback($callback, 'Phiên sửa đã hết. Bấm Sửa từng mục lại.');
-        return;
-    }
-    $field = (string)$edit['field_key'];
-    if (!in_array($field, tvb_edit_steps(), true)) {
-        tvb_edit_clear($pdo, $chatId);
-        tvb_answer_callback($callback, 'Phiên sửa đã hết. Bấm Sửa từng mục lại.');
-        return;
-    }
-    if ($action === 't') {
-        $choices = tvb_type_choices();
-        if ($field !== 'document_type' || !isset($choices[$code])) {
-            tvb_answer_callback($callback, 'Hãy trả lời mục đang hỏi.');
-            return;
-        }
-        tvb_edit_apply($pdo, (int)$owner['id'], $documentId, 'document_type', $choices[$code]);
-        $document = tvb_load_document($pdo, $documentId, (int)$owner['id']) ?? $document;
-        tvb_answer_callback($callback, 'Đã ghi thể loại');
-        tvb_edit_advance($pdo, $chatId, $document, $field, 'Đã ghi Thể loại: <b>' . tvb_html($choices[$code]) . '</b>');
-        return;
-    }
-    if ($action === 'c') {
-        tvb_edit_apply($pdo, (int)$owner['id'], $documentId, $field, null);
-        $document = tvb_load_document($pdo, $documentId, (int)$owner['id']) ?? $document;
-        tvb_answer_callback($callback, 'Đã xóa mục');
-        $label = tvb_edit_labels()[$field] ?? 'Mục';
-        tvb_edit_advance($pdo, $chatId, $document, $field, 'Đã xóa ' . tvb_html($label) . '.');
-        return;
-    }
-    tvb_answer_callback($callback, 'Giữ đề xuất');
-    $label = tvb_edit_labels()[$field] ?? 'Mục';
-    tvb_edit_advance($pdo, $chatId, $document, $field, 'Giữ ' . tvb_html($label) . ': <b>' . tvb_html(tvb_edit_current($document, $field)) . '</b>');
-}
-
-function tvb_process_edit_text(PDO $pdo, int $chatId, string $text): bool
-{
-    if ($text === '' || str_starts_with($text, '/')) return false;
-    $edit = tvb_edit_load($pdo, $chatId);
-    if (!$edit) return false;
-    $owner = tvb_owner($pdo);
-    $documentId = (int)$edit['document_id'];
-    $field = (string)$edit['field_key'];
-    $document = tvb_load_document($pdo, $documentId, (int)$owner['id']);
-    if (!$document || !in_array($field, tvb_edit_steps(), true)) {
-        tvb_edit_clear($pdo, $chatId);
-        return false;
-    }
-    $command = tvb_edit_command($text);
-    if ($command === 'cancel') {
-        tvb_edit_clear($pdo, $chatId);
-        tvb_api('sendMessage', [
-            'chat_id' => $chatId,
-            'text' => 'Đã dừng sửa. Các mục đã nhập vẫn được giữ.' . "\n" . tvb_summary($document, 'Tệp đã lưu'),
-            'parse_mode' => 'HTML',
-            'reply_markup' => tvb_keyboard($documentId, (string)($document['sector'] ?? 'hanhchinh')),
-        ]);
-        return true;
-    }
-    if ($command === 'keep') {
-        $label = tvb_edit_labels()[$field] ?? 'Mục';
-        tvb_edit_advance($pdo, $chatId, $document, $field, 'Giữ ' . tvb_html($label) . ': <b>' . tvb_html(tvb_edit_current($document, $field)) . '</b>');
-        return true;
-    }
-    if ($command === 'clear') {
-        tvb_edit_apply($pdo, (int)$owner['id'], $documentId, $field, null);
-        $document = tvb_load_document($pdo, $documentId, (int)$owner['id']) ?? $document;
-        $label = tvb_edit_labels()[$field] ?? 'Mục';
-        tvb_edit_advance($pdo, $chatId, $document, $field, 'Đã xóa ' . tvb_html($label) . '.');
-        return true;
-    }
-    $value = tvb_edit_value($field, $text);
-    if ($value === null) {
-        $again = $field === 'document_date'
-            ? 'Chưa đọc được ngày. Gửi theo dạng 12/11/2026, hoặc bấm Giữ đề xuất.'
-            : 'Nội dung trống. Gửi lại mục này, hoặc bấm Giữ đề xuất.';
-        tvb_api('sendMessage', ['chat_id' => $chatId, 'text' => $again]);
-        return true;
-    }
-    tvb_edit_apply($pdo, (int)$owner['id'], $documentId, $field, $value);
-    $document = tvb_load_document($pdo, $documentId, (int)$owner['id']) ?? $document;
-    $label = tvb_edit_labels()[$field] ?? 'Mục';
-    tvb_edit_advance($pdo, $chatId, $document, $field, 'Đã ghi ' . tvb_html($label) . ': <b>' . tvb_html($value) . '</b>');
-    return true;
 }
 
 function tvb_process_callback(PDO $pdo, array $callback): void
@@ -614,20 +282,44 @@ function tvb_process_callback(PDO $pdo, array $callback): void
     $chatId = (int)($callback['message']['chat']['id'] ?? 0);
     if (!tvb_allowed_chat($chatId)) return;
     $data = (string)($callback['data'] ?? '');
-    if (preg_match('/^e:(\d+):t:([a-z]{2})$/', $data, $match)) {
-        tvb_process_edit_callback($pdo, $callback, (int)$match[1], 't', $match[2]);
-        return;
-    }
-    if (preg_match('/^e:(\d+):(s|k|c|x)$/', $data, $match)) {
-        tvb_process_edit_callback($pdo, $callback, (int)$match[1], $match[2]);
-        return;
-    }
     $owner = tvb_owner($pdo);
     $documentId = 0;
     $confirmed = false;
     $popup = 'Đã cập nhật.';
     $sectorName = '';
     $ownerClause = 'id=? AND (owner_id=? OR owner_id=0 OR owner_id IS NULL)';
+    if (preg_match('/^merge:(\d+):(\d+)$/', $data, $match)) {
+        $documentId = (int)$match[1];
+        $prevId = (int)$match[2];
+        $current = null;
+        $previous = null;
+        if ($documentId > 0 && $prevId > 0 && $documentId !== $prevId) {
+            $stmt = $pdo->prepare('SELECT id FROM office_documents WHERE ' . $ownerClause . ' LIMIT 1');
+            $stmt->execute([$documentId, (int)$owner['id']]);
+            $current = $stmt->fetch();
+            $stmt->execute([$prevId, (int)$owner['id']]);
+            $previous = $stmt->fetch();
+        }
+        if (!$current || !$previous) {
+            tvb_answer_callback($callback, 'Không tìm thấy văn bản cần ghép.');
+            return;
+        }
+        $pdo->prepare('UPDATE office_document_files SET document_id = ? WHERE document_id = ?')->execute([$prevId, $documentId]);
+        $pdo->prepare('DELETE FROM office_documents WHERE id = ?')->execute([$documentId]);
+        tvb_answer_callback($callback, "Đã ghép tệp vào Văn bản #{$prevId}", true);
+        tvb_api('sendMessage', ['chat_id' => $chatId, 'text' => "📎 Đã chuyển tệp sang làm phụ lục của Văn bản #{$prevId}."]);
+        try {
+            tvb_api('editMessageText', [
+                'chat_id' => $chatId,
+                'message_id' => (int)($callback['message']['message_id'] ?? 0),
+                'text' => "📎 <b>ĐÃ GHÉP TỆP VÀO VĂN BẢN #{$prevId}</b>\n(Tệp đã chuyển thành phụ lục đính kèm)",
+                'parse_mode' => 'HTML',
+            ]);
+        } catch (Throwable $error) {
+            if (stripos($error->getMessage(), 'message is not modified') === false) throw $error;
+        }
+        return;
+    }
     if (preg_match('/^sector:(\d+):(hanhchinh|chuyenmon|dang)$/', $data, $match)) {
         $documentId = (int)$match[1];
         $labels = ['hanhchinh' => 'Hành chính', 'chuyenmon' => 'Chuyên môn', 'dang' => 'Đảng'];
@@ -650,14 +342,13 @@ function tvb_process_callback(PDO $pdo, array $callback): void
         return;
     }
     if ($confirmed) {
-        tvb_edit_clear($pdo, $chatId);
         tvb_answer_callback($callback, $popup, true);
         tvb_api('sendMessage', ['chat_id' => $chatId, 'text' => "✅ Đã xác nhận thông tin văn bản #{$documentId}.", 'parse_mode' => 'HTML']);
     } else {
         tvb_answer_callback($callback, $popup, false);
         tvb_api('sendMessage', ['chat_id' => $chatId, 'text' => "🔄 Đã chuyển lĩnh vực sang: <b>{$sectorName}</b>", 'parse_mode' => 'HTML']);
     }
-    tvb_edit_callback_message($chatId, $callback, $document, $documentId, $confirmed);
+    tvb_edit_callback_message($pdo, $chatId, $callback, $document, $documentId, $confirmed, (int)$owner['id']);
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') tvb_reply(['error' => 'Method not allowed'], 405);
@@ -681,15 +372,9 @@ try {
     if (!tvb_claim_update($pdo, $updateId, $chatId)) tvb_reply(['ok' => true]);
     $file = tvb_message_file($message);
     if (!$file || $file['id'] === '') {
-        $text = trim((string)($message['text'] ?? ''));
-        if (tvb_process_edit_text($pdo, $chatId, $text)) {
-            tvb_finish_update($pdo, $updateId, 'completed');
-            tvb_reply(['ok' => true]);
-        }
         tvb_finish_update($pdo, $updateId, 'ignored');
         tvb_reply(['ok' => true]);
     }
-    tvb_edit_clear($pdo, $chatId);
     $processingMessage = tvb_api('sendMessage', ['chat_id' => $chatId, 'text' => '⏳ Đang tiếp nhận và phân tích văn bản...']);
     $temporary = tvb_download_file($file['id'], $file['name'], $file['size']);
     try {
@@ -708,10 +393,8 @@ try {
         ]);
         tvb_finish_update($pdo, $updateId, 'processing', (int)$document['id']);
         vbd_store_downloaded_document_file($pdo, $document, $temporary, $file['name'], $file['mime']);
-        tvb_api('editMessageText', ['chat_id' => $chatId, 'message_id' => (int)$processingMessage['message_id'], 'text' => tvb_summary($document, $file['name']), 'parse_mode' => 'HTML', 'reply_markup' => tvb_keyboard((int)$document['id'], (string)($document['sector'] ?? 'hanhchinh'))]);
-        if (tvb_needs_manual($document)) {
-            tvb_edit_begin($pdo, $chatId, $document, 'Nhận diện chưa đủ. Bot hỏi lần lượt từng mục. Mục đúng thì bấm <b>Giữ đề xuất</b>.');
-        }
+        $previous = tvb_recent_previous_document($pdo, (int)$owner['id'], (int)$document['id']);
+        tvb_api('editMessageText', ['chat_id' => $chatId, 'message_id' => (int)$processingMessage['message_id'], 'text' => tvb_summary($document, $file['name']), 'parse_mode' => 'HTML', 'reply_markup' => tvb_keyboard((int)$document['id'], (string)($document['sector'] ?? 'hanhchinh'), $previous ? (int)$previous['id'] : null)]);
         tvb_finish_update($pdo, $updateId, 'completed', (int)$document['id']);
     } finally {
         if (isset($temporary) && is_string($temporary)) @unlink($temporary);
