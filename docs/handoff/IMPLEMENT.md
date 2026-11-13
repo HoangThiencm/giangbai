@@ -1,25 +1,22 @@
-# IMPLEMENT: Sửa bot Telegram và bộ bóc tách văn bản
+# IMPLEMENT: Sửa lỗi Build GitHub Actions (Workflow Deploy website to hosting)
 
 ## Phạm vi đã thực hiện
 
-- Tạo `api/pdf_text_extractor.php`: bóc chữ PDF thuần PHP (FlateDecode, ToUnicode CMap, Identity-H, WinAnsi). Chỉ đọc tối đa 3 trang đầu và dừng sau 1,4 giây. Không gọi `exec()`.
-- `api/vanban.php` nạp module trên. `vbd_find_document_number()` nhận cả số hành chính (`03/KH-CM`, `45/QĐ-SGDĐT`) và số Đảng/đoàn thể (`193-QĐ/THCS`, `02-HD/ĐU`, `12-NQ/CB`), bỏ qua số nằm trong căn cứ.
-- Thể loại ưu tiên dòng tên in hoa, rồi mã trong số hiệu, rồi cấu trúc Công văn (`Kính gửi` + `V/v`). Đã bỏ `stripos('Công văn')`. Trích yếu lấy dòng ngay dưới tên loại; Công văn lấy nội dung sau `V/v`.
-- Sửa regex lĩnh vực Đảng trong `vbd_detect_sector()`: dấu `/` trong `[-/]` trước đây cắt hỏng pattern.
-- `api/telegram_vanban.php`: nếu `pdftotext` không có hoặc ra dưới 30 ký tự thì gọi `vbd_pdf_extract_text()`. `$updateId` gán ngay đầu `try`. Callback nới `owner_id` (`owner_id` khớp, `0` hoặc `NULL`), trả `answerCallbackQuery` trước, nuốt lỗi Telegram `message is not modified`, và đánh dấu lĩnh vực đang chọn bằng `[• … •]`.
+1. **Sửa cú pháp trong `build_all_khbd_5512.js`:**
+   - Tại dòng 198, thay thế các backtick thô chưa được escape bên trong template literal (`"Toán 6 Kết nối tri thức"` và `""`) thành chuỗi chuẩn có escape `\"` nhằm ngăn việc template string bị đóng sớm và loại bỏ hoàn toàn `SyntaxError: Unexpected token`.
 
-## Kiểm thử
+2. **Cập nhật `tools/build-obfuscate.js`:**
+   - Thêm `build_all_khbd_5512.js` và `compile_9_khbd_docx.js` vào tập hợp `SKIP_FILE_NAMES` để tiến trình obfuscate tự động bỏ qua hai script biên dịch KHBD offline ở thư mục gốc.
 
-- `php -l` với PHP 8.3.36 portable: `api/pdf_text_extractor.php`, `api/vanban.php`, `api/telegram_vanban.php` không lỗi cú pháp.
-- `python tests/telegram-vanban-webhook-smoke.py`: đạt. Bản PDF `DỰ THẢO KE HOACH CM THANG 11.pdf` ra số `03/KH-CM`, thể loại `Kế hoạch`, trích yếu `Hoạt động chuyên môn tháng 11/2026` khi không dùng `pdftotext`.
-- Cùng script kiểm số `193-QĐ/THCS`, `02-HD/ĐU`, Công văn `663/UBND-VP` và số có khoảng trắng `45 / QĐ - SGDĐT`.
-- `2.11 CV 663...pdf`: có lớp chữ tiếng Việt, trích yếu gần đúng (`phối hợp tuyên truyền, vận động`). Dòng số trên file là `Số: /MTTQ-BTT` (thiếu phần số ở lớp chữ), nên số hiệu chưa ra `663`.
-- `193-QĐ...pdf`: không có lớp chữ dùng được (ảnh quét), bộ bóc thuần PHP không đọc được nội dung.
+3. **Cập nhật `.github/workflows/ftp-deploy.yml`:**
+   - Thêm `build_all_khbd_5512.js`, `compile_9_khbd_docx.js` và `*.py` vào danh sách `exclude` của action `SamKirkland/FTP-Deploy-Action@v4.4.0` để không tải các công cụ/script biên dịch offline lên hosting FTP.
 
-## Chưa kiểm trên hosting
+## Kiểm thử & Xác minh
 
-- Chưa gọi webhook Telegram thật, chưa bấm nút trên ứng dụng. Nhánh `message is not modified` được khóa trong mã và trong smoke test tĩnh để không còn ném HTTP 500.
-- Chưa commit.
+- Đã phân tích AST/cặp backtick trong `build_all_khbd_5512.js`: toàn bộ 7 khối template literal đều cân bằng, không còn backtick unescaped hay lỗi cú pháp.
+- Đã chạy kiểm thử mô phỏng logic lọc tệp của `tools/build-obfuscate.js`: kết quả 33 tệp JS được thu thập, 2 tệp `build_all_khbd_5512.js` và `compile_9_khbd_docx.js` được bỏ qua hoàn toàn.
+- Kiểm tra `git status` và `git diff`: chỉ đúng 3 tệp thuộc phạm vi quy định trong `docs/handoff/PLAN.md` được sửa đổi.
+- Đã khôi phục tệp `docs/handoff/.lock`.
 
 ## Việc tiếp theo
 

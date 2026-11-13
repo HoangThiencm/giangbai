@@ -87,3 +87,6 @@ jobs:
             package-lock.json
             package.json
             .deploy-obfuscated/**
+            build_all_khbd_5512.js
+            compile_9_khbd_docx.js
+            *.py
