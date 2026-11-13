@@ -388,6 +388,7 @@ function vbd_normalize_doc_number(string $raw): string
     $raw = trim($raw);
     $raw = preg_replace('/\s*\/\s*/u', '/', $raw) ?? $raw;
     $raw = preg_replace('/\s*-\s*/u', '-', $raw) ?? $raw;
+    $raw = preg_replace('/\s*&\s*/u', '&', $raw) ?? $raw;
     $raw = preg_replace('/\s+/u', '', $raw) ?? $raw;
     return $raw;
 }
@@ -400,6 +401,7 @@ function vbd_is_reference_context(string $before): bool
         $before = function_exists('mb_convert_encoding') ? (mb_convert_encoding($before, 'UTF-8', 'UTF-8') ?: '') : '';
     }
     $tail = function_exists('mb_substr') ? mb_substr($before, -90) : substr($before, -180);
+    if (preg_match('/(Địa chỉ|Dia chi|Trụ sở|Tru so|đường|phố|ngõ|ấp|khu|phường|xã).{0,40}$/ius', $tail)) return true;
     return (bool)preg_match('/(Căn cứ|Trên cơ sở|Thực hiện|Thuc hien|Thông tư\s*số|Công văn\s*số|Quyết định\s*số|Nghị quyết\s*số|Hướng dẫn\s*số|theo\s*Công văn|Theo|Tại|V\/v|về việc).{0,80}$/ius', $tail);
 }
 
@@ -422,16 +424,18 @@ function vbd_apply_annot_number(string $number, string $head): string
 function vbd_find_document_number(string $head): string
 {
     $sp = '[ \t\r\n]{0,3}';
-    $org = '[A-Za-zÀ-ỹ0-9.]+';
+    $org = '[A-Za-zÀ-ỹ0-9.&]+';
     $code = '(?:Q[ \t]*Đ|QĐ|QD|KH|CV|TB|NQ|CT|NĐ|ND|HĐ|HD|BC|QC|TT|TTr)';
     $partyCode = '(?:Q[ \t]*Đ|QĐ|QD|NQ|HD|KH|TB|BC|TTr|TT|KL)';
     $patterns = [
+        '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}' . $sp . '\/' . $sp . '[0-9]{4}' . $sp . '\/' . $sp . $org . '(?:' . $sp . '-' . $sp . $org . ')*)/iu',
         '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}' . $sp . '\/' . $sp . $code . '(?:' . $sp . '-' . $sp . $org . ')+)/iu',
-        '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}' . $sp . '-' . $sp . $partyCode . $sp . '\/' . $sp . $org . ')/iu',
+        '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}' . $sp . '-' . $sp . $partyCode . $sp . '\/' . $sp . $org . '(?:' . $sp . '-' . $sp . $org . ')*)/iu',
         '/(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}' . $sp . '\/' . $sp . $org . '(?:' . $sp . '-' . $sp . $org . ')*)/iu',
         '/(?:Số|So)\s*[:\.]?\s*([0-9]*' . $sp . '[\/\-]' . $sp . $org . '(?:' . $sp . '-' . $sp . $org . ')*)/iu',
+        '/\b([0-9]{1,6}' . $sp . '\/' . $sp . '[0-9]{4}' . $sp . '\/' . $sp . $org . '(?:' . $sp . '-' . $sp . $org . ')*)/iu',
         '/\b([0-9]{1,6}' . $sp . '\/' . $sp . $code . '(?:' . $sp . '-' . $sp . $org . ')+)/iu',
-        '/\b([0-9]{1,6}' . $sp . '-' . $sp . $partyCode . $sp . '\/' . $sp . $org . ')/iu',
+        '/\b([0-9]{1,6}' . $sp . '-' . $sp . $partyCode . $sp . '\/' . $sp . $org . '(?:' . $sp . '-' . $sp . $org . ')*)/iu',
     ];
     foreach ($patterns as $pattern) {
         if (!preg_match_all($pattern, $head, $matches, PREG_OFFSET_CAPTURE)) continue;

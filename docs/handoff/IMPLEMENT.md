@@ -1,32 +1,36 @@
-# IMPLEMENT: Annotation chữ ký số, bỏ hỏi 5 bước, ghép vào văn bản trước
+# IMPLEMENT: Chuẩn hóa nhận diện số văn bản
 
 ## Phạm vi đã thực hiện
 
-1. **`api/pdf_text_extractor.php`**
-   - `vbd_pdf_annot_texts()` đọc `/Annots` và appearance `/AP /N`, duyệt Form XObject lồng nhau.
-   - Dòng `ANNOT_TEXT:` được chèn vào text trang. File mẫu ra `7400` và `12`.
+Thực hiện theo `docs/handoff/PLAN.md` hiện tại, ngày 13/11/2026.
 
-2. **`api/vanban.php`**
-   - Số hiệu khuyết chữ số `/KH-SGDĐT` được ghép thành `7400/KH-SGDĐT`.
-   - Tiêu ngữ khuyết ngày lấy số ngày từ annotation, thành `2026-11-12`.
+1. **`api/vanban.php`**
+   - Ưu tiên nhận diện số có năm ở giữa, có hoặc không có nhãn Số: `93/2026/TT-BGDĐT`.
+   - Bổ sung `&` trong mã cơ quan, giữ đủ `4200/SGDĐT-GDPT&GDTX` và `7037/SGDĐT-GDPT&GDTX`.
+   - Giữ hậu tố ghép của văn bản Đảng: `193-QĐ/QU-THCS`; giữ các mẫu `193-QĐ/THCS`, `02-HD/ĐU`.
+   - Bổ sung loại trừ ngữ cảnh địa chỉ theo các từ khóa và cửa sổ 40 ký tự trong kế hoạch.
+   - Chuẩn hóa khoảng trắng quanh `/`, `-`, `&`.
+2. **`api/pdf_text_extractor.php`**
+   - Tăng deadline bóc tách từ 1.4 lên 3.0 giây.
+   - Truyền thứ tự trang đến bộ đọc annotation; bỏ annotation từ trang 3, vẫn đọc nội dung trang đó theo maxPages.
+3. **`tests/telegram-vanban-webhook-smoke.py`**
+   - Thêm kiểm thử số cấp Bộ, phòng ban ghép, hậu tố văn bản Đảng, mẫu không có nhãn Số, địa chỉ cùng số văn bản và địa chỉ đơn thuần.
+   - Kiểm tra chuẩn hóa khoảng trắng và các từ khóa địa chỉ.
+   - Thêm PDF tổng hợp ba trang để xác nhận chỉ đọc annotation hai trang đầu, vẫn giữ nội dung trang 3.
+   - Giữ kiểm thử PDF hội thi thực tế và các kiểm thử cũ.
 
-3. **`api/telegram_vanban.php`**
-   - Không còn wizard 5 bước, nút `Sửa từng mục`, callback `e:`, hay bảng `office_telegram_edits`.
-   - `tvb_recent_previous_document()` lấy văn bản cùng chủ sở hữu tạo trong 30 phút, trừ văn bản vừa gửi.
-   - Nếu có văn bản đó, phiếu hiện nút `📎 Ghép vào VB trước (#ID)`.
-   - Callback `merge:id:prevId` chuyển `office_document_files` sang văn bản trước, xóa bản ghi thừa, báo alert và sửa tin nhắn đã ghép.
-   - Hàng cuối vẫn là `Xác nhận chính xác` và `Mở trên Web`.
+## Kiểm thử đã chạy
 
-4. **`tests/telegram-vanban-webhook-smoke.py`**
-   - PDF hội thi phải ra `7400/KH-SGDĐT`.
-   - Hợp đồng callback `merge:(\d+):(\d+)`.
+- `php -l api/vanban.php`: PASS — No syntax errors detected.
+- `php -l api/pdf_text_extractor.php`: PASS — No syntax errors detected.
+- Dùng PHP portable tại `%TEMP%/php-portable-834/php.exe`.
+- `python tests/telegram-vanban-webhook-smoke.py`: PASS — telegram-vanban-webhook smoke: OK. Bao gồm PDF dự thảo và PDF hội thi thực tế: số `7400/KH-SGDĐT`, ngày `2026-11-12`, thể loại và trích yếu đúng.
+- `git diff --check`: PASS.
 
-## Kiểm thử
+## Bàn giao
 
-- `php -l` (PHP 8.3.36, bật mbstring): `api/telegram_vanban.php` — không lỗi cú pháp. Hai file PDF và `vanban.php` không đổi ở lượt này; smoke vẫn nạp chúng.
-- `python tests/telegram-vanban-webhook-smoke.py` — in `telegram-vanban-webhook smoke: OK`.
-- Chưa bấm ghép trên Telegram thật. Chưa commit.
-
-## Việc tiếp theo
-
-Antigravity IDE, chat mới: `/verify`.
+- Không sửa `PLAN.md` (thay đổi sẵn của người dùng), không sửa `VERIFY.md`.
+- `VERIFY.md` hiện tại là kết quả PASS của phạm vi trước; cần chạy `/verify` cho kế hoạch này.
+- Không có `.lock` khi bắt đầu, không gặp hook chặn sửa.
+- Chưa commit/push.
+- Bước tiếp theo: Antigravity IDE, chat mới: `/verify`.

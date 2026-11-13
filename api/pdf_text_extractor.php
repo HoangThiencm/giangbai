@@ -9,15 +9,15 @@ function vbd_pdf_extract_text(string $pdfPath, int $maxPages = 3): string
     if (!is_file($pdfPath)) return '';
     $data = @file_get_contents($pdfPath);
     if (!is_string($data) || strncmp($data, '%PDF', 4) !== 0) return '';
-    $deadline = microtime(true) + 1.4;
+    $deadline = microtime(true) + 3.0;
     $objects = vbd_pdf_index_objects($data);
     if (!$objects) return '';
     vbd_pdf_expand_object_streams($objects, $deadline);
     $pages = vbd_pdf_page_ids($objects, $maxPages);
     $chunks = [];
-    foreach ($pages as $pageId) {
+    foreach ($pages as $pageIndex => $pageId) {
         if (microtime(true) > $deadline) break;
-        $text = vbd_pdf_page_text($objects, $pageId);
+        $text = vbd_pdf_page_text($objects, $pageId, $pageIndex + 1);
         if ($text !== '') $chunks[] = $text;
     }
     $text = vbd_pdf_clean_text(implode("\n", $chunks));
@@ -419,8 +419,9 @@ function vbd_pdf_xobject_texts(array $objects, int $id, array &$texts, array &$s
     }
 }
 
-function vbd_pdf_annot_texts(array $objects, string $pageDict): array
+function vbd_pdf_annot_texts(array $objects, string $pageDict, int $pageNumber = 1): array
 {
+    if ($pageNumber > 2) return [];
     $ids = [];
     if (preg_match('#/Annots\s*\[(.*?)\]#s', $pageDict, $match) && preg_match_all('#(\d+)\s+0\s+R#', $match[1], $refs)) {
         foreach ($refs[1] as $id) $ids[] = (int)$id;
@@ -445,7 +446,7 @@ function vbd_pdf_annot_texts(array $objects, string $pageDict): array
     return $clean;
 }
 
-function vbd_pdf_page_text(array $objects, int $pageId): string
+function vbd_pdf_page_text(array $objects, int $pageId, int $pageNumber = 1): string
 {
     if (!isset($objects[$pageId])) return '';
     $dict = vbd_pdf_dict($objects[$pageId]);
@@ -456,7 +457,7 @@ function vbd_pdf_page_text(array $objects, int $pageId): string
         if (strlen($content) > 500000) $content = substr($content, 0, 500000);
         $rendered = vbd_pdf_render_content($content, $fonts);
     }
-    $annots = vbd_pdf_annot_texts($objects, $dict);
+    $annots = vbd_pdf_annot_texts($objects, $dict, $pageNumber);
     if ($annots) $rendered = 'ANNOT_TEXT: ' . implode(' | ', $annots) . "\n" . $rendered;
     return trim($rendered);
 }

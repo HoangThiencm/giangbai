@@ -116,6 +116,14 @@ $readPdf = static function (string $path): array {
 if ($draft !== '' && is_file($draft)) $out['pdf'] = $readPdf($draft);
 if ($contest !== '' && is_file($contest)) $out['contest'] = $readPdf($contest);
 $samples = [
+    'ministry' => "Số: 93/2026/TT-BGDĐT\nTHÔNG TƯ\nHướng dẫn thực hiện nhiệm vụ\n",
+    'ministry_no_label' => "93 / 2026 / TT - BGDĐT\nTHÔNG TƯ\nHướng dẫn thực hiện nhiệm vụ\n",
+    'joint_department' => "Số: 4200/SGDĐT-GDPT&GDTX\nKính gửi: Các đơn vị\n",
+    'joint_department_7037' => "Số: 7037/SGDĐT-GDPT&GDTX\nKính gửi: Các đơn vị\n",
+    'party_suffix' => "Số: 193-QĐ/QU-THCS\nQUYẾT ĐỊNH\nBan hành kế hoạch\n",
+    'party_no_label' => "193-QĐ/QU-THCS\nQUYẾT ĐỊNH\nBan hành kế hoạch\n",
+    'address' => "Địa chỉ: Số 1597, đường Phạm Văn Thuận... Số: 6328/SKHCN-CĐS\nKính gửi: Các đơn vị\n",
+    'address_only' => "Địa chỉ: Số 1597, đường Phạm Văn Thuận\n",
     'admin' => "Số: 03 / KH - CM\nKẾ HOẠCH\nHoạt động chuyên môn tháng 11/2026\n",
     'party_qd' => "ĐẢNG ỦY TRƯỜNG\nSố: 193-QĐ/THCS\nQUYẾT ĐỊNH\nBan hành kế hoạch kiểm tra nội bộ tháng 11\n",
     'party_hd' => "Số: 02-HD/ĐU\nHƯỚNG DẪN\nTuyên truyền học tập nghị quyết tháng 11\n",
@@ -131,6 +139,29 @@ foreach ($samples as $name => $sample) {
         'title' => $parsed['title'] ?? '',
         'date' => $parsed['document_date'] ?? '',
     ];
+}
+$out['normalized'] = vbd_normalize_doc_number(' 4200 / SGDĐT - GDPT & GDTX ');
+$pdfObjects = [];
+for ($page = 1; $page <= 3; $page++) {
+    $annotationId = 10 + $page;
+    $appearanceId = 20 + $page;
+    $contentId = 30 + $page;
+    $pdfObjects[$page] = "<< /Type /Page /Annots [$annotationId 0 R] /Contents $contentId 0 R >>";
+    $pdfObjects[$annotationId] = "<< /AP << /N $appearanceId 0 R >> >>";
+    $pdfObjects[$appearanceId] = "<< /Subtype /Form >>\nstream\nBT (STAMP$page) Tj ET\nendstream";
+    $pdfObjects[$contentId] = "<< >>\nstream\nBT (BODY$page) Tj ET\nendstream";
+}
+$pdfData = "%PDF-1.4\n";
+foreach ($pdfObjects as $id => $body) $pdfData .= "$id 0 obj\n$body\nendobj\n";
+$pdfPath = tempnam(sys_get_temp_dir(), 'vbd-smoke-');
+try {
+    file_put_contents($pdfPath, $pdfData);
+    $out['annotation_pages'] = vbd_pdf_extract_text($pdfPath, 3);
+} finally {
+    unlink($pdfPath);
+}
+foreach (['Địa chỉ', 'Dia chi', 'Trụ sở', 'Tru so', 'đường', 'phố', 'ngõ', 'ấp', 'khu', 'phường', 'xã'] as $addressWord) {
+    $out['address_contexts'][$addressWord] = vbd_is_reference_context($addressWord . ': Số ');
 }
 echo json_encode($out, JSON_UNESCAPED_UNICODE);
 '''
@@ -167,6 +198,22 @@ if 'Warning' in (completed.stderr or '') or 'Fatal' in (completed.stderr or ''):
     raise SystemExit('PHP smoke in ra cảnh báo')
 payload = json.loads(completed.stdout)
 cases = payload['cases']
+for name, expected in {
+    'ministry': '93/2026/TT-BGDĐT',
+    'ministry_no_label': '93/2026/TT-BGDĐT',
+    'joint_department': '4200/SGDĐT-GDPT&GDTX',
+    'joint_department_7037': '7037/SGDĐT-GDPT&GDTX',
+    'party_suffix': '193-QĐ/QU-THCS',
+    'party_no_label': '193-QĐ/QU-THCS',
+    'address': '6328/SKHCN-CĐS',
+    'address_only': '',
+}.items():
+    assert cases[name]['number'] == expected, (name, cases[name])
+assert payload['normalized'] == '4200/SGDĐT-GDPT&GDTX', payload['normalized']
+annotation_pages = payload['annotation_pages']
+assert 'STAMP1' in annotation_pages and 'STAMP2' in annotation_pages, annotation_pages
+assert 'STAMP3' not in annotation_pages and 'BODY3' in annotation_pages, annotation_pages
+assert all(payload['address_contexts'].values()), payload['address_contexts']
 assert cases['admin']['number'] == '03/KH-CM', cases['admin']
 assert cases['admin']['type'] == 'Kế hoạch', cases['admin']
 assert cases['admin']['title'] == 'Hoạt động chuyên môn tháng 11/2026', cases['admin']
