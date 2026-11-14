@@ -167,6 +167,27 @@ function tvb_extract_text(string $path, string $name, string $caption = ''): str
     return vbd_text_cut(vbd_preprocess_source($text), 9000);
 }
 
+function tvb_parse_caption_structured(string $caption): array
+{
+    $result = [];
+    if (preg_match('/(?:Số|So)\s*[:\.]?\s*([0-9\/\-A-Za-zÀ-ỹĐđ&.]+)/iu', $caption, $m)) {
+        $result['document_number'] = vbd_normalize_doc_number(trim($m[1]));
+    }
+    if (preg_match('/(?:Ngày|Ngay)\s*[:\.]?\s*(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/iu', $caption, $m)) {
+        $result['document_date'] = sprintf('%04d-%02d-%02d', (int)$m[3], (int)$m[2], (int)$m[1]);
+    }
+    if (preg_match('/(?:Thể loại|The loai|Loại)\s*[:\.]?\s*([^\n,;]{3,30})/iu', $caption, $m)) {
+        $result['document_type'] = trim($m[1]);
+    }
+    if (preg_match('/(?:Trích yếu|Trich yeu|V\/v|Về việc)\s*[:\.]?\s*([^\n]{5,200})/iu', $caption, $m)) {
+        $result['title'] = trim($m[1]);
+    }
+    if (preg_match('/(?:Cơ quan|Co quan|Nơi ban hành)\s*[:\.]?\s*([^\n,;]{3,80})/iu', $caption, $m)) {
+        $result['organization'] = trim($m[1]);
+    }
+    return $result;
+}
+
 function tvb_message_file(array $message): ?array
 {
     if (!empty($message['document']) && is_array($message['document'])) {
@@ -379,7 +400,19 @@ try {
     $temporary = tvb_download_file($file['id'], $file['name'], $file['size']);
     try {
         $source = tvb_extract_text($temporary, $file['name'], (string)($message['caption'] ?? ''));
+        $isScan = vbd_text_len($source) < 80;
+        if ($isScan && trim((string)($message['caption'] ?? '')) === '') {
+            tvb_api('sendMessage', [
+                'chat_id' => $chatId,
+                'text' => "📸 <b>File scan – không đọc được text.</b>\nGửi lại file và điền caption theo mẫu:\n<code>Số: 1535/TB-SGDĐT\nNgày: 05/11/2026\nThể loại: Thông báo\nTrích yếu: Kết luận cuộc họp chuyên môn cụm 8</code>",
+                'parse_mode' => 'HTML',
+            ]);
+        }
         try { $parsed = vbd_parse_document($source); } catch (Throwable $ignored) { $parsed = ['sector' => vbd_detect_sector($source), 'confidence' => 'low']; }
+        $captionData = tvb_parse_caption_structured((string)($message['caption'] ?? ''));
+        foreach (['document_number', 'document_date', 'document_type', 'title', 'organization'] as $field) {
+            if (!empty($captionData[$field])) $parsed[$field] = $captionData[$field];
+        }
         $year = vbd_current_academic_year();
         $owner = tvb_owner($pdo);
         $pdo->prepare('INSERT IGNORE INTO office_school_years (name, created_by) VALUES (?, ?)')->execute([$year, (int)$owner['id']]);

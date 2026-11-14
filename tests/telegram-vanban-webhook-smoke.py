@@ -130,6 +130,9 @@ $samples = [
     'congvan' => "ỦY BAN NHÂN DÂN PHƯỜNG\nSố: 663/UBND-VP\nKính gửi: Các đơn vị\nV/v hướng dẫn thực hiện chuyên môn tháng 11\nCăn cứ Công văn số 2747/SGDĐT-GDPT ngày 22/10/2025 về việc khác\n",
     'spaced' => "Số: 45 / QĐ - SGDĐT\nV/v Triển khai chuyên môn tháng chín\nKính gửi: Hiệu trưởng\n",
     'blank_number' => "/M(D:20261112)\nSố: /KH-SGDĐT\nĐồng Nai, ngày tháng 11 năm 2026\nKẾ HOẠCH\nTổ chức Hội thi giáo viên dạy giỏi cơ sở giáo dục Trung học cơ sở\ncấp thành phố năm học 2026 - 2027\nCăn cứ Thông tư số 22/2019/TT-BGDĐT ngày 20/12/2019\nThực hiện Công văn số 4200/SGDĐT-GDPT&GDTX ngày 22/8/2026\n",
+    'date_in_context' => "UBND PHƯỜNG HÒA AN\nSố: 663/UBND-VP\nngày 25 tháng 10 năm 2026\nKính gửi: Các đơn vị\nV/v phối hợp tuyên truyền, vận động\n",
+    'type_deep' => "SỞ KHOA HỌC VÀ CÔNG NGHỆ\nSố: 6328/SKHCN-CĐS\n...\nTHÔNG BÁO\nV/v tổ chức bồi dưỡng chuyển đổi số\n",
+    'cv_no_vv' => "ỦY BAN NHÂN DÂN\nSố: 11539/UBND-VP\nKính gửi: Các đơn vị\nTriển khai công tác nâng cao chấn chỉnh\n",
 ];
 foreach ($samples as $name => $sample) {
     $parsed = vbd_regex_extract($sample);
@@ -227,6 +230,14 @@ assert cases['congvan']['type'] == 'Công văn', cases['congvan']
 assert cases['congvan']['title'].startswith('hướng dẫn thực hiện'), cases['congvan']
 assert cases['spaced']['number'] == '45/QĐ-SGDĐT', cases['spaced']
 assert cases['spaced']['type'] == 'Quyết định', cases['spaced']
+assert cases['date_in_context']['number'] == '663/UBND-VP', cases['date_in_context']
+assert cases['date_in_context']['type'] == 'Công văn', cases['date_in_context']
+assert cases['type_deep']['number'] == '6328/SKHCN-CĐS', cases['type_deep']
+assert cases['type_deep']['type'] == 'Thông báo', cases['type_deep']
+assert cases['cv_no_vv']['number'] == '11539/UBND-VP', cases['cv_no_vv']
+assert cases['cv_no_vv']['type'] == 'Công văn', cases['cv_no_vv']
+assert 'tvb_parse_caption_structured' in webhook, 'Missing caption structured parser'
+assert 'captionData' in webhook or 'caption_data' in webhook or '$captionData' in webhook
 blank = cases['blank_number']
 assert blank['number'] == '/KH-SGDĐT', blank
 assert blank['type'] == 'Kế hoạch', blank
