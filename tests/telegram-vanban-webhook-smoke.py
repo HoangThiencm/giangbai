@@ -133,6 +133,9 @@ $samples = [
     'date_in_context' => "UBND PHƯỜNG HÒA AN\nSố: 663/UBND-VP\nngày 25 tháng 10 năm 2026\nKính gửi: Các đơn vị\nV/v phối hợp tuyên truyền, vận động\n",
     'type_deep' => "SỞ KHOA HỌC VÀ CÔNG NGHỆ\nSố: 6328/SKHCN-CĐS\n...\nTHÔNG BÁO\nV/v tổ chức bồi dưỡng chuyển đổi số\n",
     'cv_no_vv' => "ỦY BAN NHÂN DÂN\nSố: 11539/UBND-VP\nKính gửi: Các đơn vị\nTriển khai công tác nâng cao chấn chỉnh\n",
+    'kh359' => "ANNOT_TEXT: 6959 | 31\nỦY BAN NHÂN DÂN\nTHÀNH PHỐ ĐỒNG NAI\nSố: /KH-SGDĐT\n",
+    'cv_trienkhai' => "ANNOT_TEXT: 6925 | 31\nSố: /SGDĐT-VP\n" . str_repeat("Nội dung dòng văn bản.\n", 80) . "triển khai Kế hoạch số 16416/KH-UBND của UBND\n",
+    'broken_symbol' => "ANNOT_TEXT: 7038 | 03\nSố:\n/\nS\nGDĐT\n-\nVP\nKính gửi: Các đơn vị\n",
 ];
 foreach ($samples as $name => $sample) {
     $parsed = vbd_regex_extract($sample);
@@ -144,6 +147,13 @@ foreach ($samples as $name => $sample) {
     ];
 }
 $out['normalized'] = vbd_normalize_doc_number(' 4200 / SGDĐT - GDPT & GDTX ');
+$out['name_caption'] = [
+    'circular' => vbd_parse_from_name_and_caption('93_2026_TT_BGDDT.signed.pdf', 'Thông tư 93'),
+    'cv' => vbd_parse_from_name_and_caption('CV_663.pdf', 'CV 663'),
+];
+$out['city_context'] = vbd_is_reference_context('THÀNH PHỐ ĐỒNG NAI');
+$out['ward_context'] = vbd_is_reference_context('UBND PHƯỜNG HÒA AN');
+$out['commune_context'] = vbd_is_reference_context('UBND XÃ BÌNH MINH');
 $pdfObjects = [];
 for ($page = 1; $page <= 3; $page++) {
     $annotationId = 10 + $page;
@@ -163,8 +173,18 @@ try {
 } finally {
     unlink($pdfPath);
 }
-foreach (['Địa chỉ', 'Dia chi', 'Trụ sở', 'Tru so', 'đường', 'phố', 'ngõ', 'ấp', 'khu', 'phường', 'xã'] as $addressWord) {
-    $out['address_contexts'][$addressWord] = vbd_is_reference_context($addressWord . ': Số ');
+foreach ([
+    'Địa chỉ' => 'Địa chỉ: Số ',
+    'Dia chi' => 'Dia chi: Số ',
+    'Trụ sở' => 'Trụ sở: Số ',
+    'Tru so' => 'Tru so: Số ',
+    'đường' => 'đường Phạm Văn Thuận',
+    'phố' => 'phố Nguyễn Huệ',
+    'ngõ' => 'ngõ 15 Trần Phú',
+    'ấp' => 'ấp Tân Hòa',
+    'khu' => 'khu phố 3B',
+] as $addressWord => $addressPhrase) {
+    $out['address_contexts'][$addressWord] = vbd_is_reference_context($addressPhrase);
 }
 echo json_encode($out, JSON_UNESCAPED_UNICODE);
 '''
@@ -217,6 +237,18 @@ annotation_pages = payload['annotation_pages']
 assert 'STAMP1' in annotation_pages and 'STAMP2' in annotation_pages, annotation_pages
 assert 'STAMP3' not in annotation_pages and 'BODY3' in annotation_pages, annotation_pages
 assert all(payload['address_contexts'].values()), payload['address_contexts']
+assert payload['city_context'] is False, payload['city_context']
+assert payload['ward_context'] is False, payload['ward_context']
+assert payload['commune_context'] is False, payload['commune_context']
+circular = payload['name_caption']['circular']
+assert circular['document_number'] == '93/2026/TT-BGDĐT', circular
+assert circular['document_type'] == 'Thông tư', circular
+assert circular['organization'] == 'Bộ Giáo dục và Đào tạo', circular
+assert payload['name_caption']['cv']['document_type'] == 'Công văn', payload['name_caption']['cv']
+assert cases['kh359']['number'] == '6959/KH-SGDĐT', cases['kh359']
+assert cases['cv_trienkhai']['number'] == '6925/SGDĐT-VP', cases['cv_trienkhai']
+assert '16416' not in cases['cv_trienkhai']['number']
+assert cases['broken_symbol']['number'] == '7038/SGDĐT-VP', cases['broken_symbol']
 assert cases['admin']['number'] == '03/KH-CM', cases['admin']
 assert cases['admin']['type'] == 'Kế hoạch', cases['admin']
 assert cases['admin']['title'] == 'Hoạt động chuyên môn tháng 11/2026', cases['admin']

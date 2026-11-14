@@ -401,9 +401,59 @@ function vbd_is_reference_context(string $before): bool
         $before = function_exists('mb_convert_encoding') ? (mb_convert_encoding($before, 'UTF-8', 'UTF-8') ?: '') : '';
     }
     $tail = function_exists('mb_substr') ? mb_substr($before, -90) : substr($before, -180);
-    if (preg_match('/(Địa chỉ|Dia chi|Trụ sở|Tru so|đường|phố|ngõ|ấp|khu|phường|xã).{0,40}$/ius', $tail)) return true;
+    if (preg_match('/(?:Địa chỉ|Dia chi|Trụ sở|Tru so)\s*[:\.]?.{0,40}$/ius', $tail)) return true;
+    $streetTail = preg_replace('/(?:thành|thị|hành)\s*phố/iu', ' ', $tail) ?? $tail;
+    if (preg_match('/(?:đường|ngõ|hẻm|ấp|khu\s*phố|(?<!thành\s)(?<!thị\s)phố)\s+[A-Za-zÀ-ỹ0-9\s]{2,30}.{0,20}$/ius', $streetTail)) return true;
     if (preg_match('/\b(ngày|tháng|năm)\s*$/ius', $tail)) return true;
-    return (bool)preg_match('/(Căn cứ|Trên cơ sở|Thực hiện|Thuc hien|Thông tư\s*số|Công văn\s*số|Quyết định\s*số|Nghị quyết\s*số|Hướng dẫn\s*số|theo\s*Công văn|Theo|Tại|V\/v|về việc).{0,80}$/ius', $tail);
+    return (bool)preg_match('/(Căn cứ|Trên cơ sở|Thực hiện|Thuc hien|Thông tư\s*số|Công văn\s*số|Quyết định\s*số|Nghị quyết\s*số|Hướng dẫn\s*số|theo\s*Công văn|Theo|Tại|V\/v|về việc|triển khai\s+(?:Kế hoạch|Công văn|Quyết định)\s*số).{0,80}$/ius', $tail);
+}
+
+function vbd_accept_document_number(string $number): bool
+{
+    if ($number === '' || !preg_match('/\p{L}/u', $number)) return false;
+    return !preg_match('/^(?:0?[1-9]|[12]\d|3[01])\/(?:0?[1-9]|1[0-2])$/', $number);
+}
+
+function vbd_prepare_number_token(string $raw): string
+{
+    if (preg_match('/\R/u', $raw)) {
+        $lines = preg_split('/\R/u', $raw) ?: [];
+        $kept = [];
+        $started = false;
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                if ($started) break;
+                continue;
+            }
+            $symbol = !preg_match('/\p{Ll}/u', $line)
+                && !preg_match('/^(QUYẾT|ĐỊNH|THÔNG|BÁO|KẾ|HOẠCH|CỘNG|HÒA|HOÀ|ĐỘC|LẬP|HƯỚNG|DẪN|NGHỊ|CHỈ|THỊ|TỜ|TRÌNH|CÁO|KẾT|LUẬN|BAN|HÀNH|VỀ|VIỆC)$/u', $line)
+                && preg_match('/^[\/\-&A-ZÀ-Ỹ0-9.]{1,16}$/u', $line);
+            if (!$started) {
+                $kept[] = $line;
+                $started = true;
+                if (!$symbol) break;
+                continue;
+            }
+            if (!$symbol) break;
+            $previous = $kept[count($kept) - 1];
+            $previousLength = function_exists('mb_strlen') ? mb_strlen($previous) : strlen($previous);
+            $dangling = (bool)preg_match('/[\/\-&]$/u', $previous) || $previousLength <= 1;
+            $separator = (bool)preg_match('/^[\/\-&]+$/u', $line);
+            if (!$dangling && !$separator) break;
+            $kept[] = $line;
+        }
+        $raw = implode('', $kept);
+    }
+    $number = vbd_normalize_doc_number($raw);
+    $number = preg_replace('/\.{2,}.*$/u', '', $number) ?? $number;
+    return rtrim($number, '.');
+}
+
+function vbd_filename_token(string $token): string
+{
+    $token = function_exists('mb_strtoupper') ? mb_strtoupper($token, 'UTF-8') : strtoupper($token);
+    return str_replace('GDDT', 'GDĐT', $token);
 }
 
 function vbd_annot_numbers(string $text): array
@@ -424,8 +474,10 @@ function vbd_apply_annot_number(string $number, string $head): string
 
 function vbd_find_document_number(string $head): string
 {
+    $window = function_exists('mb_substr') ? mb_substr($head, 0, 700) : substr($head, 0, 700);
     $sp = '[ \t\r\n]{0,3}';
-    $org = '[A-Za-zÀ-ỹ0-9.&]+';
+    $atom = '[A-Za-zÀ-ỹ0-9.&]+';
+    $org = $atom . '(?:' . $sp . $atom . '){0,3}';
     $code = '(?:Q[ \t]*Đ|QĐ|QD|KH|CV|TB|NQ|CT|NĐ|ND|HĐ|HD|BC|QC|TT|TTr)';
     $partyCode = '(?:Q[ \t]*Đ|QĐ|QD|NQ|HD|KH|TB|BC|TTr|TT|KL)';
     $patterns = [
@@ -438,19 +490,75 @@ function vbd_find_document_number(string $head): string
         '/\b([0-9]{1,6}' . $sp . '\/' . $sp . $code . '(?:' . $sp . '-' . $sp . $org . ')+)/iu',
         '/\b([0-9]{1,6}' . $sp . '-' . $sp . $partyCode . $sp . '\/' . $sp . $org . '(?:' . $sp . '-' . $sp . $org . ')*)/iu',
     ];
+    $candidates = [];
     foreach ($patterns as $pattern) {
-        if (!preg_match_all($pattern, $head, $matches, PREG_OFFSET_CAPTURE)) continue;
-        foreach ($matches[1] as $index => $part) {
+        if (!preg_match_all($pattern, $window, $matches, PREG_OFFSET_CAPTURE)) continue;
+        foreach ($matches[1] as $part) {
             $pos = (int)$part[1];
             $start = max(0, $pos - 120);
-            $before = substr($head, $start, $pos - $start);
+            $before = substr($window, $start, $pos - $start);
             if (vbd_is_reference_context($before)) continue;
-            $number = vbd_normalize_doc_number((string)$part[0]);
-            if ($number === '' || !preg_match('/\p{L}/u', $number)) continue;
-            return vbd_apply_annot_number($number, $head);
+            $number = vbd_prepare_number_token((string)$part[0]);
+            if (!vbd_accept_document_number($number)) continue;
+            $candidates[] = [
+                'number' => $number,
+                'pos' => $pos,
+                'labeled' => (bool)preg_match('/(?:Số|So)\s*[:\.]?\s*$/iu', $before),
+            ];
         }
     }
-    return '';
+    if (!$candidates) return '';
+    usort($candidates, static function (array $left, array $right): int {
+        if ($left['labeled'] !== $right['labeled']) return $left['labeled'] ? -1 : 1;
+        return $left['pos'] <=> $right['pos'];
+    });
+    return vbd_apply_annot_number($candidates[0]['number'], $head);
+}
+
+function vbd_parse_from_name_and_caption(string $filename, string $caption): array
+{
+    $result = ['document_number' => '', 'document_type' => '', 'organization' => ''];
+    $stem = $filename;
+    $stem = preg_replace('/\.pdf$/iu', '', $stem) ?? $stem;
+    $stem = preg_replace('/\.(signed|dadongdau)$/iu', '', $stem) ?? $stem;
+    $typeByCode = [
+        'TT' => 'Thông tư', 'QD' => 'Quyết định', 'QĐ' => 'Quyết định',
+        'ND' => 'Nghị định', 'NĐ' => 'Nghị định', 'CT' => 'Chỉ thị',
+        'KH' => 'Kế hoạch', 'CV' => 'Công văn', 'TB' => 'Thông báo',
+        'NQ' => 'Nghị quyết', 'HD' => 'Hướng dẫn', 'BC' => 'Báo cáo', 'KL' => 'Kết luận',
+    ];
+    if (preg_match('/(\d+)[_\-\/](\d{4})[_\-\/](TT|QD|QĐ|ND|NĐ|CT)[_\-\/]([A-Za-z0-9]+)/iu', $stem, $match)) {
+        $code = strtoupper($match[3]);
+        if ($code === 'QD') $code = 'QĐ';
+        if ($code === 'ND') $code = 'NĐ';
+        $agency = vbd_filename_token($match[4]);
+        $result['document_number'] = $match[1] . '/' . $match[2] . '/' . $code . '-' . $agency;
+        $result['document_type'] = $typeByCode[$code] ?? '';
+        if ($agency === 'BGDĐT') $result['organization'] = 'Bộ Giáo dục và Đào tạo';
+    } elseif (preg_match('/(\d+)[_\-\/]([A-Za-z]+)[_\-\/]([A-Za-z]+)/u', $stem, $match)) {
+        $middle = strtoupper($match[2]);
+        $tail = vbd_filename_token($match[3]);
+        if (isset($typeByCode[$middle])) {
+            $code = $middle === 'QD' ? 'QĐ' : ($middle === 'ND' ? 'NĐ' : $middle);
+            $result['document_number'] = $match[1] . '/' . $code . '-' . $tail;
+            $result['document_type'] = $typeByCode[$middle];
+        } else {
+            $result['document_number'] = $match[1] . '/' . vbd_filename_token($match[2]) . '-' . $tail;
+            $result['document_type'] = 'Công văn';
+        }
+    }
+    if (preg_match('/(?:Thông\s*tư|Kế\s*hoạch|Quyết\s*định|Công\s*văn|Thông\s*báo|TT|KH|QĐ|QD|CV|TB)\s+(\d{1,6})\b/iu', $caption, $match)) {
+        $word = function_exists('mb_strtolower') ? mb_strtolower($match[0], 'UTF-8') : strtolower($match[0]);
+        $captionType = '';
+        if (preg_match('/thông\s*tư|^tt\s/iu', $word)) $captionType = 'Thông tư';
+        elseif (preg_match('/kế\s*hoạch|^kh\s/iu', $word)) $captionType = 'Kế hoạch';
+        elseif (preg_match('/quyết\s*định|^qđ\s|^qd\s/iu', $word)) $captionType = 'Quyết định';
+        elseif (preg_match('/công\s*văn|^cv\s/iu', $word)) $captionType = 'Công văn';
+        elseif (preg_match('/thông\s*báo|^tb\s/iu', $word)) $captionType = 'Thông báo';
+        if ($result['document_type'] === '' && $captionType !== '') $result['document_type'] = $captionType;
+        if ($result['document_number'] === '') $result['document_number'] = $match[1];
+    }
+    return $result;
 }
 
 function vbd_document_type_labels(): array
@@ -606,6 +714,7 @@ function vbd_regex_extract(string $source): array
     // Hỗ trợ trường hợp text bị tách (Số: rồi sau đó số), hoặc "Số:1176/..." không khoảng trắng.
     // Bỏ qua nếu số nằm sau từ chỉ dẫn chiếu (Căn cứ, Trên cơ sở, Công văn số...)
     $result['document_number'] = vbd_find_document_number($head);
+    $numberHead = function_exists('mb_substr') ? mb_substr($head, 0, 700) : substr($head, 0, 700);
 
     $numberPatterns = [
         '/(?:^|[\n\r])\s*(?:Số|So)\s*[:\.]?\s*([0-9]{1,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu',
@@ -614,11 +723,11 @@ function vbd_regex_extract(string $source): array
     ];
     foreach ($numberPatterns as $pattern) {
         if ($result['document_number'] !== '') break;
-        if (preg_match($pattern, $head, $match)) {
+        if (preg_match($pattern, $numberHead, $match)) {
             $num = trim(preg_replace('/\s+/u', '', $match[1]) ?? $match[1]);
             // Kiểm tra context: nếu trước số không có từ dẫn chiếu thì lấy
-            $pos = mb_strpos($head, $match[0]);
-            $contextBefore = $pos !== false ? mb_substr($head, max(0, $pos - 100), min(100, $pos)) : '';
+            $pos = mb_strpos($numberHead, $match[0]);
+            $contextBefore = $pos !== false ? mb_substr($numberHead, max(0, $pos - 100), min(100, $pos)) : '';
             if (!vbd_is_reference_context($contextBefore)) {
                 $result['document_number'] = $num;
                 break;
@@ -627,11 +736,11 @@ function vbd_regex_extract(string $source): array
     }
 
     // Fallback mạnh: chỉ khi 500 ký tự đầu có nhãn "Số" đứng đầu dòng, tránh số trong câu nội dung.
-    if (empty($result['document_number']) && preg_match('/(?:^|\n)\s*Số\s*[:\.]?\s*\d/iu', mb_substr($head, 0, 500))) {
-        if (preg_match('/\b([0-9]{1,6}\/[A-ZĐA-ZÀ-Ỹ0-9.\-]{2,})\b/u', $head, $match)) {
+    if (empty($result['document_number']) && preg_match('/(?:^|\n)\s*Số\s*[:\.]?\s*\d/iu', mb_substr($numberHead, 0, 500))) {
+        if (preg_match('/\b([0-9]{1,6}\/[A-ZĐA-ZÀ-Ỹ0-9.\-]{2,})\b/u', $numberHead, $match)) {
             $num = $match[1];
-            $pos = mb_strpos($head, $num);
-            $before = $pos !== false ? mb_substr($head, max(0, $pos - 100), min(100, $pos)) : '';
+            $pos = mb_strpos($numberHead, $num);
+            $before = $pos !== false ? mb_substr($numberHead, max(0, $pos - 100), min(100, $pos)) : '';
             if (!vbd_is_reference_context($before) && !preg_match('/(Căn cứ|Thực hiện|triển khai).{0,80}$/ius', $before)) {
                 $result['document_number'] = $num;
             }
@@ -641,14 +750,14 @@ function vbd_regex_extract(string $source): array
     // Cứu hộ mạnh cho ký số / text layer lỗi:
     // Nếu thấy "Số" hoặc tên cơ quan ở đầu, quét head để tìm số chính; bỏ số ngay sau căn cứ/triển khai.
     if (empty($result['document_number'])) {
-        if (preg_match('/Số\s*[:\.]?\s*([0-9]{3,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu', $head, $match)) {
-            $pos = mb_strpos($head, $match[1]);
-            $before = $pos !== false ? mb_substr($head, max(0, $pos - 80), min(80, $pos)) : '';
+        if (preg_match('/Số\s*[:\.]?\s*([0-9]{3,6}\s*\/\s*[A-Za-zÀ-ỹ0-9.\-]+)/iu', $numberHead, $match)) {
+            $pos = mb_strpos($numberHead, $match[1]);
+            $before = $pos !== false ? mb_substr($numberHead, max(0, $pos - 80), min(80, $pos)) : '';
             if (!preg_match('/(Căn cứ|Thực hiện|triển khai).{0,80}$/ius', $before)) {
                 $result['document_number'] = trim(preg_replace('/\s+/u', '', $match[1]));
             }
-        } elseif (preg_match('/\b([0-9]{1,6}\/[A-ZĐA-ZÀ-Ỹ0-9.\-]{2,})\b/u', mb_substr($head, 0, 700), $match)) {
-            $window = mb_substr($head, 0, 700);
+        } elseif (preg_match('/\b([0-9]{1,6}\/[A-ZĐA-ZÀ-Ỹ0-9.\-]{2,})\b/u', $numberHead, $match)) {
+            $window = $numberHead;
             $pos = mb_strpos($window, $match[1]);
             $before = $pos !== false ? mb_substr($window, max(0, $pos - 80), min(80, $pos)) : '';
             $earlyContext = mb_substr($head, 0, 400);
@@ -659,8 +768,8 @@ function vbd_regex_extract(string $source): array
     }
 
     // Siêu cứu hộ cuối cùng: quét 500 ký tự đầu nếu có "Số:" nhưng chưa có số; vẫn bỏ số dẫn chiếu.
-    if (empty($result['document_number']) && preg_match('/Số\s*[:\.]?/iu', $head)) {
-        $rescueWindow = mb_substr($head, 0, 500);
+    if (empty($result['document_number']) && preg_match('/Số\s*[:\.]?/iu', $numberHead)) {
+        $rescueWindow = mb_substr($numberHead, 0, 500);
         if (preg_match('/\b(\d{1,6}\/[A-ZĐA-ZÀ-Ỹ0-9.\-]{2,})\b/u', $rescueWindow, $match)) {
             $pos = mb_strpos($rescueWindow, $match[1]);
             $before = $pos !== false ? mb_substr($rescueWindow, max(0, $pos - 80), min(80, $pos)) : '';
@@ -669,6 +778,7 @@ function vbd_regex_extract(string $source): array
             }
         }
     }
+    if (!vbd_accept_document_number((string)$result['document_number'])) $result['document_number'] = '';
 
     // Organization: lấy tên cơ quan ở rất đầu, cắt trước khi gặp "Số:"
     $orgPatterns = [

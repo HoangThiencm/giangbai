@@ -409,6 +409,13 @@ try {
             ]);
         }
         try { $parsed = vbd_parse_document($source); } catch (Throwable $ignored) { $parsed = ['sector' => vbd_detect_sector($source), 'confidence' => 'low']; }
+        $fromNameCap = vbd_parse_from_name_and_caption($file['name'], (string)($message['caption'] ?? ''));
+        foreach (['document_number', 'document_type', 'organization'] as $field) {
+            if (empty($parsed[$field]) && !empty($fromNameCap[$field])) $parsed[$field] = $fromNameCap[$field];
+        }
+        if (!empty($fromNameCap['document_number']) && str_contains($fromNameCap['document_number'], '/')) {
+            $parsed['document_number'] = $fromNameCap['document_number'];
+        }
         $captionData = tvb_parse_caption_structured((string)($message['caption'] ?? ''));
         foreach (['document_number', 'document_date', 'document_type', 'title', 'organization'] as $field) {
             if (!empty($captionData[$field])) $parsed[$field] = $captionData[$field];
