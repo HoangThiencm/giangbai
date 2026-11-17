@@ -6779,8 +6779,13 @@
             const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
             const teachers = [];
             [...doc.querySelectorAll('table')].forEach((table, tableIndex) => {
-                const grid = wordTableGrid(table), all = grid.flat().join(' ');
-                const nameMatch = all.match(/(?:Giáo\s*viên|GV|Thầy|Cô)\s*[:\-–—]?\s*([A-Za-zÀ-ỹĐđ][^\n\r|]{0,80}?)(?=\s*(?:\(|Buổi|Thứ|Năm học|Học kỳ|$))/i);
+                const grid = wordTableGrid(table);
+                // Đọc tên từ ô Word nguyên gốc, trước khi mở rộng colspan/rowspan.
+                // Nếu dùng grid đã mở rộng, ô tiêu đề gộp sẽ bị lặp nhiều lần.
+                const headerCells = [...table.rows].slice(0, 4).flatMap(row => [...row.cells])
+                    .map(cell => String(cell.innerText || cell.textContent || '').replace(/\s+/g, ' ').trim());
+                const namePattern = /(?:Giáo\s*viên|GV|Thầy|Cô)\s*[:\-–—]?\s*([A-Za-zÀ-ỹĐđ][^\n\r|]{0,80}?)(?=\s*(?:\(|Buổi|Thứ|Năm học|Học kỳ|$))/i;
+                const nameMatch = headerCells.map(text => text.match(namePattern)).find(Boolean);
                 if (!nameMatch) return;
                 const rawLabel = nameMatch[0].replace(/\s+/g, ' ').trim(), rawName = nameMatch[1].replace(/\s+/g, ' ').trim().replace(/[,:;\-–—]+$/, '');
                 const result = { rawName, rawLabel, tableIndex, morning: {}, afternoon: {}, sourceText: grid.map(row => row.join(' | ')).join('\n') };
@@ -6855,7 +6860,11 @@
         function wordTimetableForImport(row) {
             const next = emptyTimetable(); next.school_year = document.getElementById('tt-school-year')?.value.trim() || state.info?.school_year || ''; next.semester = document.getElementById('tt-semester')?.value.trim() || state.info?.semester || ''; next.updated_at = new Date().toISOString().slice(0, 10);
             ['morning', 'afternoon'].forEach(session => TT_DAYS.forEach(day => Object.entries(row[session]?.[day] || {}).forEach(([sourcePeriod, raw]) => {
-                const configured = getSessionPeriods(session); const period = configured[Number(sourcePeriod) - 1] || Number(sourcePeriod); const parsed = parseTimetableCell(raw); if (parsed) { parsed.class_name = matchClassFromTimetable(parsed.class_name, state.classes || []); next[session][day][String(period)] = parsed; }
+                const configured = getSessionPeriods(session), sourceIndex = Number(sourcePeriod) - 1;
+                // Hàng Word là thứ tự trong buổi. Nếu khung hiện chỉ hiện 7–9,
+                // hàng thứ tư vẫn phải là tiết 10, không được quay về tiết 4.
+                const period = configured[sourceIndex] ?? ((configured[0] || 1) + sourceIndex);
+                const parsed = parseTimetableCell(raw); if (parsed) { parsed.class_name = matchClassFromTimetable(parsed.class_name, state.classes || []); next[session][day][String(period)] = parsed; }
             })));
             return next;
         }
