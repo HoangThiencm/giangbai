@@ -2037,10 +2037,10 @@
                         </div>
                     </div>
                     <div class="tt-dropzone tt-word-zone" id="tt-word-dropzone" onclick="document.getElementById('tt-word-file-input').click()">
-                        <input type="file" id="tt-word-file-input" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="hidden" onchange="handleTimetableWordFile(this.files && this.files[0])">
-                        <div><i class="fas fa-file-word" style="font-size:1.4rem; color:#15803d;"></i></div>
-                        <p style="margin:8px 0 4px; font-weight:800;">Nhập file Word TKB toàn trường (.docx)</p>
-                        <p style="margin:0; color:#64748b; font-size:0.8rem;">Tách bảng từng giáo viên, đối chiếu với danh sách tổ trước khi nạp.</p>
+                        <input type="file" id="tt-word-file-input" accept=".docx,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf" class="hidden" onchange="handleTimetableSourceFile(this.files && this.files[0])">
+                        <div><i class="fas fa-file-arrow-up" style="font-size:1.4rem; color:#15803d;"></i></div>
+                        <p style="margin:8px 0 4px; font-weight:800;">Chuẩn bị nguồn TKB Word/PDF cho AI (.docx, .pdf)</p>
+                        <p style="margin:0; color:#64748b; font-size:0.8rem;">Chọn giáo viên, xuất Prompt; sau đó tải chính tệp này kèm Prompt lên ChatGPT/Gemini để lấy JSON nạp lại.</p>
                     </div>
                     <div id="tt-ai-scan-badge" style="display:none; margin:0 0 8px; padding:6px 10px; border-radius:999px; background:#eef2ff; color:#312e81; font-size:0.78rem; font-weight:800; line-height:1.4;"></div>
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -3083,7 +3083,7 @@
     <div class="modal-overlay" id="modal-word-tkb" onclick="if(event.target === this) closeWordTimetableModal()">
         <div class="modal-card" style="max-width:1120px;">
             <div class="modal-header">
-                <h3 style="margin:0;"><i class="fas fa-file-word" style="color:#15803d;"></i> Nhận diện TKB Word — đối chiếu giáo viên</h3>
+                <h3 style="margin:0;"><i class="fas fa-file-arrow-up" style="color:#15803d;"></i> TKB nguồn — chọn giáo viên và xuất JSON AI</h3>
                 <button class="modal-close" type="button" onclick="closeWordTimetableModal()">&times;</button>
             </div>
             <div class="modal-body" style="padding:16px; overflow:auto;">
@@ -3097,6 +3097,7 @@
                 <div id="word-tkb-results"></div>
                 <div id="word-tkb-warnings"></div>
                 <div id="word-tkb-ai-panel" style="display:none;margin-top:12px;">
+                    <p style="margin:0 0 8px;padding:9px 11px;border-radius:8px;background:#fffbeb;color:#92400e;font-size:.84rem;"><b>Bước tiếp theo:</b> sao chép Prompt, rồi tải <b>chính tệp TKB nguồn</b> lên ChatGPT/Gemini trong cùng cuộc trò chuyện. AI đọc tệp và trả JSON để dán vào ô bên dưới.</p>
                     <label style="font-weight:800;display:block;margin-bottom:5px;">Prompt cho ChatGPT / Gemini</label>
                     <textarea id="word-tkb-prompt" class="form-control" rows="10" readonly></textarea>
                     <div style="display:flex;gap:8px;margin-top:7px;flex-wrap:wrap;">
@@ -3110,7 +3111,7 @@
                 <button type="button" class="btn-small" onclick="closeWordTimetableModal()">Đóng</button>
                 <button type="button" class="btn-small" onclick="generateWordTimetablePrompt()"><i class="fas fa-robot"></i> Xuất Prompt AI</button>
                 <button type="button" class="btn-small" onclick="importTimetableFromJson(document.getElementById('word-tkb-json').value)"><i class="fas fa-code"></i> Nạp JSON AI</button>
-                <button type="button" class="btn-small btn-small-primary" onclick="applyWordTimetableDirectly()"><i class="fas fa-bolt"></i> Nạp trực tiếp TKB đã chọn</button>
+                <button type="button" class="btn-small btn-small-primary" id="word-tkb-direct-btn" onclick="applyWordTimetableDirectly()"><i class="fas fa-bolt"></i> Nạp trực tiếp Word đã chọn</button>
             </div>
         </div>
     </div>
@@ -6811,7 +6812,7 @@
 
         function matchWordTeachersWithDb(extracted) {
             const aliases = getWordTeacherAliases(), teachers = state.teachers || [];
-            return (extracted || []).map(item => {
+            const matches = (extracted || []).map(item => {
                 const key = strictWordTeacherKey(item.rawLabel), aliasId = aliases[key];
                 let candidates = aliasId ? teachers.filter(t => String(t.id) === String(aliasId)) : [];
                 if (!candidates.length) {
@@ -6821,6 +6822,31 @@
                 const teacher = candidates.length === 1 ? candidates[0] : null;
                 return { ...item, teacherId: teacher?.id || '', selected: Boolean(teacher), status: teacher ? (aliasId ? 'alias' : 'exact') : (candidates.length ? 'ambiguous' : 'not_found') };
             });
+            // Một giáo viên có thể xuất hiện lặp ở nguồn (ví dụ bảng bị tách trang).
+            // Chỉ giữ một bản ghi được ghép để không đếm/nạp một người nhiều lần.
+            const matchedTeacherIds = new Set();
+            return matches.map(row => {
+                if (!row.teacherId || !matchedTeacherIds.has(String(row.teacherId))) {
+                    if (row.teacherId) matchedTeacherIds.add(String(row.teacherId));
+                    return row;
+                }
+                return { ...row, teacherId: '', selected: false, status: 'duplicate' };
+            });
+        }
+
+        function handleTimetableSourceFile(file) {
+            if (!file) return;
+            if (/\.pdf$/i.test(file.name || '') || file.type === 'application/pdf') {
+                wordTimetableImport = {
+                    fileName: file.name,
+                    sourceType: 'pdf',
+                    extracted: [],
+                    matches: (state.teachers || []).map(teacher => ({ rawName: teacher.name, rawLabel: teacher.name, teacherId: teacher.id, selected: false, status: 'manual', morning: {}, afternoon: {} }))
+                };
+                renderWordTeacherMatchModal();
+                return;
+            }
+            handleTimetableWordFile(file);
         }
 
         async function handleTimetableWordFile(file) {
@@ -6831,7 +6857,7 @@
                 const converted = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
                 const extracted = parseWordTimetableHtml(converted.value);
                 if (!extracted.length) throw new Error('Không tìm thấy bảng TKB có nhãn Giáo viên/GV/Thầy/Cô trong file Word.');
-                wordTimetableImport = { fileName: file.name, extracted, matches: matchWordTeachersWithDb(extracted) };
+                wordTimetableImport = { fileName: file.name, sourceType: 'docx', extracted, matches: matchWordTeachersWithDb(extracted) };
                 renderWordTeacherMatchModal();
             } catch (error) { console.error(error); showToast(error.message || 'Không thể đọc file Word.', 'error'); }
         }
@@ -6839,15 +6865,16 @@
         function renderWordTeacherMatchModal() {
             const modal = document.getElementById('modal-word-tkb'), box = document.getElementById('word-tkb-results');
             if (!modal || !box) return;
-            const rows = wordTimetableImport.matches || [], matched = rows.filter(r => r.teacherId).length;
-            document.getElementById('word-tkb-summary').textContent = `Đã tìm thấy ${rows.length} bảng giáo viên trong “${wordTimetableImport.fileName}”; ghép chắc chắn ${matched} giáo viên trong tổ.`;
-            box.innerHTML = `<table class="word-match-table"><thead><tr><th>Chọn</th><th>Tên trong Word</th><th>Giáo viên trong CSDL</th><th>Trạng thái</th></tr></thead><tbody>${rows.map((row, index) => {
+            const rows = wordTimetableImport.matches || [], matched = new Set(rows.filter(r => r.teacherId).map(r => String(r.teacherId))).size, aiOnly = wordTimetableImport.sourceType === 'pdf';
+            document.getElementById('word-tkb-summary').textContent = aiOnly ? `Chọn giáo viên cần AI nhận diện trong “${wordTimetableImport.fileName}”. Tệp PDF sẽ được tải kèm Prompt lên ChatGPT/Gemini.` : `Đã tìm thấy ${rows.length} bảng giáo viên trong “${wordTimetableImport.fileName}”; ghép ${matched} giáo viên duy nhất từ danh sách CSDL hiện có (${(state.teachers || []).length} giáo viên). Bạn có thể xuất Prompt để AI đọc tệp gốc và trả JSON.`;
+            box.innerHTML = `<table class="word-match-table"><thead><tr><th>Chọn</th><th>${aiOnly ? 'Giáo viên cần AI nhận diện' : 'Tên trong Word'}</th><th>Giáo viên trong CSDL</th><th>Trạng thái</th></tr></thead><tbody>${rows.map((row, index) => {
                 const status = row.status === 'exact' || row.status === 'alias' ? 'exact' : row.status === 'not_found' ? 'missing' : 'choice';
-                const label = row.status === 'exact' ? 'Khớp chính xác' : row.status === 'alias' ? 'Đã nhớ bí danh' : row.status === 'not_found' ? 'Chưa tìm thấy' : 'Cần chọn';
+                const label = row.status === 'exact' ? 'Khớp chính xác' : row.status === 'alias' ? 'Đã nhớ bí danh' : row.status === 'duplicate' ? 'Trùng GV đã ghép' : row.status === 'not_found' ? 'Chưa tìm thấy' : 'Cần chọn';
                 return `<tr><td><input type="checkbox" ${row.selected && row.teacherId ? 'checked' : ''} ${row.teacherId ? '' : 'disabled'} onchange="toggleWordTeacher(${index}, this.checked)"></td><td><b>${escapeHtml(row.rawLabel)}</b></td><td><select class="form-control" onchange="setWordTeacherMatch(${index}, this.value)"><option value="">— Chọn giáo viên —</option>${(state.teachers || []).map(t => `<option value="${escapeHtml(t.id)}" ${String(t.id) === String(row.teacherId) ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('')}</select></td><td><span class="word-match-status ${status}">${label}</span></td></tr>`;
             }).join('')}</tbody></table>`;
             document.getElementById('word-tkb-warnings').textContent = '';
             document.getElementById('word-tkb-ai-panel').style.display = 'none';
+            document.getElementById('word-tkb-direct-btn').style.display = aiOnly ? 'none' : '';
             modal.classList.add('active');
         }
 
@@ -6857,13 +6884,13 @@
         function selectWordTeachers(kind) { (wordTimetableImport.matches || []).forEach(row => { row.selected = kind === 'all' ? Boolean(row.teacherId) : kind === 'matched' ? ['exact', 'alias'].includes(row.status) : false; }); renderWordTeacherMatchModal(); }
         function saveWordTeacherAliases() { const aliases = getWordTeacherAliases(); let saved = 0; (wordTimetableImport.matches || []).filter(r => r.selected && r.teacherId).forEach(row => { aliases[strictWordTeacherKey(row.rawLabel)] = row.teacherId; saved++; }); localStorage.setItem('tkb_word_aliases', JSON.stringify(aliases)); showToast(`Đã lưu ${saved} bí danh giáo viên cho lần nhập sau.`, 'success'); }
 
-        function wordTimetableForImport(row) {
+        function wordTimetableForImport(row, sourceIsWordRows = true) {
             const next = emptyTimetable(); next.school_year = document.getElementById('tt-school-year')?.value.trim() || state.info?.school_year || ''; next.semester = document.getElementById('tt-semester')?.value.trim() || state.info?.semester || ''; next.updated_at = new Date().toISOString().slice(0, 10);
             ['morning', 'afternoon'].forEach(session => TT_DAYS.forEach(day => Object.entries(row[session]?.[day] || {}).forEach(([sourcePeriod, raw]) => {
                 const configured = getSessionPeriods(session), sourceIndex = Number(sourcePeriod) - 1;
                 // Hàng Word là thứ tự trong buổi. Nếu khung hiện chỉ hiện 7–9,
                 // hàng thứ tư vẫn phải là tiết 10, không được quay về tiết 4.
-                const period = configured[sourceIndex] ?? ((configured[0] || 1) + sourceIndex);
+                const period = sourceIsWordRows ? (configured[sourceIndex] ?? ((configured[0] || 1) + sourceIndex)) : Number(sourcePeriod);
                 const parsed = parseTimetableCell(raw); if (parsed) { parsed.class_name = matchClassFromTimetable(parsed.class_name, state.classes || []); next[session][day][String(period)] = parsed; }
             })));
             return next;
@@ -6918,7 +6945,7 @@
 
         function generateWordTimetablePrompt() {
             const rows = (wordTimetableImport.matches || []).filter(r => r.selected && r.teacherId); if (!rows.length) return showToast('Hãy chọn giáo viên trước khi xuất Prompt.', 'error');
-            const prompt = `Bạn là bộ nhận diện Thời khóa biểu chuyên nghiệp. CHỈ trích xuất TKB cho danh sách sau:\n${rows.map(r => { const t = state.teachers.find(x => String(x.id) === String(r.teacherId)); return `- Teacher ID: ${t.id}; Họ tên: ${t.name}; Tên trong bảng: ${r.rawLabel}`; }).join('\n')}\n\nQUY TẮC BẮT BUỘC:\n- Phân biệt tuyệt đối dấu tiếng Việt (Thiên khác Thiện); không nhận diện người ngoài danh sách.\n- Giữ nguyên ô trống, không dồn tiết; không suy đoán dữ liệu.\n- Chỉ trả về JSON hợp lệ là mảng các đối tượng {teacher_id, teacher_name, morning, afternoon}. morning/afternoon có dạng {"2":{"1":"Môn - Lớp"}}; ô trống bỏ qua hoặc đặt null.\n\nDỮ LIỆU BẢNG NGUỒN:\n${rows.map(r => `\n[${r.rawLabel}]\n${r.sourceText}`).join('\n')}`;
+            const prompt = `Bạn là bộ nhận diện Thời khóa biểu chuyên nghiệp. Người dùng đã tải kèm tệp TKB nguồn “${wordTimetableImport.fileName}”. Hãy ĐỌC TRỰC TIẾP tệp đính kèm này, không suy đoán dữ liệu ngoài tệp.\n\nCHỈ trích xuất TKB cho các giáo viên sau:\n${rows.map(r => { const t = state.teachers.find(x => String(x.id) === String(r.teacherId)); return `- teacher_id: ${t.id}; họ tên chuẩn: ${t.name}; nhãn có thể gặp: ${r.rawLabel}`; }).join('\n')}\n\nQUY TẮC BẮT BUỘC:\n- Phân biệt tuyệt đối dấu tiếng Việt (Thiên khác Thiện); không nhận diện giáo viên ngoài danh sách.\n- Bảo toàn vị trí theo thứ, buổi, tiết; ô trống phải là null hoặc bỏ qua, tuyệt đối không dồn tiết.\n- Chỉ trả về DUY NHẤT JSON hợp lệ, không Markdown, theo đúng schema hệ thống sau:\n[\n  {\n    "teacher_id": "ID trong danh sách",\n    "teacher_name": "Họ tên chuẩn",\n    "morning": { "2": { "1": "Môn - Lớp", "2": null }, "3": {}, "4": {}, "5": {}, "6": {}, "7": {} },\n    "afternoon": { "2": { "1": null }, "3": {}, "4": {}, "5": {}, "6": {}, "7": {} }\n  }\n]\n- Dùng số tiết ghi trong tệp; nếu tệp chỉ biểu diễn thứ tự hàng trong buổi, dùng 1–5 cho mỗi buổi.`;
             document.getElementById('word-tkb-prompt').value = prompt; document.getElementById('word-tkb-ai-panel').style.display = 'block'; document.getElementById('word-tkb-ai-panel').scrollIntoView({ block: 'nearest' });
         }
 
@@ -6926,7 +6953,7 @@
 
         function importTimetableFromJson(jsonText) {
             try { const raw = String(jsonText || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''); const rows = JSON.parse(raw); if (!Array.isArray(rows)) throw new Error('JSON phải là một mảng các giáo viên.');
-                const entries = rows.map(row => { const teacher = (state.teachers || []).find(t => String(t.id) === String(row.teacher_id)); if (!teacher) throw new Error(`Không tìm thấy Teacher ID: ${row.teacher_id || '(trống)'}.`); return { teacher, timetable: wordTimetableForImport(row) }; });
+                const entries = rows.map(row => { const teacher = (state.teachers || []).find(t => String(t.id) === String(row.teacher_id)); if (!teacher) throw new Error(`Không tìm thấy Teacher ID: ${row.teacher_id || '(trống)'}.`); return { teacher, timetable: wordTimetableForImport(row, false) }; });
                 if (!confirmWordTimetablePeriodRange(entries)) return;
                 const warnings = validateTimetableRules(entries); if (warnings.length && !confirm(`Phát hiện ${warnings.length} cảnh báo. Vẫn nạp JSON AI?\n\n${warnings.slice(0, 5).join('\n')}`)) return;
                 entries.forEach(({ teacher, timetable }) => { persistTeacherTimetable(teacher.id, timetable); applyTimetableToAssignments(teacher.id, { silent: true, skipRender: true }); }); saveCurrentPhaseSnapshot(); saveToLocal(); hasUnsavedChanges = true; renderTimetableTeacherList(); renderTimetableWorkspace(); closeWordTimetableModal(); showToast(`Đã nạp JSON AI cho ${entries.length} giáo viên.`, 'success');
@@ -7513,7 +7540,7 @@
                 wordZone.addEventListener('drop', e => {
                     e.preventDefault(); wordZone.classList.remove('dragover');
                     const file = e.dataTransfer?.files?.[0];
-                    if (file) handleTimetableWordFile(file);
+                    if (file) handleTimetableSourceFile(file);
                 });
             }
             if (!ttPasteBound) {

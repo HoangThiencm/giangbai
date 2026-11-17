@@ -20,6 +20,9 @@
 - Sửa lỗi hiển thị lặp tên: tên giáo viên nay được đọc từ ô tiêu đề Word nguyên gốc, trước khi xử lý các ô gộp `colspan`/`rowspan`.
 - Sửa ánh xạ tiết buổi chiều: hàng kế tiếp trong Word tiếp tục theo tiết đầu của khung chiều (ví dụ sau 7–9 là tiết 10), không bị gán sai về tiết 4.
 - Khi Word có tiết ở hàng hợp lệ vượt khung hiện tại, hệ thống giờ đề nghị mở rộng khung theo đúng hàng thực tế (ví dụ `7–9` thành `7–10`) trước khi kiểm tra và nạp, thay vì báo nhận diện sai.
+- Làm rõ luồng AI: nguồn `.docx` hoặc `.pdf` được người dùng tải kèm vào ChatGPT/Gemini; hệ thống chỉ xuất Prompt với schema JSON và danh sách giáo viên rồi nạp JSON AI trả về. Nạp trực tiếp chỉ hiển thị với Word đã tách được bảng; PDF dùng luồng AI/JSON.
+- JSON AI được nạp theo đúng số tiết trong schema hệ thống, tách biệt với cách đánh số “hàng 1–5” khi nạp trực tiếp từ Word.
+- Đối chiếu Word chỉ tính mỗi `teacher_id` một lần; bảng nguồn lặp giáo viên được đánh dấu riêng và không tự chọn/nạp trùng. Phần tổng kết cũng hiển thị rõ số giáo viên duy nhất và tổng số giáo viên hiện có trong CSDL.
 - Rà soát các điểm tích hợp: input Word, modal, parser, ghép CSDL/bí danh, nạp trực tiếp, prompt AI và nạp JSON đều có liên kết sự kiện.
 
 ## Cần kiểm thử giao diện
