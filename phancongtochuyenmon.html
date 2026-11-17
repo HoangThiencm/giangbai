@@ -6880,10 +6880,36 @@
             return [...new Set(warnings)];
         }
 
+        function reconcileWordTimetablePeriods(entries) {
+            const updates = [];
+            ['morning', 'afternoon'].forEach(session => {
+                const configured = getSessionPeriods(session), configuredEnd = Math.max(...configured);
+                const used = entries.flatMap(({ timetable }) => TT_DAYS.flatMap(day => Object.keys(timetable[session]?.[day] || {}).map(Number))).filter(Number.isFinite);
+                const requiredEnd = used.length ? Math.max(...used) : configuredEnd;
+                if (requiredEnd > configuredEnd) {
+                    const start = configured[0] || (session === 'morning' ? 1 : 1);
+                    updates.push({ session, start, end: requiredEnd, value: `${start}-${requiredEnd}` });
+                }
+            });
+            return updates;
+        }
+
+        function confirmWordTimetablePeriodRange(entries) {
+            const updates = reconcileWordTimetablePeriods(entries);
+            if (!updates.length) return true;
+            const lines = updates.map(update => `${update.session === 'morning' ? 'Buổi sáng' : 'Buổi chiều'}: ${getSessionPeriods(update.session).join('–')} → ${update.value}`);
+            const accepted = confirm(`TKB Word có tiết hợp lệ nằm ngoài khung đang hiển thị.\n\n${lines.join('\n')}\n\nCập nhật khung tiết theo đúng các hàng trong Word rồi nạp TKB?`);
+            if (!accepted) return false;
+            if (!state.info) state.info = {};
+            updates.forEach(update => { state.info[`${update.session}_periods`] = update.value; });
+            return true;
+        }
+
         function applyWordTimetableDirectly() {
             const selected = (wordTimetableImport.matches || []).filter(r => r.selected && r.teacherId), seen = new Set();
             if (!selected.length) return showToast('Hãy chọn ít nhất một giáo viên đã được ghép.', 'error');
             const entries = selected.map(row => ({ row, teacher: (state.teachers || []).find(t => String(t.id) === String(row.teacherId)), timetable: wordTimetableForImport(row) })).filter(x => x.teacher && !seen.has(String(x.teacher.id)) && (seen.add(String(x.teacher.id)) || true));
+            if (!confirmWordTimetablePeriodRange(entries)) return;
             const warnings = validateTimetableRules(entries); const warningBox = document.getElementById('word-tkb-warnings');
             if (warnings.length && !confirm(`Phát hiện ${warnings.length} cảnh báo. Vẫn nạp TKB?\n\n${warnings.slice(0, 5).join('\n')}`)) { if (warningBox) warningBox.innerHTML = `<b>Cảnh báo cần rà soát:</b><br>${warnings.map(escapeHtml).join('<br>')}`; return; }
             entries.forEach(({ teacher, timetable }) => { persistTeacherTimetable(teacher.id, timetable); try { applyTimetableToAssignments(teacher.id, { silent: true, skipRender: true }); } catch (e) { console.warn(e); } });
@@ -6901,6 +6927,7 @@
         function importTimetableFromJson(jsonText) {
             try { const raw = String(jsonText || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, ''); const rows = JSON.parse(raw); if (!Array.isArray(rows)) throw new Error('JSON phải là một mảng các giáo viên.');
                 const entries = rows.map(row => { const teacher = (state.teachers || []).find(t => String(t.id) === String(row.teacher_id)); if (!teacher) throw new Error(`Không tìm thấy Teacher ID: ${row.teacher_id || '(trống)'}.`); return { teacher, timetable: wordTimetableForImport(row) }; });
+                if (!confirmWordTimetablePeriodRange(entries)) return;
                 const warnings = validateTimetableRules(entries); if (warnings.length && !confirm(`Phát hiện ${warnings.length} cảnh báo. Vẫn nạp JSON AI?\n\n${warnings.slice(0, 5).join('\n')}`)) return;
                 entries.forEach(({ teacher, timetable }) => { persistTeacherTimetable(teacher.id, timetable); applyTimetableToAssignments(teacher.id, { silent: true, skipRender: true }); }); saveCurrentPhaseSnapshot(); saveToLocal(); hasUnsavedChanges = true; renderTimetableTeacherList(); renderTimetableWorkspace(); closeWordTimetableModal(); showToast(`Đã nạp JSON AI cho ${entries.length} giáo viên.`, 'success');
             } catch (error) { showToast(error.message || 'JSON AI không hợp lệ.', 'error'); }

@@ -19,6 +19,7 @@
 - Đọc cấu trúc file Word mẫu được cung cấp: xác nhận có 50 bảng Word và các nhãn `Giáo viên …`, `Buổi sáng`, `Buổi chiều`, `THỨ 2`–`THỨ 7` phù hợp với bộ tách bảng.
 - Sửa lỗi hiển thị lặp tên: tên giáo viên nay được đọc từ ô tiêu đề Word nguyên gốc, trước khi xử lý các ô gộp `colspan`/`rowspan`.
 - Sửa ánh xạ tiết buổi chiều: hàng kế tiếp trong Word tiếp tục theo tiết đầu của khung chiều (ví dụ sau 7–9 là tiết 10), không bị gán sai về tiết 4.
+- Khi Word có tiết ở hàng hợp lệ vượt khung hiện tại, hệ thống giờ đề nghị mở rộng khung theo đúng hàng thực tế (ví dụ `7–9` thành `7–10`) trước khi kiểm tra và nạp, thay vì báo nhận diện sai.
 - Rà soát các điểm tích hợp: input Word, modal, parser, ghép CSDL/bí danh, nạp trực tiếp, prompt AI và nạp JSON đều có liên kết sự kiện.
 
 ## Cần kiểm thử giao diện
