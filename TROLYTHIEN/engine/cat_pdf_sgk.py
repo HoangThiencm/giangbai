@@ -53,12 +53,22 @@ def split_pdf_by_ranges(input_pdf_path, lessons_config, output_dir):
         start_p = item['start_page']
         end_p = item['end_page']
         
+        # Tự động khắc phục lỗi độ lệch trang khi bài chỉ có 1 trang
+        # (thường gặp khi bài Luyện tập chung 1 trang bị tính end_p = next_start - 1 dẫn đến start_p > end_p)
+        if start_p > end_p:
+            if end_p == start_p - 1 or end_p <= 0:
+                print(f"  💡 Tự động điều chỉnh '{title}': bài 1 trang (đặt end_page = start_page = {start_p})")
+                end_p = start_p
+            else:
+                print(f"  ⚠️ Bỏ qua mục '{title}': trang bắt đầu ({start_p}) > trang kết thúc ({end_p})")
+                continue
+        
         # Đảm bảo phạm vi hợp lệ (1-indexed -> 0-indexed cho PyMuPDF)
         start_idx = max(0, start_p - 1)
         end_idx = min(total_pages - 1, end_p - 1)
         
         if start_idx > end_idx:
-            print(f"  ⚠️ Bỏ qua mục '{title}': trang bắt đầu ({start_p}) > trang kết thúc ({end_p})")
+            print(f"  ⚠️ Bỏ qua mục '{title}': chỉ số trang không hợp lệ ({start_idx} > {end_idx})")
             continue
             
         out_doc = pymupdf.open()

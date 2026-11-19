@@ -32,6 +32,12 @@
   `$\widehat{A} + \widehat{B} + \widehat{C} + \widehat{D} = 360^\circ$`, `$\widehat{M} + \widehat{N} + \widehat{P} + \widehat{Q} = 360^\circ$`, `$\widehat{DAE} = \widehat{ADH} = \widehat{AEH} = 90^\circ$`, `$\widehat{MAC} = \widehat{MCA}$`, `$\widehat{OEA} = \widehat{OAE}$`.
   Tuyệt đối không dùng chữ "góc M", "góc A" cộc lốc trong phép tính đại số/hình học.
 
+### 4. Quy chuẩn Bắt buộc khi Cắt PDF SGK thành từng bài học (Mục 10):
+- **Bắt buộc độc lập hóa 100% bài "Luyện tập chung":** Trong GDPT 2018, *Luyện tập chung* là một bài học độc lập (1 - 2 tiết theo PPCT). Bắt buộc phải được cắt thành file PDF riêng biệt với cú pháp: `[Mon][Lop]_Chuong_[X]_Luyen_tap_chung_Trang_[A-B].pdf`.
+- **Ranh giới bài học:** Bài lý thuyết trước đó (`Bài 1`, `Bài 2`...) BẮT BUỘC kết thúc ngay trước trang Luyện tập chung. TUYỆT ĐỐI KHÔNG gộp Luyện tập chung vào bài trước.
+- **Bảo toàn bài học 1 trang:** Đối với các bài Luyện tập chung hoặc Bài tập cuối chương chỉ có 1 trang in (`start_page == end_page`), hệ thống phải xuất đủ 1 trang, cấm bỏ qua (skip).
+- **Nhận diện đầy đủ 4 nhóm đề mục:** `Bài \d+`, `Luyện tập chung`, `Bài tập cuối chương`, `Hoạt động thực hành trải nghiệm`.
+
 
 Bất cứ khi nào người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
@@ -109,7 +115,7 @@ Tất cả các file làm việc ĐƯỢC QUY ĐỊNH CỐ ĐỊNH trong thư m�
   + Khi chọn mục 10 (Cắt PDF SGK thành từng bài học):
     * Đọc cuốn SGK/SBT PDF trong `TROLYTHIEN/2_TAO_BAI_TAP/Dau_vao/`.
     * Tự động xác định độ lệch số trang in vs số trang PDF (Offset).
-    * Nhận diện chuẩn xác 100% ranh giới từng bài (bài học, luyện tập chung, bài tập cuối chương).
+    * Nhận diện chuẩn xác 100% ranh giới từng bài: Bắt buộc độc lập hóa bài "Luyện tập chung", "Bài tập cuối chương", "Hoạt động thực hành trải nghiệm" thành các file PDF riêng biệt; tuyệt đối không gộp Luyện tập chung vào bài lý thuyết trước đó; xử lý chuẩn xác các bài ngắn chỉ có 1 trang in (`start_page == end_page`).
     * Gọi engine `TROLYTHIEN/engine/cat_pdf_sgk.py` trích xuất bằng PyMuPDF giữ nguyên 100% chất lượng vector/ảnh gốc.
     * Xuất danh sách PDF từng bài học sạch sẽ vào `TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/PDF_Tung_Bai/` (không tự ý sao chép sang Dau_vao).
   + Khi chọn mục 11 (Xây dựng mô phỏng hình học tương tác):

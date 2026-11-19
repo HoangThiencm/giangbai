@@ -9,10 +9,19 @@ Giúp Thầy/Cô đưa nguyên cuốn Sách giáo khoa (SGK) hoặc Sách bài t
 ---
 
 ## 🛡️ Cơ chế đảm bảo CHÍNH XÁC TUYỆT ĐỐI (Không cắt nhầm trang)
-Hệ thống giải quyết triệt để 3 vấn đề cố hữu của các công cụ cắt PDF thông thường:
+Hệ thống giải quyết triệt để các vấn đề cố hữu của các công cụ cắt PDF thông thường:
 1. **Triệt tiêu độ lệch số trang (Page Offset):** Tự động đọc Mục lục và đối chiếu số trang in dưới chân trang với chỉ số trang vật lý của file PDF (bỏ qua bìa, lời nói đầu, hướng dẫn sử dụng sách).
-2. **Bắt trọn vẹn ranh giới bài học:** Trang bắt đầu của Bài $k$ luôn là trang xuất hiện tiêu đề bài; trang kết thúc là trang ngay trước khi xuất hiện bài tiếp theo (bao gồm cả các phần Luyện tập chung, Em có biết, Bài tập cuối chương).
-3. **Bảo toàn 100% chất lượng gốc:** Sử dụng PyMuPDF trích xuất trực tiếp các trang PDF gốc, không qua nén giảm chất lượng ảnh, không làm vỡ nét công thức hay hình vẽ.
+2. **Bắt trọn vẹn ranh giới bài học & Độc lập hóa 100% "Luyện tập chung":**
+   - **Bài lý thuyết (`Bài 1...`, `Bài 2...`):** Trang bắt đầu là trang xuất hiện tiêu đề bài; trang kết thúc là trang ngay trước khi xuất hiện bài tiếp theo hoặc ngay trước khi xuất hiện bài *Luyện tập chung* / *Bài tập cuối chương*. **TUYỆT ĐỐI KHÔNG gộp phần Luyện tập chung vào bài lý thuyết trước đó!**
+   - **Bài "Luyện tập chung" (BẮT BUỘC CẮT FILE RIÊNG):** Trong chương trình GDPT 2018 và phân phối chương trình (PPCT), *Luyện tập chung* là một bài học độc lập (thường từ 1 - 2 tiết). Bắt buộc phải được cắt thành file PDF riêng biệt với quy tắc đặt tên: `[Mon][Lop]_Chuong_[X]_Luyen_tap_chung_Trang_[A-B].pdf`.
+   - **Bài "Bài tập cuối chương" & "Hoạt động thực hành trải nghiệm":** Tương tự, bắt buộc phải xuất thành từng file PDF riêng biệt, không được bỏ sót hay nuốt vào bài khác.
+   - **Xử lý bài học ngắn chỉ có 1 trang:** Đối với các bài *Luyện tập chung* hoặc *Bài tập cuối chương* chỉ chiếm đúng 1 trang in duy nhất, hệ thống xác định `start_page == end_page` (tổng số trang là 1), trích xuất trọn vẹn trang đó, tuyệt đối không được bỏ qua.
+3. **Nhận diện đầy đủ 4 nhóm đề mục bài học:**
+   - Nhóm 1: `Bài \d+` (Bài 1, Bài 2, Bài 3...)
+   - Nhóm 2: `Luyện tập chung` / `Luyện tập`
+   - Nhóm 3: `Bài tập cuối chương` / `Ôn tập chương`
+   - Nhóm 4: `Hoạt động thực hành trải nghiệm`
+4. **Bảo toàn 100% chất lượng gốc:** Sử dụng PyMuPDF trích xuất trực tiếp các trang PDF gốc, không qua nén giảm chất lượng ảnh, không làm vỡ nét công thức hay hình vẽ.
 
 ---
 

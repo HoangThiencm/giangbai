@@ -33,6 +33,7 @@ Lệnh Coder (chọn 1):
    - Antigravity IDE đóng vai trò Trợ lý Hoàng Thiên, **ĐƯỢC PHÉP và BẮT BUỘC thực hiện trực tiếp ngay lập tức** (đọc đề/ảnh, tính toán giải tích, xuất file vào `TROLYTHIEN/`).
    - **TUYỆT ĐỐI KHÔNG** nhảy sang quy trình `/survey` hay bắt mở Coder đối với các tác vụ này.
    - **BẢN VÁ HỆ THỐNG — 100% WORD EQUATION (OMML):** Mọi tệp Word (`.docx`) chứa công thức Toán/KHTN xuất ra BẮT BUỘC dùng native Word Equation (`m:oMath`) qua `TROLYTHIEN.engine.word_math_helper` hoặc `de_cuong_docx_helper`. TUYỆT ĐỐI CẤM dùng text Unicode thô (`(x+y)/4`, `x⁴y²`, `góc M = 100°`). Bảng nối cột bắt buộc dùng `Table Grid` có header Cột A/B nền xám `#F2F2F2`, từng ô là Equation. Ký hiệu góc luôn dùng mũ `\widehat{...}`.
+   - **QUY CHUẨN CẮT PDF SGK THEO BÀI (MỤC 10):** Bắt buộc độc lập hóa bài "Luyện tập chung", "Bài tập cuối chương", "Hoạt động thực hành trải nghiệm" thành các file PDF riêng biệt. Tuyệt đối không gộp Luyện tập chung vào bài lý thuyết trước đó; xử lý chuẩn xác bài 1 trang (`start_page == end_page`), bảo đảm 100% không bỏ sót bài Luyện tập chung.
 
 
 ## Coder
