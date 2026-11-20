@@ -39,6 +39,14 @@
 - **Nhận diện đầy đủ 4 nhóm đề mục:** `Bài \d+`, `Luyện tập chung`, `Bài tập cuối chương`, `Hoạt động thực hành trải nghiệm`.
 
 
+### 5. Quy tắc Ký hiệu Cung tròn & Số đo Cung Toán 9 (OMML Accent m:acc với \u23DC):
+- Mọi ký hiệu cung tròn $\wideparen{AB}$, $\wideparen{AmB}$, $\wideparen{CD}$ và số đo cung $\text{sđ }\wideparen{AB}$ bắt buộc xuất sang Office Math Accent `<m:acc>` với `m:chr val="⏜"` (`\u23DC` - TOP PARENTHESIS).
+- Font Cambria Math của Microsoft Word tự động co giãn ôm trọn đỉnh các chữ cái. TUYỆT ĐỐI CẤM dùng ký tự thô `⌒` (U+2312) nằm ngang trước chữ cái (`⌒AB`, `⌒AmB`).
+
+### 6. Quy chuẩn Thể thức Dấu nháy Kép Hành chính (NĐ 30/2020/NĐ-CP) và Chống Rò rỉ Cú pháp Markdown:
+- **Dấu nháy kép hành chính:** Toàn bộ dấu ngoặc kép trong văn bản Word bắt buộc là cặp dấu nháy kép cong thông minh: mở là `“` (U+201C), đóng là `”` (U+201D). TUYỆT ĐỐI KHÔNG dùng dấu nháy thẳng máy đánh chữ ASCII `"`.
+- **Chống rò rỉ Markdown:** Tuyệt đối không để lộ các ký tự sao Markdown rác (`***`, `**`) ra văn bản Word thành phẩm; các khối tích hợp sư phạm `***...***` không được bị cắt đứt giữa chừng bởi role breaks.
+
 Bất cứ khi nào người dùng gõ `/thien` hoặc gọi "Thiên ơi":
 
 ## 1. Menu Cấp 1 (Tác vụ chính - 14 lựa chọn)

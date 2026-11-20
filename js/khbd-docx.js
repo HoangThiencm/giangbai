@@ -134,6 +134,7 @@
         s = s.replace(/\\hat\s*\{([^{}]+)\}/g, "∠$1");
         s = s.replace(/\\wideparen\s*\{([^{}]+)\}/g, "⌒$1");
         s = s.replace(/\\overarc\s*\{([^{}]+)\}/g, "⌒$1");
+        s = s.replace(/\\overparen\s*\{([^{}]+)\}/g, "⌒$1");
         s = s.replace(/\\overrightarrow\s*\{([^{}]+)\}/g, "$1→");
         s = s.replace(/\\vec\s*\{([^{}]+)\}/g, "$1→");
         s = s.replace(/\\overline\s*\{([^{}]+)\}/g, "$1");
@@ -176,7 +177,7 @@
           "\\mid": "∣", "\\vert": "|", "\\Vert": "‖", "\\colon": ":", "\\setminus": "∖",
           "\\vdots": "⋮", "\\not\\vdots": "∤", "\\nmid": "∤",
           "\\backsimeq": "⋍", "\\backsim": "∽", "\\sim": "∽",
-          "\\wideparen": "⌒", "\\overarc": "⌒",
+          "\\wideparen": "⌒", "\\overarc": "⌒", "\\overparen": "⌒",
           "\\Leftrightarrow": "⇔", "\\cdots": "...", "\\ldots": "...", "\\text": "",
           "\\mathbf": "", "\\mathrm": "", "\\left": "", "\\right": "", "\\,": " ", "\\;": " ",
           "\\quad": "  ", "\\qquad": "    "
@@ -210,7 +211,7 @@
         const supportedCommands = [
           "Leftrightarrow", "Rightarrow", "implies", "iff", "leftarrow", "rightarrow", "overrightarrow", "subseteq", "supseteq",
           "emptyset", "parallel", "triangle", "varepsilon", "displaystyle", "overline", "widehat",
-          "backsimeq", "backsim", "wideparen", "overarc",
+          "backsimeq", "backsim", "wideparen", "overarc", "overparen",
           "mathbb", "mathcal", "mathfrak", "mathrm", "mathbf", "textrm", "textit", "textbf",
           "nolimits", "limits", "dfrac", "tfrac", "cfrac", "notin", "subset", "supset", "forall",
           "exists", "approx", "equiv", "cdots", "ldots", "times", "cdot", "lbrack", "rbrack",
@@ -351,7 +352,7 @@
           triangle: "△", angle: "∠", parallel: "∥", perp: "⊥", cup: "∪", cap: "∩",
           emptyset: "∅", infty: "∞", forall: "∀", exists: "∃", partial: "∂", nabla: "∇",
           subset: "⊂", subseteq: "⊆", supset: "⊃", sim: "∽", backsim: "∽", backsimeq: "⋍", approx: "≈", equiv: "≡",
-          wideparen: "⌒", overarc: "⌒",
+          wideparen: "⌒", overarc: "⌒", overparen: "⌒",
           mid: "∣", vert: "|", Vert: "‖", colon: ":", setminus: "∖",
           vdots: "⋮", nmid: "∤",
           cdots: "⋯", ldots: "…", dots: "…", degree: "°", ell: "ℓ", hbar: "ℏ",
@@ -530,8 +531,8 @@
               nodes = this.buildAccentMath(readGroup(), "\u0304", mathApi);
             } else if (command === "underline") {
               nodes = readGroup();
-            } else if (command === "wideparen" || command === "overarc") {
-              nodes = [run("⌒"), ...readGroup()];
+            } else if (command === "wideparen" || command === "overarc" || command === "overparen" || command === "paren") {
+              nodes = this.buildAccentMath(readGroup(), "\u23DC", mathApi);
             } else if (commandMap[command]) {
               nodes = [run(commandMap[command])];
             } else if (functions.has(command)) {
@@ -665,6 +666,15 @@
         s = s.replace(/(?<=[a-zà-ỹ])implies/gi, " ⇒ ");
         s = s.replace(/\bimplies\b/gi, " ⇒ ");
         s = s.replace(/\biff\b/gi, " ⇔ ");
+
+        // CHUẨN HÓA THỂ THỨC VĂN BẢN HÀNH CHÍNH (Nghị định 30/2020/NĐ-CP & Hướng dẫn 05-HD/VPTW):
+        // Dấu ngoặc kép trong văn bản hành chính bắt buộc là dấu nháy cong thông minh: “...” thay vì "..."
+        s = s.replace(/"([^"\n]+)"/g, "“$1”");
+        s = s.replace(/(^|[\s(\[{:–—\-])"/g, "$1“");
+        s = s.replace(/"/g, "”");
+
+        // TRIỆT TIÊU TRIỆT ĐỂ RÒ RỈ DẤU SAO MARKDOWN (***, **) RA VĂN BẢN WORD
+        s = s.replace(/\*{2,3}/g, "");
         return s;
       }
 
@@ -1252,6 +1262,17 @@
               .replace(/<br>\s*-\s*(?:\*\*)?GV\s*:(?:\*\*)?/gi, "<br>- **GV:**")
               .replace(/<br>\s*-\s*(?:\*\*)?HS\s*:(?:\*\*)?/gi, "<br>- **HS:**");
         }
+
+        // BẢO TOÀN ĐỊNH DẠNG MARKDOWN KHI XUỐNG DÒNG <br>: Phân bổ thẻ đóng/mở qua từng dòng
+        normalized = normalized.replace(/\*\*\*([\s\S]+?)\*\*\*/g, (match, inner) => {
+          if (!inner.includes("<br>")) return match;
+          return inner.split(/<br\s*\/?>/gi).map(seg => `***${seg.trim()}***`).join("<br>");
+        });
+        normalized = normalized.replace(/\*\*([\s\S]+?)\*\*/g, (match, inner) => {
+          if (!inner.includes("<br>")) return match;
+          return inner.split(/<br\s*\/?>/gi).map(seg => `**${seg.trim()}**`).join("<br>");
+        });
+
         const lines = normalized.replace(/<br\s*\/?>/gi, "\n").split("\n").map(line => line.trim());
         const usable = lines.length ? lines : [""];
         return usable.flatMap(line => {

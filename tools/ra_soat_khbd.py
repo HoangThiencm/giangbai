@@ -152,6 +152,20 @@ def audit_khbd_file(fpath):
             docx_ctrls = re.findall(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", xml_content)
             if docx_ctrls:
                 issues.append(f"LỖI WORD DOCX: Chứa {len(docx_ctrls)} ký tự điều khiển ẩn trong văn bản Word.")
+
+            # Quét rò rỉ cú pháp Markdown thừa ra Word (*** hoặc **)
+            stray_stars = re.findall(r"<w:t[^>]*>[^<]*\*{2,3}[^<]*<\/w:t>", xml_content)
+            if stray_stars:
+                issues.append(f"LỖI WORD DOCX: Có {len(stray_stars)} vị trí bị rò rỉ ký tự sao Markdown (*** hoặc **) ra văn bản Word.")
+
+            # Quét dấu ngoặc kép máy đánh chữ ASCII " thay vì dấu nháy hành chính “...”
+            ascii_quotes = re.findall(r"<w:t[^>]*>[^<]*\"[^<]*<\/w:t>", xml_content)
+            if ascii_quotes:
+                issues.append(f"LỖI THỂ THỨC HÀNH CHÍNH (NĐ 30): Có {len(ascii_quotes)} đoạn chứa dấu nháy thẳng '\"' thay vì dấu nháy kép cong '“...'”.")
+
+            # Quét lỗi ký hiệu cung tròn dạng text thô U+2312 (⌒)
+            if "\u2312" in xml_content:
+                issues.append("LỖI KÝ HIỆU CUNG TRÒN: Chứa ký hiệu cung thô ⌒ (U+2312) thay vì Office Math Accent <m:acc> với ⏜ (U+23DC).")
         except Exception as e:
             warnings.append(f"Không thể mở file docx để thẩm định XML: {e}")
 
@@ -168,11 +182,16 @@ def audit_khbd_file(fpath):
     }
 
 def main():
-    base_dir = r"TROLYTHIEN/1_SOAN_KHBD/Ket_qua"
-    files = sorted(glob.glob(os.path.join(base_dir, "*.md")))
+    target_path = sys.argv[1] if len(sys.argv) > 1 else r"TROLYTHIEN/1_SOAN_KHBD/Ket_qua"
+    if os.path.isfile(target_path):
+        files = [target_path]
+    else:
+        files = sorted(glob.glob(os.path.join(target_path, "**/*.md"), recursive=True))
+        if not files:
+            files = sorted(glob.glob(os.path.join(target_path, "*.md")))
 
     if not files:
-        print("Không tìm thấy file Markdown nào trong", base_dir)
+        print("Không tìm thấy file Markdown nào trong", target_path)
         sys.exit(1)
 
     print("=" * 80)

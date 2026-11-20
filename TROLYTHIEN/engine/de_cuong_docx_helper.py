@@ -58,15 +58,19 @@ def latex_to_omml(latex_code):
         # Chuẩn hóa ký hiệu góc: \widehat -> \hat để MathML nhận diện accent="true", tránh lỗi m:limUpp dấu caret bay lơ lửng
         code = re.sub(r'\\widehat\b', r'\\hat', code)
         
+        # Chuẩn hóa ký hiệu cung tròn: \wideparen / \overarc -> \overparen để tạo thẻ mover trong MathML
+        code = re.sub(r'\\(?:wideparen|overarc)\b', r'\\overparen', code)
+        
         mathml = convert(code)
         tree = ET.fromstring(mathml)
         omml = _transform(tree)
         
         ns = {'m': 'http://schemas.openxmlformats.org/officeDocument/2006/math'}
 
-        # SỬA LỖI KÝ HIỆU GÓC (\widehat và \hat):
+        # SỬA LỖI KÝ HIỆU GÓC (\widehat và \hat) VÀ CUNG TRÒN (\wideparen, \overarc):
         # MML2OMML chuyển \widehat thành m:limUpp với text '^', làm dấu mũ bay lơ lửng trên trời.
         # Chuyển m:limUpp thành m:acc với chr val="̂" (\u0302) để thành mũ góc chuẩn Office Math ôm trọn đỉnh/chữ.
+        # Tương tự, cung tròn chuyển sang m:acc với chr val="⏜" (\u23DC) để thành vòng cung ôm trọn đỉnh các chữ cái.
         for limUpp in omml.xpath('//m:limUpp', namespaces=ns):
             lim_t = limUpp.xpath('./m:lim//m:t', namespaces=ns)
             if lim_t and lim_t[0].text in ['^', '\u02c6', '\u0302']:
@@ -78,14 +82,25 @@ def latex_to_omml(latex_code):
                     chr_elm.set('{http://schemas.openxmlformats.org/officeDocument/2006/math}val', '\u0302')
                     acc.append(e_elms[0])
                     limUpp.getparent().replace(limUpp, acc)
+            elif lim_t and lim_t[0].text in ['\u23dc', '\u2312', '⏜', '⌒']:
+                e_elms = limUpp.xpath('./m:e', namespaces=ns)
+                if e_elms:
+                    acc = ET.Element('{http://schemas.openxmlformats.org/officeDocument/2006/math}acc')
+                    accPr = ET.SubElement(acc, '{http://schemas.openxmlformats.org/officeDocument/2006/math}accPr')
+                    chr_elm = ET.SubElement(accPr, '{http://schemas.openxmlformats.org/officeDocument/2006/math}chr')
+                    chr_elm.set('{http://schemas.openxmlformats.org/officeDocument/2006/math}val', '\u23dc')
+                    acc.append(e_elms[0])
+                    limUpp.getparent().replace(limUpp, acc)
 
-        # Đảm bảo m:acc luôn dùng chr val="̂" (\u0302) thay vì dấu caret '^' hoặc '\u02c6'
+        # Đảm bảo m:acc luôn dùng chr val chuẩn
         for acc in omml.xpath('//m:acc', namespaces=ns):
             chr_elm = acc.xpath('./m:accPr/m:chr', namespaces=ns)
             if chr_elm:
                 val = chr_elm[0].get('{http://schemas.openxmlformats.org/officeDocument/2006/math}val')
                 if val in ['^', '\u02c6']:
                     chr_elm[0].set('{http://schemas.openxmlformats.org/officeDocument/2006/math}val', '\u0302')
+                elif val in ['⌒', '\u2312']:
+                    chr_elm[0].set('{http://schemas.openxmlformats.org/officeDocument/2006/math}val', '\u23dc')
 
         # KHẮC PHỤC TRIỆT ĐỂ LỖI DẤU TRỪ SAU DẤU MỞ NGOẶC (MML2OMML separator bug):
         # Tránh ô vuông rỗng (<m:e/>) trong các biểu thức: (-2; 1), (-1/2)^2, (-x)...
@@ -165,6 +180,18 @@ def latex_to_omml(latex_code):
         print(f"LỖI LATEX_TO_OMML trên mã: '{latex_code}': {e}")
         return None
 
+def clean_administrative_text(text):
+    """Chuẩn hóa thể thức văn bản hành chính (Nghị định 30/2020/NĐ-CP): dấu nháy kép cong “...” và xóa rác Markdown."""
+    if not text or not isinstance(text, str):
+        return text
+    # Chuẩn hóa dấu ngoặc kép theo thể thức văn bản hành chính Việt Nam: “...”
+    text = re.sub(r'"([^"\n]+)"', r'“\1”', text)
+    text = re.sub(r'(^|[\s(\[{:–—\-])"', r'\1“', text)
+    text = text.replace('"', '”')
+    # Triệt tiêu rò rỉ cú pháp Markdown *** hoặc ** ra văn bản Word
+    text = re.sub(r'\*{2,3}', '', text)
+    return text
+
 def add_text_with_math(paragraph, text, default_size_pt=13, default_font="Times New Roman", bold=False, italic=False, color_rgb=(0,0,0)):
     """
     Thêm đoạn văn bản hỗn hợp (gồm text thường và công thức toán $...$).
@@ -179,7 +206,7 @@ def add_text_with_math(paragraph, text, default_size_pt=13, default_font="Times 
     for match in re.finditer(pattern, text):
         start, end = match.span()
         if start > pos:
-            run = paragraph.add_run(text[pos:start])
+            run = paragraph.add_run(clean_administrative_text(text[pos:start]))
             run.font.name = default_font
             run.font.size = Pt(default_size_pt)
             run.bold = bold
@@ -202,7 +229,7 @@ def add_text_with_math(paragraph, text, default_size_pt=13, default_font="Times 
         pos = end
         
     if pos < len(text):
-        run = paragraph.add_run(text[pos:])
+        run = paragraph.add_run(clean_administrative_text(text[pos:]))
         run.font.name = default_font
         run.font.size = Pt(default_size_pt)
         run.bold = bold

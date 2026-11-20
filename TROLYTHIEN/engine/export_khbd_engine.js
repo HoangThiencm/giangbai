@@ -106,8 +106,8 @@ function formatKhbdRoleLine(line) {
   content = content.replace(/§BR§/g, "<br>- ");
   content = content.replace(/§GV§/g, "**GV:**");
   content = content.replace(/§HS§/g, "**HS:**");
-  content = content.replace(/(\*\*GV:\*\*.*?)([."”])\s+HS\s+(?!:)/g, "$1$2<br>- **HS:** ");
-  content = content.replace(/(\*\*HS:\*\*.*?)([."”])\s+GV\s+(?!:)/g, "$1$2<br>- **GV:** ");
+  content = content.replace(/(\*\*GV:\*\*(?:(?!<br>|\*\*\*|\*\*).)*?)([."”])\s+HS\s+(?!:)/g, "$1$2<br>- **HS:** ");
+  content = content.replace(/(\*\*HS:\*\*(?:(?!<br>|\*\*\*|\*\*).)*?)([."”])\s+GV\s+(?!:)/g, "$1$2<br>- **GV:** ");
   content = content.replace(/^(\s*)(?:<br>)+/, "$1");
   if (isTable) content = content.replace(/(\|\s*)(?:<br>)+/g, "$1");
   return content;

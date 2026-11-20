@@ -131,7 +131,7 @@ async function main() {
   assert.ok(!xml.includes("\u223C"), "XML không được chứa dấu ngã ∼ (U+223C)");
   assert.match(xml, /<m:acc>/, "\\widehat{ABC} phải tạo OMML accent <m:acc>");
   assert.match(xml, /<m:chr m:val="/, "Accent góc phải có m:chr");
-  assert.match(xml, /⌒/, "\\wideparen{AB} phải có ký hiệu cung ⌒");
+  assert.match(xml, /<m:acc><m:accPr><m:chr m:val="⏜"\/>/, "\\wideparen{AB} phải tạo OMML accent cung ⏜ (U+23DC)");
   assert.match(xml, /<m:begChr m:val="\["\/>/, "\\left[ array phải tạo delimiter begChr=[");
 
   const { getPromptTemplate } = require("../js/khbd-prompts.js");

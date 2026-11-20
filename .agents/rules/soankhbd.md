@@ -105,3 +105,20 @@ Mỗi phản biện của giáo viên là một "bản vá đỏ" bắt buộc h
      2. **Engine khôi phục toàn diện ký tự điều khiển:** Tự động sửa `\u0008egin` -> `\begin`, `\u0009ext` -> `\text`, `\u0009imes` -> `\times`, `(?<![\\f])rac{` -> `\frac{` trước khi xuất Word.
      3. **Nâng cấp công cụ rà soát lên V3.0 (Bảo vệ kép Dual-Layer):** Rà soát bắt buộc phải giải nén và quét trực tiếp file `word/document.xml` của file `.docx` thành phẩm. Bắt buộc kiểm tra cả thẻ `<m:t>` và `<w:t>`. Bất kỳ chuỗi rác nào (`egin`, `array`, `rac`, `\\vdots`, `&`, `\\`) xuất hiện trong file Word đều bị đánh FAIL ngay lập tức.
 
+7. **Bản vá 7 — Ký hiệu Cung tròn Toán 9 (`\wideparen`) & Thể thức Dấu nháy Kép Hành chính (NĐ 30/2020/NĐ-CP):**
+   - *Phản biện của Thầy:*
+     1. "Có vấn đề khi soạn giáo án toán 9. Số đo cung nó hiển thị như ảnh là sai" (Ký hiệu cung tròn `⌒` bị đặt nằm ngang phía trước mặt chữ cái `⌒AmB`, `⌒AnB` thay vì vòng cung úp trên đỉnh chữ).
+     2. "Khi trong word tạo dấu \" nên là dấu nháy của văn bản hành chính, rồi vẫn còn dấu ** kìa" (Dấu ngoặc kép trong Word bị thành dấu nháy thẳng typewriter ASCII `"`, và còn bị rò rỉ ký tự sao Markdown `***` / `**` do lỗi role break xé đôi khối tích hợp).
+   - *Quy chuẩn vá vĩnh viễn:*
+     1. **100% Ký hiệu Cung tròn Word Equation (`m:acc` với `\u23DC`):**
+        - Mọi ký hiệu cung tròn $\wideparen{AB}$, $\wideparen{AmB}$, $\wideparen{CD}$ và số đo cung $\text{sđ }\wideparen{AB}$ bắt buộc chuyển sang Office Math Accent `<m:acc>` với thuộc tính `m:chr val="⏜"` (`\u23DC` - TOP PARENTHESIS).
+        - Với ký tự này, font Cambria Math của Microsoft Word tự động co giãn ôm trọn đỉnh các chữ cái (kể cả 2 hay 3 chữ cái). TUYỆT ĐỐI CẤM để ký tự thô `⌒` (U+2312) nằm ngang phía trước chữ cái (`⌒AB`).
+     2. **100% Dấu nháy kép Hành chính (Nghị định 30/2020/NĐ-CP):**
+        - Mọi dấu ngoặc kép trong văn bản Word bắt buộc là cặp dấu nháy kép cong thông minh:
+          * Mở ngoặc kép: `“` (U+201C, Left Double Quotation Mark).
+          * Đóng ngoặc kép: `”` (U+201D, Right Double Quotation Mark).
+        - TUYỆT ĐỐI KHÔNG dùng dấu nháy thẳng máy đánh chữ ASCII `"` trong văn bản Word thành phẩm.
+     3. **Bảo toàn Cú pháp Markdown & Triệt tiêu Rò rỉ Dấu sao `***` / `**`:**
+        - Khóa an toàn trong `formatKhbdRoleLine`: Tuyệt đối không chèn ngắt dòng `<br>- **HS:** ` hoặc `<br>- **GV:** ` vào bên trong các khối tích hợp sư phạm `***...***` hoặc `**...**`.
+        - Phân bổ lại cặp thẻ `***` nếu có ngắt dòng `<br>` trong đoạn văn bản.
+        - Bộ lọc làm sạch cuối cùng trong `cleanPlainTextMath` và `de_cuong_docx_helper`: Tự động quét sạch và triệt tiêu 100% các ký tự sao rác `***`, `**` nếu bị rò rỉ ra văn bản Word.
