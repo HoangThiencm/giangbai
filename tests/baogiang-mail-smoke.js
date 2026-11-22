@@ -19,6 +19,8 @@ assert.match(html, /directButton\.disabled = !directAllowed/, 'nút gửi trực
 assert(html.includes(selfOnlyWarning), 'cảnh báo self-only phải rõ cách cấu hình');
 assert.match(html, /if \(baogiangMailStatus\.loaded && !baogiangMailStatus\.direct_delivery\)/, 'hàm gửi trực tiếp phải chặn trước khi POST');
 assert.match(html, /function buildTeacherBaoGiangWeekHtml\(/, 'email LBG giáo viên phải dùng mẫu riêng có cấu trúc');
+assert.match(html, /NGHỈ TOÀN TRƯỜNG/, 'email LBG phải có khối nghỉ toàn trường');
+assert.match(html, /background:#fef2f2; border:1px solid #fecaca/, 'khối ngày nghỉ LBG phải nổi bật');
 assert.match(html, /Lịch được gom theo ngày; buổi sáng và buổi chiều được ngăn cách rõ ràng\./, 'mẫu LBG giáo viên phải gom theo ngày và buổi');
 assert.match(html, /formatBaoGiangLessonDisplay\(row\)/, 'mẫu LBG giáo viên phải hiển thị PPCT/phân đoạn');
 
@@ -66,6 +68,29 @@ assert.match(html, /ics: buildTeacherBaoGiangIcs\(teacher, range, ordered, baoGi
     assert.match(ics, /TRIGGER:-PT15M/);
     assert.match(ics, /Giáo viên: Cô An/);
     assert.equal((ics.match(/BEGIN:VEVENT/g) || []).length, 3);
+}
+
+{
+    const vm = require('node:vm');
+    const start = html.indexOf('function buildTeacherBaoGiangWeekHtml');
+    const end = html.indexOf('const BAOGIANG_PERIOD_TIMES', start);
+    const context = vm.createContext({
+        escapeHtml: value => String(value ?? ''),
+        formatVnDate: value => { const [y, m, d] = String(value).split('-'); return `${d}/${m}/${y}`; },
+        baoGiangWeekdayLabel: () => 'Thứ Hai',
+        baoGiangDate: value => new Date(`${value}T00:00:00`),
+        baoGiangIso: date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+        baoGiangEmailActionsHtml: () => '',
+        formatBaoGiangLessonDisplay: row => row.lesson?.lesson || '',
+        isTeacherDayOff: (teacher, date) => date === '2026-11-23' ? { type: 'off', scope: 'all', reason: 'Nghỉ lễ 20/11' } : null
+    });
+    vm.runInContext(html.slice(start, end), context);
+    const rendered = vm.runInContext(`buildTeacherBaoGiangWeekHtml({ id: 'gv1', name: 'Cô An' }, { start: '2026-11-23', end: '2026-11-29' }, [
+        { date: '2026-11-24', session: 'morning', period: 1, subject: 'Toán', class_name: '8A1', lesson: { lesson: 'Đơn thức', ppct: '3' } }
+    ], '', '')`, context);
+    assert.match(rendered, /NGHỈ TOÀN TRƯỜNG \(Nghỉ lễ 20\/11\)/);
+    assert.match(rendered, /Thứ Hai, ngày 23\/11\/2026/);
+    assert.match(rendered, /Toán/);
 }
 
 console.log('PASS: trạng thái gửi email, chốt self-only, mẫu LBG giáo viên và tệp lịch .ics.');

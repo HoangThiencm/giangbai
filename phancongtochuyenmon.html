@@ -2078,6 +2078,7 @@
                 <button type="button" class="btn-small" onclick="openGeminiModelModal()" title="Cài đặt Model Gemini AI">
                     <i class="fas fa-robot text-indigo-600"></i> Model: <span id="tt-toolbar-model-label">2.5 Flash</span>
                 </button>
+                <button type="button" class="btn-small" onclick="openHolidaysManagerModal()"><i class="fas fa-calendar-xmark text-rose-600"></i> Quản lý Ngày nghỉ</button>
                 <button type="button" class="btn-small" onclick="goToNextTimetableTeacher(true)">GV tiếp theo ➔</button>
                 <button type="button" class="btn-small" onclick="saveTimetableForSelectedWeek()"><i class="fas fa-calendar-check"></i> Lưu TKB tuần này</button>
                 <button type="button" class="btn-small" onclick="clearCurrentTeacherTimetable()"><i class="fas fa-trash"></i> Xóa TKB GV này</button>
@@ -2090,6 +2091,7 @@
         <div class="panel-card" style="max-width:1100px; margin:0 auto; padding:20px;">
             <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:start;">
                 <div><h2 style="margin:0;color:#1e3a8a;"><i class="fas fa-envelope"></i> Gửi email</h2><p style="margin:6px 0;color:#64748b;">Chọn đúng loại lịch cần gửi. Email cá nhân của bạn dùng cấu hình gửi của hệ thống; email từng giáo viên khai báo trong phần Giáo viên.</p></div>
+                <button type="button" class="btn-small" onclick="openHolidaysManagerModal()"><i class="fas fa-calendar-xmark text-rose-600"></i> Quản lý Ngày nghỉ</button>
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 12px;">
                 <button type="button" class="btn-small btn-small-primary email-tab-btn active" data-email-tab="mine" onclick="switchEmailTab('mine')">1. TKB của tôi</button>
@@ -2099,11 +2101,20 @@
             <div id="email-mail-status" role="status" style="margin:0 0 12px;padding:11px 13px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#475569;font-size:.88rem;">Đang kiểm tra chế độ gửi email…</div>
             <section class="email-tab-pane" data-email-pane="mine" style="padding:16px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
                 <h3 style="margin:0 0 8px;color:#1e3a8a;">Thời khóa biểu của tôi</h3><p style="margin:0 0 12px;color:#475569;">Hệ thống tự tìm giáo viên khớp tài khoản đang đăng nhập (mã tài khoản hoặc họ tên) và gửi TKB đó về email cá nhân của bạn.</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px;">
+                    <label class="form-group" style="margin:0;min-width:180px;"><span>Tuần áp dụng TKB cần gửi</span><input id="email-tt-week" class="form-control" type="week" onchange="syncTimetableEmailWeek(this.value, 'email-tt-week')"></label>
+                    <span id="email-tt-week-label" style="font-size:.84rem;color:#475569;padding:8px 0;"></span>
+                </div>
                 <button type="button" class="btn-small btn-small-primary" onclick="sendMyTimetableEmail()"><i class="fas fa-paper-plane"></i> Gửi TKB của tôi về email cá nhân</button>
             </section>
             <section class="email-tab-pane" data-email-pane="all" hidden style="padding:16px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
                 <h3 style="margin:0 0 8px;color:#1e3a8a;">Tổng hợp TKB giáo viên</h3><p style="margin:0 0 12px;color:#475569;">Chọn giáo viên tại tab <b>Thời khóa biểu GV</b>, rồi gửi bản tổng hợp về email cá nhân của bạn.</p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px;">
+                    <label class="form-group" style="margin:0;min-width:180px;"><span>Tuần áp dụng TKB cần gửi</span><input id="email-tt-week-all" class="form-control" type="week" onchange="syncTimetableEmailWeek(this.value, 'email-tt-week-all')"></label>
+                    <span id="email-tt-week-all-label" style="font-size:.84rem;color:#475569;padding:8px 0;"></span>
+                </div>
                 <button type="button" class="btn-small btn-small-primary" onclick="sendSelectedTeachersTimetableEmail()"><i class="fas fa-envelope"></i> Gửi TKB đã chọn về email tôi</button>
+                <button type="button" class="btn-small" onclick="sendSelectedTeachersIndividualTimetableEmail()" style="margin-left:8px;"><i class="fas fa-paper-plane"></i> Gửi riêng TKB tuần này cho từng GV đã chọn</button>
             </section>
             <section class="email-tab-pane" data-email-pane="baogiang" hidden style="padding:16px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;">
                 <h3 style="margin:0 0 8px;color:#1e3a8a;">Lịch báo giảng cá nhân từng giáo viên</h3><p style="margin:0 0 12px;color:#475569;">Chọn tuần, tích giáo viên và kiểm tra email trước khi gửi. Mỗi người chỉ nhận lịch của chính mình.</p>
@@ -2124,6 +2135,7 @@
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;">
                     <button type="button" class="btn-small" onclick="openBaoGiangConfigModal()"><i class="fas fa-sliders"></i> Cài đặt PPCT &amp; Lịch nghỉ</button>
+                    <button type="button" class="btn-small" onclick="openHolidaysManagerModal()"><i class="fas fa-calendar-xmark text-rose-600"></i> Quản lý Ngày nghỉ</button>
                     <label class="form-group" style="margin:0;min-width:240px;"><span>Định dạng Lịch</span><select id="bg-ics-format" class="form-control" onchange="syncBaoGiangIcsFormat(this.value)"><option value="allday" selected>Tiết 1, 2, 3... không gán giờ</option><option value="timed">Kèm khung giờ</option></select></label>
                     <button type="button" class="btn-small" onclick="exportCurrentBaoGiangIcs()" title="Tải file lịch để nhập vào Google Calendar hoặc ứng dụng Lịch"><i class="fas fa-calendar-plus text-indigo-600"></i> Xuất Google Calendar (.ics)</button>
                     <button type="button" class="btn-small" onclick="openBaoGiangCalendarFeedModal()" title="Đăng ký lịch một lần, iPhone và Google Calendar tự cập nhật cả năm"><i class="fas fa-link text-indigo-600"></i> Đồng bộ Lịch (iPhone / Google Calendar)</button>
@@ -2970,12 +2982,74 @@
                         <label class="form-group" style="grid-column:1/-1;">Tiết/bài cụ thể của tôi<select id="bg-ex-lesson" class="form-control"><option value="">Chọn ngày để xem các tiết của tôi</option></select></label>
                     </div>
                     <button class="btn-small" type="button" style="margin-top:10px;" onclick="addBaoGiangException()"><i class="fas fa-plus"></i> Thêm ngoại lệ</button>
+                    <button class="btn-small" type="button" style="margin-top:10px;margin-left:8px;" onclick="openHolidaysManagerModal()"><i class="fas fa-calendar-xmark"></i> Mở Quản lý Ngày nghỉ</button>
                     <div id="bg-exceptions" style="margin-top:8px;"></div>
                 </section>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn-small" onclick="closeBaoGiangConfigModal()">Đóng</button>
                 <button type="button" class="btn-small btn-small-primary" onclick="closeBaoGiangConfigModal(); renderBaoGiangView(); showToast('Đã áp dụng cấu hình PPCT & lịch nghỉ.', 'success');"><i class="fas fa-check"></i> Lưu &amp; Áp dụng</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-manage-holidays">
+        <div class="modal-card" style="max-width:920px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-calendar-xmark"></i> Quản lý Ngày nghỉ &amp; Ngoại lệ</h2>
+                <button class="modal-close" type="button" onclick="closeHolidaysManagerModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding:20px;">
+                <section style="margin-bottom:18px;padding:14px;border:1px solid #fecaca;border-radius:10px;background:#fff7f7;">
+                    <h3 style="margin:0 0 8px;color:#9f1239;font-size:1rem;">Thêm nhanh theo tuần</h3>
+                    <p style="margin:0 0 10px;color:#64748b;font-size:.82rem;">Chọn một tuần, tick một hoặc nhiều ngày (kể cả hai ngày không liền nhau), rồi lưu một lần.</p>
+                    <label class="form-group" style="max-width:240px;">Tuần áp dụng<input type="week" id="hl-week-input" class="form-control" onchange="renderWeeklyHolidayCheckboxes()"></label>
+                    <div id="hl-week-days" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:8px 0 12px;"></div>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;">
+                        <label><input type="radio" name="hl-scope" value="all" checked onchange="onHolidayScopeChange()"> Toàn trường (Tất cả GV &amp; học sinh)</label>
+                        <label><input type="radio" name="hl-scope" value="teacher" onchange="onHolidayScopeChange()"> Giáo viên cá nhân</label>
+                    </div>
+                    <div id="hl-teacher-wrap" style="display:none;margin-bottom:10px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
+                        <label style="display:block;margin-bottom:6px;"><input type="checkbox" id="hl-teacher-all" onchange="toggleHolidayTeacherChecks(this.checked)"> Chọn tất cả</label>
+                        <div id="hl-teachers" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px;"></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+                        <label class="form-group">Buổi nghỉ<select id="hl-session" class="form-control"><option value="all_day">Cả ngày</option><option value="morning">Buổi sáng</option><option value="afternoon">Buổi chiều</option></select></label>
+                        <label class="form-group">Lý do nghỉ<input id="hl-reason" class="form-control" list="hl-reason-options" placeholder="Ví dụ: Nghỉ lễ"></label>
+                        <datalist id="hl-reason-options">
+                            <option value="Nghỉ lễ"></option>
+                            <option value="Nghỉ Giỗ Tổ Hùng Vương"></option>
+                            <option value="Nghỉ 30/4 - 1/5"></option>
+                            <option value="Nghỉ Tết"></option>
+                            <option value="Công tác"></option>
+                            <option value="Tập huấn"></option>
+                            <option value="Nghỉ phép"></option>
+                            <option value="Hội nghị"></option>
+                        </datalist>
+                    </div>
+                    <button type="button" class="btn-small btn-small-primary" onclick="saveWeeklyHolidayBatch()"><i class="fas fa-plus"></i> Lưu các ngày nghỉ đã chọn</button>
+                </section>
+                <section style="margin-bottom:18px;padding:14px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;">
+                    <h3 style="margin:0 0 8px;color:#1e3a8a;font-size:1rem;">Thêm theo khoảng ngày dài</h3>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
+                        <label class="form-group">Từ ngày<input id="hl-range-from" class="form-control" type="date"></label>
+                        <label class="form-group">Đến ngày<input id="hl-range-to" class="form-control" type="date"></label>
+                        <label class="form-group">Đối tượng<select id="hl-range-scope" class="form-control" onchange="onHolidayRangeScopeChange()"><option value="all">Toàn trường</option><option value="teacher">Giáo viên cá nhân</option></select></label>
+                        <label class="form-group">Buổi<select id="hl-range-session" class="form-control"><option value="all_day">Cả ngày</option><option value="morning">Buổi sáng</option><option value="afternoon">Buổi chiều</option></select></label>
+                        <label class="form-group" style="grid-column:1/-1;">Lý do<input id="hl-range-reason" class="form-control" list="hl-reason-options" placeholder="Ví dụ: Nghỉ Tết"></label>
+                    </div>
+                    <div id="hl-range-teacher-wrap" style="display:none;margin:8px 0;padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;">
+                        <div id="hl-range-teachers" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px;"></div>
+                    </div>
+                    <button type="button" class="btn-small btn-small-primary" onclick="saveHolidayDateRange()"><i class="fas fa-plus"></i> Lưu khoảng ngày nghỉ</button>
+                </section>
+                <section>
+                    <h3 style="margin:0 0 8px;color:#1e3a8a;font-size:1rem;">Ngày nghỉ đã lưu</h3>
+                    <div id="hl-list"></div>
+                </section>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-small" onclick="closeHolidaysManagerModal()">Đóng</button>
             </div>
         </div>
     </div>
@@ -3725,14 +3799,22 @@
         function buildTeacherBaoGiangWeekHtml(teacher, range, ordered, webcalUrl, pageUrl) {
             const sessionMeta = { morning: { label: 'Buổi sáng', background: '#fff7ed', color: '#9a3412' }, afternoon: { label: 'Buổi chiều', background: '#eff6ff', color: '#1d4ed8' }, makeup: { label: 'Dạy bù', background: '#f0fdf4', color: '#047857' } };
             const byDate = ordered.reduce((groups, row) => { (groups.get(row.date) || (groups.set(row.date, []), groups.get(row.date))).push(row); return groups; }, new Map());
-            const days = [...byDate.entries()].map(([date, dayRows]) => {
+            const weekDates = (range && range.start) ? Array.from({ length: 6 }, (_, index) => { const date = baoGiangDate(range.start); date.setDate(date.getDate() + index); return baoGiangIso(date); }) : [...byDate.keys()];
+            const days = weekDates.map(date => {
+                const dayRows = byDate.get(date) || [];
+                const morningOff = isTeacherDayOff(teacher, date, 'morning');
+                const afternoonOff = isTeacherDayOff(teacher, date, 'afternoon');
+                const fullOff = morningOff && afternoonOff;
+                const off = fullOff ? (morningOff || afternoonOff) : null;
+                const notice = off ? `<div style="margin:0 0 16px; padding:12px 14px; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; color:#991b1b;"><b style="font-size:14px;"><i class="fas fa-calendar-xmark"></i> ${escapeHtml(baoGiangWeekdayLabel(date))}, ngày ${escapeHtml(formatVnDate(date))}</b>: ${off.scope === 'all' ? 'NGHỈ TOÀN TRƯỜNG' : 'NGHỈ CÁ NHÂN'} (${escapeHtml(off.reason || (off.scope === 'all' ? 'Nghỉ theo quy định' : 'Cá nhân nghỉ'))})</div>` : '';
+                if (!dayRows.length) return notice;
                 const sessions = ['morning', 'afternoon', 'makeup'].map(session => {
                     const rows = dayRows.filter(row => row.session === session);
                     if (!rows.length) return '';
                     const meta = sessionMeta[session];
                     return `<tr><td colspan="5" style="padding:9px 10px;background:${meta.background};color:${meta.color};font-weight:700;border-top:2px solid #cbd5e1;">${meta.label}</td></tr>${rows.map((row, index) => `<tr style="background:${index % 2 ? '#f8fafc' : '#ffffff'};"><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#334155;white-space:nowrap;">${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `Tiết ${row.period}`)}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;color:#1e3a8a;">${escapeHtml(row.class_name)}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;"><span style="display:inline-block;background:#e0f2fe;color:#0369a1;padding:3px 7px;border-radius:999px;font-weight:700;font-size:12px;">${escapeHtml(row.subject)}</span></td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;color:#0f172a;line-height:1.4;">${escapeHtml(row.lesson ? formatBaoGiangLessonDisplay(row) : 'Chưa khai báo PPCT')}</td><td style="padding:10px 8px;border-bottom:1px solid #e2e8f0;text-align:center;color:#047857;font-weight:700;white-space:nowrap;">${escapeHtml(`${row.lesson?.ppct || '—'}${row.lesson?.segment ? ` · ${row.lesson.segment}` : ''}`)}</td></tr>`).join('')}`;
                 }).join('');
-                return `<div style="margin:0 0 18px;border:1px solid #dbeafe;border-radius:10px;overflow:hidden;"><div style="padding:11px 12px;background:#dbeafe;color:#1e3a8a;font-weight:700;font-size:15px;">${escapeHtml(baoGiangWeekdayLabel(date))}, ngày ${escapeHtml(formatVnDate(date))}</div><div style="overflow-x:auto;"><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;min-width:640px;font-size:13px;"><thead><tr style="background:#f8fafc;color:#475569;"><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Tiết</th><th style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Lớp</th><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Môn</th><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Bài dạy</th><th style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">PPCT</th></tr></thead><tbody>${sessions}</tbody></table></div></div>`;
+                return `${notice}<div style="margin:0 0 18px;border:1px solid #dbeafe;border-radius:10px;overflow:hidden;"><div style="padding:11px 12px;background:#dbeafe;color:#1e3a8a;font-weight:700;font-size:15px;">${escapeHtml(baoGiangWeekdayLabel(date))}, ngày ${escapeHtml(formatVnDate(date))}</div><div style="overflow-x:auto;"><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;min-width:640px;font-size:13px;"><thead><tr style="background:#f8fafc;color:#475569;"><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Tiết</th><th style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Lớp</th><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Môn</th><th align="left" style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">Bài dạy</th><th style="padding:9px 8px;border-bottom:1px solid #cbd5e1;">PPCT</th></tr></thead><tbody>${sessions}</tbody></table></div></div>`;
             }).join('');
             return `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:980px;margin:0 auto;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 4px 18px rgba(15,23,42,.12);"><div style="padding:24px 28px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#ffffff;"><div style="font-size:13px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;">Lịch báo giảng cá nhân</div><div style="font-size:25px;font-weight:700;margin-top:6px;">${escapeHtml(teacher.name)}</div><div style="font-size:14px;margin-top:8px;opacity:.9;">Tuần ${escapeHtml(range.start)} – ${escapeHtml(range.end)} · ${ordered.length} tiết dạy đã được ghép theo TKB và PPCT</div></div><div style="padding:22px 28px 8px;"><p style="margin:0 0 16px;color:#475569;font-size:14px;">Lịch được gom theo ngày; buổi sáng và buổi chiều được ngăn cách rõ ràng.</p>${days}${baoGiangEmailActionsHtml(pageUrl, webcalUrl)}</div><div style="padding:16px 28px 22px;color:#64748b;font-size:12px;border-top:1px solid #e2e8f0;">Lịch được tạo tự động từ thời khóa biểu, PPCT và các ngày nghỉ/dạy bù đã khai báo.</div></div></div>`;
         }
@@ -4042,12 +4124,55 @@
             renderBaoGiangMailStatus();
             loadBaoGiangMailStatus();
             if (tabName === 'baogiang') renderEmailRecipientList();
+            ['email-tt-week', 'email-tt-week-all'].forEach(id => {
+                const input = document.getElementById(id);
+                if (!input) return;
+                if (!input.value) input.value = baoGiangWeekValueFromDate(baoGiangIso(new Date()));
+                syncTimetableEmailWeek(input.value, id);
+            });
         }
 
         function syncBaoGiangEmailWeek(value) {
             const range = baoGiangWeekRange(value);
             const label = document.getElementById('email-bg-send-week-label');
             if (label) label.textContent = range ? `Từ ${formatVnDate(range.start)} đến ${formatVnDate(range.end)}` : '';
+            syncTimetableEmailWeek(value, 'email-bg-send-week');
+        }
+
+        function syncTimetableEmailWeek(value, sourceId) {
+            const text = timetableWeekHolidayLabel(value);
+            const labelId = sourceId === 'email-tt-week-all' ? 'email-tt-week-all-label' : 'email-tt-week-label';
+            const label = document.getElementById(labelId);
+            if (label && sourceId !== 'email-bg-send-week') label.textContent = text;
+            if (!sourceId || sourceId === 'email-tt-week') {
+                const mine = document.getElementById('email-tt-week-label');
+                if (mine && document.getElementById('email-tt-week')?.value === value) mine.textContent = text;
+            }
+        }
+
+        function timetableWeekHolidayLabel(weekValue) {
+            const range = baoGiangWeekRange(weekValue);
+            if (!range) return '';
+            const start = baoGiangDate(range.start);
+            const names = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+            const offDays = [];
+            for (let index = 0; index < 6; index++) {
+                const date = new Date(start);
+                date.setDate(start.getDate() + index);
+                const iso = baoGiangIso(date);
+                const hit = (state.bao_giang?.exceptions || []).some(ex => {
+                    if (ex.type !== 'off') return false;
+                    const from = ex.start_date || ex.date;
+                    const to = ex.end_date || from;
+                    return iso >= from && iso <= to;
+                });
+                if (hit) offDays.push(names[index]);
+            }
+            const teachingWeek = baoGiangTeachingWeek(range.start, state.bao_giang?.start_date);
+            const isoWeek = Number(String(weekValue || '').split('W')[1]) || '';
+            const fromLabel = formatVnDate(range.start).replace(/\/\d{4}$/, '');
+            const offLabel = offDays.length ? ` — ${offDays.length} ngày nghỉ (${offDays.join(', ')})` : '';
+            return `Tuần ${teachingWeek || isoWeek} (Từ ${fromLabel} đến ${formatVnDate(range.end)})${offLabel}`;
         }
 
         function renderEmailRecipientList() {
@@ -7201,25 +7326,203 @@
             saveToLocal();
         }
 
-        function timetableEmailSessionTable(teacher, session) {
+        function ensureHolidayExceptions() {
+            if (!state.bao_giang) state.bao_giang = { exceptions: [], recipient_ids: [] };
+            if (!Array.isArray(state.bao_giang.exceptions)) state.bao_giang.exceptions = [];
+            return state.bao_giang.exceptions;
+        }
+
+        function isTeacherDayOff(teacher, dateStr, session) {
+            return (state.bao_giang?.exceptions || []).find(ex => {
+                if (ex.type !== 'off') return false;
+                const from = ex.start_date || ex.date, to = ex.end_date || from;
+                if (!from || dateStr < from || dateStr > to) return false;
+                const exSession = ex.session || 'all_day';
+                if (exSession !== 'all_day' && exSession !== session) return false;
+                return baoGiangMatchesException(ex, { date: dateStr, session, teacher_id: teacher?.id, teacher_name: teacher?.name });
+            });
+        }
+
+        function holidayDatesForWeek(weekValue) {
+            const range = baoGiangWeekRange(weekValue);
+            if (!range) return [];
+            const start = baoGiangDate(range.start);
+            return TT_DAYS.map((day, index) => {
+                const date = new Date(start);
+                date.setDate(start.getDate() + index);
+                return { day, date: baoGiangIso(date), label: TT_DAY_LABELS[day] };
+            });
+        }
+
+        function openHolidaysManagerModal() {
+            ensureHolidayExceptions();
+            const modal = document.getElementById('modal-manage-holidays');
+            const week = document.getElementById('hl-week-input');
+            if (week && !week.value) {
+                const today = new Date();
+                week.value = baoGiangWeekValueFromDate(baoGiangIso(today));
+            }
+            renderHolidayTeacherChecks('hl-teachers', 'hl-teacher');
+            renderHolidayTeacherChecks('hl-range-teachers', 'hl-range-teacher');
+            renderWeeklyHolidayCheckboxes();
+            onHolidayScopeChange();
+            onHolidayRangeScopeChange();
+            renderHolidaysList();
+            modal?.classList.add('active');
+        }
+
+        function closeHolidaysManagerModal() {
+            document.getElementById('modal-manage-holidays')?.classList.remove('active');
+        }
+
+        function onHolidayScopeChange() {
+            const scope = document.querySelector('input[name="hl-scope"]:checked')?.value;
+            const wrap = document.getElementById('hl-teacher-wrap');
+            if (wrap) wrap.style.display = scope === 'teacher' ? '' : 'none';
+        }
+
+        function onHolidayRangeScopeChange() {
+            const scope = document.getElementById('hl-range-scope')?.value;
+            const wrap = document.getElementById('hl-range-teacher-wrap');
+            if (wrap) wrap.style.display = scope === 'teacher' ? '' : 'none';
+        }
+
+        function renderHolidayTeacherChecks(containerId, inputClass) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            container.innerHTML = (state.teachers || []).map(teacher => `<label style="font-size:.86rem;"><input type="checkbox" class="${inputClass}" value="${escapeHtml(String(teacher.id))}" data-name="${escapeHtml(teacher.name || '')}"> ${escapeHtml(teacher.name || '')}</label>`).join('') || '<span style="color:#64748b;">Chưa có giáo viên trong tổ.</span>';
+        }
+
+        function toggleHolidayTeacherChecks(checked) {
+            document.querySelectorAll('.hl-teacher').forEach(input => { input.checked = checked; });
+        }
+
+        function renderWeeklyHolidayCheckboxes() {
+            const box = document.getElementById('hl-week-days');
+            const weekValue = document.getElementById('hl-week-input')?.value;
+            if (!box) return;
+            const days = holidayDatesForWeek(weekValue);
+            if (!days.length) { box.innerHTML = '<span style="color:#64748b;">Chọn một tuần hợp lệ.</span>'; return; }
+            box.innerHTML = days.map(item => {
+                const shown = formatVnDate(item.date).replace(/\/\d{4}$/, '');
+                return `<label style="padding:8px;border:1px solid #fecaca;border-radius:8px;background:#fff;font-size:.86rem;"><input type="checkbox" class="hl-week-day" value="${escapeHtml(item.date)}" data-day="${escapeHtml(item.day)}"> ${escapeHtml(item.label)} (${escapeHtml(shown)})</label>`;
+            }).join('');
+        }
+
+        function selectedHolidayTeachers(inputClass) {
+            return [...document.querySelectorAll(`.${inputClass}:checked`)].map(input => ({ id: input.value, name: input.dataset.name || '' }));
+        }
+
+        function pushHolidayException(record) {
+            const list = ensureHolidayExceptions();
+            const duplicate = list.some(ex => ex.type === 'off' && ex.start_date === record.start_date && ex.end_date === record.end_date && ex.session === record.session && ex.scope === record.scope && String(ex.teacher_id || '') === String(record.teacher_id || '') && ex.reason === record.reason);
+            if (!duplicate) list.push(record);
+        }
+
+        function persistHolidayExceptions(message) {
+            saveToLocal();
+            if (typeof saveToDB === 'function') saveToDB();
+            renderHolidaysList();
+            if (typeof renderBaoGiangView === 'function') renderBaoGiangView();
+            ['email-tt-week', 'email-tt-week-all'].forEach(id => {
+                const input = document.getElementById(id);
+                if (input?.value) syncTimetableEmailWeek(input.value, id);
+            });
+            showToast(message, 'success');
+        }
+
+        function saveWeeklyHolidayBatch() {
+            const dates = [...document.querySelectorAll('.hl-week-day:checked')].map(input => input.value);
+            if (!dates.length) return showToast('Hãy tick ít nhất một ngày nghỉ trong tuần.', 'error');
+            const scope = document.querySelector('input[name="hl-scope"]:checked')?.value || 'all';
+            const session = document.getElementById('hl-session')?.value || 'all_day';
+            const reason = document.getElementById('hl-reason')?.value.trim() || '';
+            const teachers = scope === 'teacher' ? selectedHolidayTeachers('hl-teacher') : [];
+            if (scope === 'teacher' && !teachers.length) return showToast('Hãy chọn giáo viên nghỉ.', 'error');
+            const targets = scope === 'teacher' ? teachers : [{ id: '', name: '' }];
+            const stamp = Date.now();
+            let count = 0;
+            dates.forEach((date, dateIndex) => targets.forEach((teacher, teacherIndex) => {
+                pushHolidayException({ id: `hl_${stamp}_${dateIndex}_${teacherIndex}`, date, start_date: date, end_date: date, type: 'off', scope, session, reason, teacher_id: teacher.id, teacher_name: teacher.name, target: teacher.id || teacher.name || '' });
+                count += 1;
+            }));
+            persistHolidayExceptions(`Đã lưu ${count} ngày nghỉ.`);
+        }
+
+        function saveHolidayDateRange() {
+            const start_date = document.getElementById('hl-range-from')?.value;
+            const end_date = document.getElementById('hl-range-to')?.value || start_date;
+            if (!start_date) return showToast('Hãy chọn từ ngày.', 'error');
+            if (end_date < start_date) return showToast('Đến ngày không được trước từ ngày.', 'error');
+            const scope = document.getElementById('hl-range-scope')?.value || 'all';
+            const session = document.getElementById('hl-range-session')?.value || 'all_day';
+            const reason = document.getElementById('hl-range-reason')?.value.trim() || '';
+            const teachers = scope === 'teacher' ? selectedHolidayTeachers('hl-range-teacher') : [{ id: '', name: '' }];
+            if (scope === 'teacher' && !teachers[0]?.id) return showToast('Hãy chọn giáo viên nghỉ.', 'error');
+            const stamp = Date.now();
+            teachers.forEach((teacher, index) => pushHolidayException({ id: `hl_${stamp}_range_${index}`, date: start_date, start_date, end_date, type: 'off', scope, session, reason, teacher_id: teacher.id, teacher_name: teacher.name, target: teacher.id || teacher.name || '' }));
+            persistHolidayExceptions('Đã lưu khoảng ngày nghỉ.');
+        }
+
+        function renderHolidaysList() {
+            const container = document.getElementById('hl-list');
+            if (!container) return;
+            const rows = ensureHolidayExceptions().filter(ex => ex.type === 'off');
+            if (!rows.length) { container.innerHTML = '<p style="color:#64748b;font-size:.85rem;">Chưa có ngày nghỉ.</p>'; return; }
+            container.innerHTML = `<div style="overflow:auto;"><table class="data-table"><thead><tr><th>Ngày/Khoảng ngày</th><th>Thứ</th><th>Buổi</th><th>Đối tượng</th><th>Lý do</th><th>Thao tác</th></tr></thead><tbody>${rows.map(ex => {
+                const from = ex.start_date || ex.date;
+                const to = ex.end_date || from;
+                const span = from === to ? formatVnDate(from) : `${formatVnDate(from)} – ${formatVnDate(to)}`;
+                const session = ex.session === 'morning' ? 'Buổi sáng' : ex.session === 'afternoon' ? 'Buổi chiều' : 'Cả ngày';
+                const who = ex.scope === 'all' ? 'Toàn trường' : (ex.teacher_name || 'Cá nhân');
+                return `<tr><td>${escapeHtml(span)}</td><td>${escapeHtml(baoGiangWeekdayLabel(from))}</td><td>${escapeHtml(session)}</td><td>${escapeHtml(who)}</td><td>${escapeHtml(ex.reason || '')}</td><td><button type="button" class="btn-small" onclick="deleteHolidayException('${escapeHtml(ex.id)}')">Xóa</button></td></tr>`;
+            }).join('')}</tbody></table></div>`;
+        }
+
+        function deleteHolidayException(id) {
+            state.bao_giang.exceptions = ensureHolidayExceptions().filter(ex => ex.id !== id);
+            saveToLocal();
+            renderHolidaysList();
+            if (typeof renderBaoGiangView === 'function') renderBaoGiangView();
+            showToast('Đã xóa ngày nghỉ.', 'success');
+        }
+
+        function timetableEmailDayOffHtml(dayOff) {
+            const title = dayOff.scope === 'all' ? 'NGHỈ LỄ' : 'NGHỈ PHÉP';
+            const reason = dayOff.reason || (dayOff.scope === 'all' ? 'Nghỉ theo quy định' : 'Cá nhân nghỉ');
+            return `<div style="padding:6px; background:#f1f5f9; border-radius:6px; color:#475569; font-weight:700; font-size:12px;">${title}: ${escapeHtml(reason)}<br><span style="font-weight:normal; font-size:11px; color:#64748b;">${escapeHtml(reason)}</span></div>`;
+        }
+
+        function timetableEmailSessionTable(teacher, session, weekRange = null) {
             const timetable = normalizeTeacherTimetable(teacher.timetable);
             const periods = periodsForTimetableSession(session, timetable);
             const title = session === 'morning' ? 'Buổi sáng' : 'Buổi chiều';
+            const dates = weekRange ? holidayDatesForWeek(baoGiangWeekValueFromDate(weekRange.start)) : [];
+            const dateByDay = Object.fromEntries(dates.map(item => [item.day, item.date]));
             const rows = periods.map(period => `<tr><th style="padding:8px;border:1px solid #cbd5e1;background:#f8fafc;text-align:left;white-space:nowrap;">Tiết ${period}</th>${TT_DAYS.map(day => {
+                const dayOff = weekRange ? isTeacherDayOff(teacher, dateByDay[day], session) : null;
                 const cell = parseTimetableCell(timetable[session]?.[day]?.[String(period)]);
-                const value = cell ? `${escapeHtml(cell.subject || '—')}<br><span style="color:#475569;font-size:12px;">${escapeHtml(cell.class_name || '')}</span>` : '<span style="color:#94a3b8;">—</span>';
+                const value = dayOff ? timetableEmailDayOffHtml(dayOff) : (cell ? `${escapeHtml(cell.subject || '—')}<br><span style="color:#475569;font-size:12px;">${escapeHtml(cell.class_name || '')}</span>` : '<span style="color:#94a3b8;">—</span>');
                 return `<td style="padding:8px;border:1px solid #cbd5e1;text-align:center;vertical-align:top;min-width:82px;">${value}</td>`;
             }).join('')}</tr>`).join('');
-            return `<div style="margin-top:16px;"><div style="padding:8px 10px;background:${session === 'morning' ? '#fff7ed' : '#eff6ff'};color:${session === 'morning' ? '#9a3412' : '#1d4ed8'};font-weight:700;">${title}</div><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-size:13px;"><thead><tr><th style="padding:8px;border:1px solid #cbd5e1;background:#e2e8f0;text-align:left;">Tiết</th>${TT_DAYS.map(day => `<th style="padding:8px;border:1px solid #cbd5e1;background:#e2e8f0;">${TT_DAY_LABELS[day]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+            const headers = TT_DAYS.map(day => {
+                const date = dateByDay[day];
+                const dayOff = weekRange ? isTeacherDayOff(teacher, date, session) : null;
+                const badge = dayOff && dayOff.scope === 'all' ? ' (Nghỉ)' : '';
+                const caption = date ? `${TT_DAY_LABELS[day]}<br><small>${escapeHtml(formatVnDate(date).replace(/\/\d{4}$/, ''))}</small>${badge}` : TT_DAY_LABELS[day];
+                return `<th style="padding:8px;border:1px solid #cbd5e1;background:#e2e8f0;">${caption}</th>`;
+            }).join('');
+            return `<div style="margin-top:16px;"><div style="padding:8px 10px;background:${session === 'morning' ? '#fff7ed' : '#eff6ff'};color:${session === 'morning' ? '#9a3412' : '#1d4ed8'};font-weight:700;">${title}</div><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse;width:100%;font-size:13px;"><thead><tr><th style="padding:8px;border:1px solid #cbd5e1;background:#e2e8f0;text-align:left;">Tiết</th>${headers}</tr></thead><tbody>${rows}</tbody></table></div>`;
         }
 
-        function buildSelectedTeachersTimetableEmail(teacherIds) {
+        function buildSelectedTeachersTimetableEmail(teacherIds, weekValue) {
             const ids = new Set((teacherIds || []).map(String));
             const teachers = (state.teachers || []).filter(t => ids.has(String(t.id)) && timetableHasLessons(t.timetable));
             if (!teachers.length) throw new Error('Hãy chọn ít nhất một giáo viên đã có Thời khóa biểu.');
+            const weekRange = weekValue ? baoGiangWeekRange(weekValue) : null;
             const schoolYear = state.info?.school_year || teachers[0]?.timetable?.school_year || '';
             const semester = state.info?.semester || teachers[0]?.timetable?.semester || '';
-            const cards = teachers.map(teacher => `<section style="margin:0 0 22px;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;background:#fff;"><div style="padding:16px 18px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;"><div style="font-size:19px;font-weight:700;">${escapeHtml(teacher.name || 'Giáo viên')}</div><div style="margin-top:4px;font-size:13px;opacity:.9;">${escapeHtml(teacher.role || 'GV')} · ${countTimetableLessons(teacher.timetable)} tiết</div></div><div style="padding:0 14px 14px;overflow-x:auto;">${timetableEmailSessionTable(teacher, 'morning')}${timetableEmailSessionTable(teacher, 'afternoon')}</div></section>`).join('');
+            const cards = teachers.map(teacher => `<section style="margin:0 0 22px;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;background:#fff;"><div style="padding:16px 18px;background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff;"><div style="font-size:19px;font-weight:700;">${escapeHtml(teacher.name || 'Giáo viên')}</div><div style="margin-top:4px;font-size:13px;opacity:.9;">${escapeHtml(teacher.role || 'GV')} · ${countTimetableLessons(teacher.timetable)} tiết</div></div><div style="padding:0 14px 14px;overflow-x:auto;">${timetableEmailSessionTable(teacher, 'morning', weekRange)}${timetableEmailSessionTable(teacher, 'afternoon', weekRange)}</div></section>`).join('');
             const plain = teachers.map(teacher => `${teacher.name || 'Giáo viên'} (${teacher.role || 'GV'}) — ${countTimetableLessons(teacher.timetable)} tiết`).join('\n');
             return {
                 subject: `Thời khóa biểu ${teachers.length} giáo viên${schoolYear ? ` - ${schoolYear}` : ''}${semester ? ` ${semester}` : ''}`,
@@ -7228,13 +7531,14 @@
             };
         }
 
-        function buildTeacherIndividualTimetableEmail(teacher, recipient = teacher?.email, requireRecipient = true, webcalUrl) {
+        function buildTeacherIndividualTimetableEmail(teacher, recipient = teacher?.email, requireRecipient = true, webcalUrl, weekValue) {
             if (requireRecipient && (!recipient || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipient))) throw new Error(`Giáo viên ${teacher?.name || ''} chưa có email hợp lệ.`);
             if (!timetableHasLessons(teacher.timetable)) throw new Error(`Giáo viên ${teacher.name} chưa có Thời khóa biểu.`);
+            const weekRange = weekValue ? baoGiangWeekRange(weekValue) : null;
             const schoolYear = state.info?.school_year || teacher.timetable?.school_year || '';
             const semester = state.info?.semester || teacher.timetable?.semester || '';
             const plain = ['morning', 'afternoon'].map(session => `${session === 'morning' ? 'Buổi sáng' : 'Buổi chiều'}:\n${periodsForTimetableSession(session, normalizeTeacherTimetable(teacher.timetable)).map(period => `Tiết ${period}: ${TT_DAYS.map(day => { const cell=parseTimetableCell(normalizeTeacherTimetable(teacher.timetable)[session]?.[day]?.[String(period)]); return `${TT_DAY_LABELS[day]} ${cell ? `${cell.subject} (${cell.class_name})` : '—'}`; }).join(' | ')}`).join('\n')}`).join('\n\n');
-            const email = { subject: `Thời khóa biểu - ${teacher.name}${schoolYear ? ` (${schoolYear})` : ''}`, body: `Kính gửi thầy/cô ${teacher.name},\n\n${plain}\n\nTrân trọng.`, html: `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:900px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;"><div style="padding:22px;background:#0f3b82;color:#fff;"><div style="font-size:24px;font-weight:700;">Thời khóa biểu - ${escapeHtml(teacher.name)}</div><div style="margin-top:5px;">${escapeHtml([schoolYear, semester].filter(Boolean).join(' · '))}</div></div><div style="padding:0 16px 18px;overflow-x:auto;">${timetableEmailSessionTable(teacher, 'morning')}${timetableEmailSessionTable(teacher, 'afternoon')}${calendarSubscribeButtonsHtml(webcalUrl)}</div></div></div>` };
+            const email = { subject: `Thời khóa biểu - ${teacher.name}${schoolYear ? ` (${schoolYear})` : ''}`, body: `Kính gửi thầy/cô ${teacher.name},\n\n${plain}\n\nTrân trọng.`, html: `<div style="margin:0;padding:24px 12px;background:#f1f5f9;font-family:Arial,sans-serif;color:#0f172a;"><div style="max-width:900px;margin:auto;background:#fff;border-radius:12px;overflow:hidden;"><div style="padding:22px;background:#0f3b82;color:#fff;"><div style="font-size:24px;font-weight:700;">Thời khóa biểu - ${escapeHtml(teacher.name)}</div><div style="margin-top:5px;">${escapeHtml([schoolYear, semester].filter(Boolean).join(' · '))}</div></div><div style="padding:0 16px 18px;overflow-x:auto;">${timetableEmailSessionTable(teacher, 'morning', weekRange)}${timetableEmailSessionTable(teacher, 'afternoon', weekRange)}${calendarSubscribeButtonsHtml(webcalUrl)}</div></div></div>` };
             if (recipient) email.to = String(recipient).trim();
             return email;
         }
@@ -7251,7 +7555,7 @@
             try {
                 const teacher = currentUserTeacher();
                 if (!teacher) throw new Error('Chưa tìm thấy giáo viên khớp với tài khoản đang đăng nhập. Hãy kiểm tra mã hoặc họ tên giáo viên.');
-                const email = buildTeacherIndividualTimetableEmail(teacher, '', false, (await baoGiangCalendarFeedWebcal(teacher.id)).webcal_url);
+                const email = buildTeacherIndividualTimetableEmail(teacher, '', false, (await baoGiangCalendarFeedWebcal(teacher.id)).webcal_url, document.getElementById('email-tt-week')?.value || '');
                 const response = await fetch('api/baogiang_mail.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify(email) });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể gửi Thời khóa biểu của bạn.');
@@ -7261,7 +7565,7 @@
 
         async function sendSelectedTeachersTimetableEmail() {
             try {
-                const email = buildSelectedTeachersTimetableEmail([...selectedTimetableTeacherIds]);
+                const email = buildSelectedTeachersTimetableEmail([...selectedTimetableTeacherIds], document.getElementById('email-tt-week-all')?.value || document.getElementById('email-tt-week')?.value || '');
                 const response = await fetch('api/baogiang_mail.php', {
                     method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify(email)
                 });
@@ -7280,7 +7584,8 @@
                 const missing = teachers.filter(t => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(t.email || '')));
                 if (missing.length) throw new Error(`Hãy bổ sung email hợp lệ cho: ${missing.map(t => t.name).join(', ')}.`);
                 const deliveries = [];
-                for (const teacher of teachers) deliveries.push(buildTeacherIndividualTimetableEmail(teacher, teacher.email, true, (await baoGiangCalendarFeedWebcal(teacher.id)).webcal_url));
+                const weekValue = document.getElementById('email-tt-week-all')?.value || document.getElementById('email-tt-week')?.value || '';
+                for (const teacher of teachers) deliveries.push(buildTeacherIndividualTimetableEmail(teacher, teacher.email, true, (await baoGiangCalendarFeedWebcal(teacher.id)).webcal_url, weekValue));
                 const response = await fetch('api/baogiang_mail.php', { method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, credentials: 'include', body: JSON.stringify({ deliveries }) });
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok || !data.ok) throw new Error(data.error || 'Không thể gửi Thời khóa biểu.');

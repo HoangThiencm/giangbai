@@ -1,32 +1,23 @@
-# IMPLEMENT: Nhập Thời khóa biểu Word và đối chiếu giáo viên
+# IMPLEMENT — Ngày nghỉ tuần, TKB email và LBG
 
-**Ngày thực hiện:** 2026-11-17
-**Phạm vi:** Triển khai đúng `docs/handoff/PLAN.md` trong `phancongtochuyenmon.html`.
+**Ngày:** 2026-11-22  
+**Nguồn:** `docs/handoff/PLAN.md`
 
-## Đã thực hiện
+## Đã làm
 
-- Bổ sung vùng nạp/kéo thả file `.docx` trong khu vực nhập thời khóa biểu; giữ nguyên luồng nhập ảnh hiện có.
-- Dùng `mammoth.js` đã có để đổi Word thành HTML, mở rộng bảng có `rowspan`/`colspan`, tìm từng bảng giáo viên, và cố định 5 hàng dữ liệu sau mỗi tiêu đề buổi sáng/chiều thành 5 tiết tương ứng.
-- Thêm modal đối chiếu: checkbox, chọn lại giáo viên từ CSDL, chọn nhanh, trạng thái khớp, và lưu bí danh vào `localStorage` với khóa `tkb_word_aliases`.
-- So khớp tên có dấu nghiêm ngặt (không dùng hàm bỏ dấu), do đó `Thiên` và `Thiện` là hai tên khác nhau.
-- Thêm Engine A nạp trực tiếp: chuẩn hóa lớp theo danh mục, kiểm tra dải tiết, lớp chưa có trong CSDL, và xung đột cùng lớp/cùng tiết; sau khi xác nhận sẽ lưu TKB và đồng bộ phân công môn.
-- Thêm Engine B: sinh prompt kèm dữ liệu bảng nguồn cho các giáo viên đã chọn, sao chép một chạm, và nạp lại JSON AI sau khi kiểm tra schema/qui tắc.
+- `phancongtochuyenmon.html`
+  - Modal `#modal-manage-holidays`: chọn nhiều ngày trong một tuần, khoảng ngày dài, đối tượng Toàn trường hoặc giáo viên, buổi, lý do, bảng ngày nghỉ và xóa.
+  - Nút Quản lý Ngày nghỉ ở tab Thời khóa biểu GV, tab Gửi email, tab Lịch báo giảng và trong modal PPCT.
+  - Tuần áp dụng TKB: `#email-tt-week` và `#email-tt-week-all`, nhãn `Tuần N (Từ dd/mm đến dd/mm/yyyy) — N ngày nghỉ (...)`.
+  - Nút gửi riêng TKB tuần cho từng GV đã chọn.
+  - `isTeacherDayOff` đối chiếu `state.bao_giang.exceptions`. Ô TKB email của ngày nghỉ là `NGHỈ LỄ` (toàn trường) hoặc `NGHỈ PHÉP` (cá nhân), kèm lý do. Tiêu đề thứ có ngày và huy hiệu `(Nghỉ)` khi nghỉ toàn trường.
+  - Email LBG tuần hiện khối `NGHỈ TOÀN TRƯỜNG` / `NGHỈ CÁ NHÂN` cho ngày nghỉ cả sáng và chiều.
 
-## Kiểm tra đã chạy
+## Kiểm tra
 
-- Kiểm tra cú pháp toàn bộ JavaScript nhúng bằng Node: đạt (`JavaScript syntax OK`).
-- Kiểm tra whitespace/diff cho `phancongtochuyenmon.html`: đạt.
-- Đọc cấu trúc file Word mẫu được cung cấp: xác nhận có 50 bảng Word và các nhãn `Giáo viên …`, `Buổi sáng`, `Buổi chiều`, `THỨ 2`–`THỨ 7` phù hợp với bộ tách bảng.
-- Sửa lỗi hiển thị lặp tên: tên giáo viên nay được đọc từ ô tiêu đề Word nguyên gốc, trước khi xử lý các ô gộp `colspan`/`rowspan`.
-- Sửa ánh xạ tiết buổi chiều: hàng kế tiếp trong Word tiếp tục theo tiết đầu của khung chiều (ví dụ sau 7–9 là tiết 10), không bị gán sai về tiết 4.
-- Khi Word có tiết ở hàng hợp lệ vượt khung hiện tại, hệ thống giờ đề nghị mở rộng khung theo đúng hàng thực tế (ví dụ `7–9` thành `7–10`) trước khi kiểm tra và nạp, thay vì báo nhận diện sai.
-- Làm rõ luồng AI: nguồn `.docx` hoặc `.pdf` được người dùng tải kèm vào ChatGPT/Gemini; hệ thống chỉ xuất Prompt với schema JSON và danh sách giáo viên rồi nạp JSON AI trả về. Nạp trực tiếp chỉ hiển thị với Word đã tách được bảng; PDF dùng luồng AI/JSON.
-- JSON AI được nạp theo đúng số tiết trong schema hệ thống, tách biệt với cách đánh số “hàng 1–5” khi nạp trực tiếp từ Word.
-- Đối chiếu Word chỉ tính mỗi `teacher_id` một lần; bảng nguồn lặp giáo viên được đánh dấu riêng và không tự chọn/nạp trùng. Phần tổng kết cũng hiển thị rõ số giáo viên duy nhất và tổng số giáo viên hiện có trong CSDL.
-- Rà soát các điểm tích hợp: input Word, modal, parser, ghép CSDL/bí danh, nạp trực tiếp, prompt AI và nạp JSON đều có liên kết sự kiện.
+- `node tests/timetable-render-smoke.js` → PASS
+- `node tests/baogiang-mail-smoke.js` → PASS
 
-## Cần kiểm thử giao diện
+## Ngoài phạm vi
 
-- Dùng file TKB Word thực tế có bảng của giáo viên `Thiên` và `Thiện`, kiểm tra hai hàng được tách riêng và chọn đúng giáo viên trong CSDL.
-- Thử nạp trực tiếp, kiểm tra 5 hàng buổi sáng/chiều không bị dồn tiết.
-- Thử lưu bí danh, tải lại trang rồi nhập lại file để kiểm tra tự ghép.
+Không sửa file ngoài PLAN. Không commit, không push. `/verify` chạy ở chat Antigravity mới.

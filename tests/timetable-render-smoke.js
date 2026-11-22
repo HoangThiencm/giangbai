@@ -333,7 +333,11 @@ assert.match(html, /@media \(max-width: 1024px\)\s*\{\s*\.tt-sessions-container\
     assert(html.includes(token), `missing safe direct-email control: ${token}`);
 });
 
-assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail\(\)"/, 'individual timetable sending is not duplicated outside the centralized email flow');
+assert.match(html, /id="view-email"[\s\S]*onclick="sendSelectedTeachersIndividualTimetableEmail\(\)"/, 'tab email gửi riêng TKB tuần cho từng giáo viên đã chọn');
+assert.match(html, /id="modal-manage-holidays"/, 'có modal quản lý ngày nghỉ');
+assert.match(html, /function saveWeeklyHolidayBatch\(/, 'có lưu ngày nghỉ theo tuần');
+assert.match(html, /function renderWeeklyHolidayCheckboxes\(/, 'có lưới chọn nhiều ngày trong tuần');
+assert.match(html, /id="email-tt-week"/, 'tab TKB của tôi chọn tuần áp dụng');
 
 {
     const feed = fs.readFileSync(path.join(__dirname, '../api/calendar_feed.php'), 'utf8');
@@ -455,6 +459,45 @@ assert.doesNotMatch(html, /onclick="sendSelectedTeachersIndividualTimetableEmail
     assert.equal(friday['5'].class_name, '6/4', 'Friday row 5 stays period 5 and maps 64 to 6/4');
     assert.match(badge.textContent, /Sáng: 8 tiết/, 'the scan badge counts recognized morning lessons');
     assert.match(badge.textContent, /9\/3/, 'the scan badge lists recognized classes');
+}
+
+{
+    const names = ['ensureHolidayExceptions', 'isTeacherDayOff', 'holidayDatesForWeek', 'timetableEmailDayOffHtml', 'timetableEmailSessionTable', 'buildTeacherIndividualTimetableEmail', 'baoGiangMatchesException', 'baoGiangWeekRange', 'baoGiangDate', 'baoGiangIso', 'baoGiangWeekValueFromDate', 'formatVnDate'];
+    const timetable = { morning: { 2: { 1: { subject: 'Đại số', class_name: '8A1' } }, 3: { 1: { subject: 'Hình', class_name: '8A2' } }, 4: { 1: { subject: 'Hình', class_name: '8A3' } }, 5: { 1: { subject: 'Đại số', class_name: '8A4' } }, 6: { 1: { subject: 'Hình', class_name: '8A5' } }, 7: { 1: { subject: 'Hình', class_name: '8A6' } } }, afternoon: { 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} } };
+    const context = vm.createContext({
+        state: { info: {}, bao_giang: { start_date: '2026-09-07', exceptions: [] }, teachers: [
+            { id: 'tung', name: 'Thầy Tùng', email: 'tung@example.edu.vn', timetable: JSON.parse(JSON.stringify(timetable)) },
+            { id: 'thao', name: 'Cô Thảo', email: 'thao@example.edu.vn', timetable: JSON.parse(JSON.stringify(timetable)) }
+        ] },
+        TT_DAYS: ['2', '3', '4', '5', '6', '7'],
+        TT_DAY_LABELS: { 2: 'Thứ 2', 3: 'Thứ 3', 4: 'Thứ 4', 5: 'Thứ 5', 6: 'Thứ 6', 7: 'Thứ 7' },
+        getSessionPeriods: () => [1],
+        escapeHtml: value => String(value ?? ''),
+        foldText: value => String(value || '').toLowerCase(),
+        calendarSubscribeButtonsHtml: () => '',
+        JSON, String, Object, Set, Number, parseInt, Date
+    });
+    vm.runInContext(names.map(declaration).join('\n') + '\n' + ['emptyDayMap', 'emptyTimetable', 'splitSubjectAndClass', 'parseTimetableCell', 'normalizeTeacherTimetable', 'timetableHasLessons', 'periodsForTimetableSession'].map(declaration).join('\n'), context);
+    const week = vm.runInContext(`baoGiangWeekValueFromDate('2026-11-23')`, context);
+    const range = vm.runInContext(`baoGiangWeekRange(${JSON.stringify(week)})`, context);
+    assert.equal(range.start, '2026-11-23');
+    context.state.bao_giang.exceptions = [
+        { type: 'off', scope: 'all', start_date: '2026-11-23', end_date: '2026-11-23', session: 'all_day', reason: 'Nghỉ lễ & Hoạt động ngoại khóa' },
+        { type: 'off', scope: 'all', start_date: '2026-11-26', end_date: '2026-11-26', session: 'all_day', reason: 'Nghỉ lễ & Hoạt động ngoại khóa' }
+    ];
+    const schoolHtml = vm.runInContext(`buildTeacherIndividualTimetableEmail(state.teachers[0], state.teachers[0].email, true, '', ${JSON.stringify(week)}).html`, context);
+    assert.match(schoolHtml, /NGHỈ LỄ: Nghỉ lễ & Hoạt động ngoại khóa/);
+    assert.doesNotMatch(schoolHtml, /Đại số/);
+    assert.match(schoolHtml, /Hình/);
+    assert.match(schoolHtml, /\(Nghỉ\)/);
+    context.state.bao_giang.exceptions = [
+        { type: 'off', scope: 'teacher', teacher_id: 'tung', teacher_name: 'Thầy Tùng', start_date: '2026-11-24', end_date: '2026-11-24', session: 'all_day', reason: 'Nghỉ phép' }
+    ];
+    const tung = vm.runInContext(`buildTeacherIndividualTimetableEmail(state.teachers[0], state.teachers[0].email, true, '', ${JSON.stringify(week)}).html`, context);
+    const thao = vm.runInContext(`buildTeacherIndividualTimetableEmail(state.teachers[1], state.teachers[1].email, true, '', ${JSON.stringify(week)}).html`, context);
+    assert.match(tung, /NGHỈ PHÉP: Nghỉ phép/);
+    assert.match(thao, /Hình/);
+    assert.doesNotMatch(thao, /NGHỈ PHÉP/);
 }
 
 console.log('PASS: timetable view loads numeric IDs and JSON data, uses a compact responsive layout, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');
