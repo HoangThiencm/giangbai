@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { createKhbdDocx } = require('./TROLYTHIEN/engine/export_khbd_engine');
+const { createKhbdDocx } = require('../TROLYTHIEN/engine/export_khbd_engine');
 
 function fileToDataUrl(filePath, mimeType = 'image/png') {
   if (fs.existsSync(filePath)) {

@@ -225,7 +225,7 @@
           "dots", "circ", "hbar", "not", "in", "ni", "ne", "le", "ge", "pm", "mp", "ast", "div",
           "cup", "cap", "sim", "to", "ell", "sin", "cos", "tan", "cot", "sec", "csc", "log", "ln",
           "lg", "lim", "max", "min", "gcd", "lcm", "det", "dim", "ker", "hom", "arg", "exp", "sinh",
-          "cosh", "tanh", "vec", "hat", "underline", "quad", "qquad", "text"
+          "cosh", "tanh", "vec", "hat", "underline", "quad", "qquad", "text", "begin", "end", "cases", "aligned", "array"
         ].sort((a, b) => b.length - a.length);
         const isKnownCommand = value => supportedCommands.some(command => value.startsWith(command));
     
@@ -233,6 +233,7 @@
         source = source.replace(/\\{2,}([A-Za-z]+)/g, (match, commandText) => (
           isKnownCommand(commandText) ? `\\${commandText}` : match
         ));
+        source = source.replace(/\\{2,}(begin|end)\b/g, "\\$1");
     
         // Tách theo lệnh dài nhất: \\notinA -> \\notin A, thay vì coi "notinA" là một lệnh lạ.
         source = source.replace(/\\([A-Za-z]+)/g, (match, commandText) => {
@@ -285,7 +286,14 @@
         const equationArray = element("m:eqArr");
         for (const row of rows) {
           const equation = element("m:e");
-          equation.root.push(new mathApi.MathRun(this.latexToUnicodeMath(row)));
+          const rowMath = this.createNativeMath(row);
+          if (rowMath && Array.isArray(rowMath.root) && rowMath.root.length) {
+            for (const child of rowMath.root) {
+              equation.root.push(child);
+            }
+          } else {
+            equation.root.push(new mathApi.MathRun(this.latexToUnicodeMath(row)));
+          }
           equationArray.root.push(equation);
         }
         const base = element("m:e");
@@ -297,6 +305,9 @@
     
       /** Tạo OMML delimiter + equation array cho cases/aligned và \\left\\{, kể cả khi có tiền tố \\Leftrightarrow / \\Rightarrow. */
       createCasesMath(source, mathApi) {
+        const matches = source.match(/\\begin\s*\{(?:cases|aligned)\}/gi);
+        if (matches && matches.length > 1) return null;
+
         const casesMatch = source.match(/^([\s\S]*?)\\begin\s*\{(cases|aligned)\}([\s\S]*?)\\end\s*\{\2\}\s*$/i);
         const leftBraceMatch = source.match(/^([\s\S]*?)\\left\s*\\\{([\s\S]*?)\\right\s*\.\s*$/);
         const leftBracketMatch = source.match(/^([\s\S]*?)\\left\s*\[([\s\S]*?)\\right\s*\.\s*$/);
@@ -314,6 +325,9 @@
           body = leftBracketMatch[2];
           begChr = "[";
         }
+        if (!body) return null;
+        if (/\\end\s*\{(?:cases|aligned)\}/i.test(body)) return null;
+
         const delimiter = this.buildCasesDelimiter(body, mathApi, begChr);
         if (!delimiter) return null;
         const children = [];
