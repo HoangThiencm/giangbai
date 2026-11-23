@@ -36,6 +36,23 @@ Lệnh Coder (chọn 1):
    - **QUY CHUẨN KÝ HIỆU CUNG TRÒN & CÔNG THỨC TOÁN 9 (OMML):** Ký hiệu cung tròn $\wideparen{AB}$, $\wideparen{AmB}$, $\wideparen{CD}$ và số đo cung $\text{sđ }\wideparen{AB}$ bắt buộc dùng Office Math Accent `m:acc` với `\u23DC` (`⏜` TOP PARENTHESIS). Tuyệt đối cấm ký tự thô `⌒` (U+2312) nằm ngang trước chữ cái (`⌒AB`).
    - **THỂ THỨC DẤU NHÁY HÀNH CHÍNH (NĐ 30/2020/NĐ-CP) & CHỐNG RÒ RỈ MARKDOWN:** Toàn bộ dấu ngoặc kép trong Word bắt buộc là cặp dấu nháy kép cong hành chính: mở `“` (U+201C), đóng `”` (U+201D); tuyệt đối không dùng dấu nháy thẳng typewriter ASCII `"`. Tuyệt đối không để lộ các ký tự sao Markdown rác (`***`, `**`) ra văn bản Word thành phẩm; các khối tích hợp sư phạm `***...***` không được bị cắt đứt giữa chừng bởi role breaks.
    - **QUY CHUẨN CẮT PDF SGK THEO BÀI (MỤC 10):** Bắt buộc độc lập hóa bài "Luyện tập chung", "Bài tập cuối chương", "Hoạt động thực hành trải nghiệm" thành các file PDF riêng biệt. Tuyệt đối không gộp Luyện tập chung vào bài lý thuyết trước đó; xử lý chuẩn xác bài 1 trang (`start_page == end_page`), bảo đảm 100% không bỏ sót bài Luyện tập chung.
+   - **QUY CHUẨN HEADER & FOOTER TRANG WORD (BẢNG KẺ ĐƠN XANH DƯƠNG #5B9BD5):**
+     + Toàn bộ các trang Word thành phẩm bắt buộc có Header và Footer qua thuộc tính native `section.headers` và `section.footers` của Word (lặp lại chuẩn mực trên mọi trang).
+     + **Header (Đầu trang):** Bảng 2 cột, viền dưới đơn màu xanh dương `#5B9BD5` (size 6), không viền khác.
+       * Cột trái: `Trường THCS Trần Phú` (font Times New Roman, cỡ 11pt/size 22).
+       * Cột phải: `Giáo viên: Hoàng Tấn Thiên` (font Times New Roman, cỡ 11pt/size 22, căn phải).
+     + **Footer (Chân trang):** Bảng 3 cột, viền trên đơn màu xanh dương `#5B9BD5` (size 6), không viền khác.
+       * Cột trái (40%): Tự động phân loại chính xác theo môn và phân môn:
+         - Toán 6: `Môn: Toán – Số học 6` hoặc `Môn: Toán – Hình học 6`
+         - Toán 9: `Môn: Toán – Đại số 9` hoặc `Môn: Toán – Hình học 9`
+         - Tin học 6: `Môn: Tin học 6`
+       * Cột giữa (25%): Đánh số trang căn giữa dạng `- Trang ` + `PageNumber.CURRENT` + `-` (ví dụ: `- Trang 38-`).
+       * Cột phải (35%): `Năm học: 2026-2027` (căn phải).
+   - **QUY CHUẨN LÀM SẠCH VĂN BẢN & ĐỀ THI ĐÁP ÁN:**
+     + Bảng đáp án Toán: Tuyệt đối cấm xuất hiện chữ rác `phantom`, `phantomA`, `phantomB`, `phantomD`... Mọi bước tính toán tự luận viết dưới dạng đẳng thức liên hoàn sạch đẹp.
+     + Đề trắc nghiệm Tin học: Tuyệt đối làm sạch các số thứ tự dòng/đoạn thừa dạng `[4]`, `[5]`, `[30]`... trước các phương án A, B, C, D.
+     + Mã năng lực AI: Bắt buộc chuẩn hóa đúng khối lớp tương ứng (`6.D1.1` cho Lớp 6, `9.D1.1` cho Lớp 9).
+     + Tiết kiểm tra giữa kì: Bắt buộc đối chiếu đúng Phân phối chương trình (PPCT), có kế hoạch bài dạy riêng biệt cho cả phân môn Số học / Đại số và Hình học (Toán 6 Tiết 29 Số học & Tiết 10 Hình học; Toán 9 Tiết 26 Đại số & Tiết 14 Hình học; Tin 6 Tiết 10).
 
 
 ## Coder

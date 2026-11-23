@@ -27,6 +27,7 @@ function sanitizeKhbdMathSource(text) {
   source = source.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "");
 
   // 2. Khôi phục các lệnh LaTeX bị rụng gạch chéo phổ biến
+  source = source.replace(/\\phantom\s*\{[^{}]*\}/g, "");
   source = source.replace(/(?<!\\)\b(?:frac|rac)(?=\{)/g, "\\frac");
   source = source.replace(/(?<!\\)\bbegin(?=\{|\b)/g, "\\begin");
   source = source.replace(/(?<!\\)\bext(?=\{)/g, "\\text");
@@ -93,7 +94,198 @@ function loadDocx() {
 }
 
 const docx = loadDocx();
-const { Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, Footer, Table, TableRow, TableCell, WidthType, BorderStyle, TableLayoutType, VerticalAlign } = docx;
+const { Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, Header, Footer, Table, TableRow, TableCell, WidthType, BorderStyle, TableLayoutType, VerticalAlign, PageNumber } = docx;
+
+function resolveKhbdSubjectLine(lessonInfo = {}) {
+  const norm = { ...lessonInfo };
+  let subject = String(norm.subject || "").trim();
+  let grade = String(norm.grade || "").trim();
+  let branch = String(norm.branch || "").trim();
+
+  // Gom chuỗi ngữ cảnh tổng hợp để nhận diện chính xác
+  const searchCorpus = [
+    norm.topic,
+    norm.unitName,
+    norm.subject,
+    norm.branch,
+    norm.filePath,
+    norm.mdFile,
+    norm.mdFilePath,
+    norm.outFile,
+    norm.outputDocxPath,
+    norm.ppct
+  ].filter(Boolean).join(" ");
+
+  // Phát hiện khối lớp chuẩn xác theo pattern, tránh bắt nhầm số tiết (như Tiết 26, 28)
+  if (!grade) {
+    const gradeMatch = searchCorpus.match(/(?:Lớp|Toán|Tin\s*học|Khối|Toan|Tin)\s*([6789])/i)
+      || searchCorpus.match(/[_\-\/\\](?:Toan|Tin)?([6789])[_\-\/\\]/i);
+    if (gradeMatch) {
+      grade = gradeMatch[1] || gradeMatch[2];
+    } else if (/Toan6|Tin6/i.test(searchCorpus)) {
+      grade = "6";
+    } else if (/Toan9/i.test(searchCorpus)) {
+      grade = "9";
+    } else if (/Toan8/i.test(searchCorpus)) {
+      grade = "8";
+    } else {
+      grade = "6";
+    }
+  }
+
+  // Nếu là môn Tin học
+  if (subject.toLowerCase().includes("tin") || /TIN\s*HỌC|TIN6|TIN\s*6/i.test(searchCorpus)) {
+    return `Môn: Tin học ${grade || 6}`;
+  }
+
+  // Nhận diện phân môn Toán: Hình học hay Số học / Đại số
+  const branchLower = branch.toLowerCase();
+  const isGeometry = branchLower === "hinhhoc"
+    || branchLower.includes("hinh")
+    || branchLower.includes("hình")
+    || /HÌNH\s*HỌC|HÌNH\s*PHẲNG|TAM\s*GIÁC|HÌNH\s*CHỮ\s*NHẬT|HÌNH\s*VUÔNG|CUNG|DÂY|ĐƯỜNG\s*TRÒN|HỆ\s*THỨC\s*LƯỢNG|LƯỢNG\s*GIÁC|ĐỘ\s*DÀI\s*CUNG/i.test(searchCorpus);
+
+  if (grade === "6") {
+    return isGeometry ? "Môn: Toán – Hình học 6" : "Môn: Toán – Số học 6";
+  } else if (grade === "9") {
+    return isGeometry ? "Môn: Toán – Hình học 9" : "Môn: Toán – Đại số 9";
+  } else if (grade === "8") {
+    return isGeometry ? "Môn: Toán – Hình học 8" : "Môn: Toán – Đại số 8";
+  } else if (grade === "7") {
+    return isGeometry ? "Môn: Toán – Hình học 7" : "Môn: Toán – Đại số 7";
+  }
+
+  return `Môn: Toán – ${grade}`;
+}
+
+function createKhbdPageHeader(generator, lessonInfo = {}) {
+  const schoolName = String(lessonInfo.school || "Trường THCS Trần Phú").trim();
+  const teacherName = String(lessonInfo.teacher || "Hoàng Tấn Thiên").trim();
+  const font = generator.fontFamily || "Times New Roman";
+  const tblWidth = generator.tableWidth || 9638;
+  const colW = Math.round(tblWidth / 2);
+
+  const borderBlue = { style: BorderStyle.SINGLE, size: 6, color: "5B9BD5" };
+  const borderNone = { style: BorderStyle.NONE, size: 0, color: "auto" };
+
+  return new Table({
+    width: { size: tblWidth, type: WidthType.DXA },
+    columnWidths: [colW, tblWidth - colW],
+    borders: {
+      top: borderNone,
+      left: borderNone,
+      right: borderNone,
+      bottom: borderBlue,
+      insideHorizontal: borderNone,
+      insideVertical: borderNone
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: colW, type: WidthType.DXA },
+            margins: { top: 0, bottom: 40, left: 0, right: 0 },
+            children: [
+              new Paragraph({
+                spacing: { before: 0, after: 0, line: 240, lineRule: "auto" },
+                children: [
+                  new TextRun({ text: schoolName, font: font, size: 22 })
+                ]
+              })
+            ]
+          }),
+          new TableCell({
+            width: { size: tblWidth - colW, type: WidthType.DXA },
+            margins: { top: 0, bottom: 40, left: 0, right: 0 },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                spacing: { before: 0, after: 0, line: 240, lineRule: "auto" },
+                children: [
+                  new TextRun({ text: `Giáo viên: ${teacherName}`, font: font, size: 22 })
+                ]
+              })
+            ]
+          })
+        ]
+      })
+    ]
+  });
+}
+
+function createKhbdPageFooter(generator, lessonInfo = {}) {
+  const font = generator.fontFamily || "Times New Roman";
+  const tblWidth = generator.tableWidth || 9638;
+  const col1 = Math.round(tblWidth * 0.40); // 40% cho Môn
+  const col2 = Math.round(tblWidth * 0.25); // 25% cho Trang
+  const col3 = tblWidth - col1 - col2;     // 35% cho Năm học
+
+  const borderBlue = { style: BorderStyle.SINGLE, size: 6, color: "5B9BD5" };
+  const borderNone = { style: BorderStyle.NONE, size: 0, color: "auto" };
+
+  const subjectText = resolveKhbdSubjectLine(lessonInfo);
+  const yearText = String(lessonInfo.academicYear || "Năm học: 2026-2027").trim();
+  const yearDisplay = yearText.startsWith("Năm học:") ? yearText : `Năm học: ${yearText}`;
+
+  return new Table({
+    width: { size: tblWidth, type: WidthType.DXA },
+    columnWidths: [col1, col2, col3],
+    borders: {
+      top: borderBlue,
+      left: borderNone,
+      right: borderNone,
+      bottom: borderNone,
+      insideHorizontal: borderNone,
+      insideVertical: borderNone
+    },
+    rows: [
+      new TableRow({
+        children: [
+          new TableCell({
+            width: { size: col1, type: WidthType.DXA },
+            margins: { top: 60, bottom: 0, left: 0, right: 0 },
+            children: [
+              new Paragraph({
+                spacing: { before: 0, after: 0, line: 240, lineRule: "auto" },
+                children: [
+                  new TextRun({ text: subjectText, font: font, size: 22 })
+                ]
+              })
+            ]
+          }),
+          new TableCell({
+            width: { size: col2, type: WidthType.DXA },
+            margins: { top: 60, bottom: 0, left: 0, right: 0 },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 0, after: 0, line: 240, lineRule: "auto" },
+                children: [
+                  new TextRun({ text: "- Trang ", font: font, size: 22 }),
+                  new TextRun({ children: PageNumber?.CURRENT != null ? [PageNumber.CURRENT] : ["X"], font: font, size: 22 }),
+                  new TextRun({ text: "-", font: font, size: 22 })
+                ]
+              })
+            ]
+          }),
+          new TableCell({
+            width: { size: col3, type: WidthType.DXA },
+            margins: { top: 60, bottom: 0, left: 0, right: 0 },
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.RIGHT,
+                spacing: { before: 0, after: 0, line: 240, lineRule: "auto" },
+                children: [
+                  new TextRun({ text: yearDisplay, font: font, size: 22 })
+                ]
+              })
+            ]
+          })
+        ]
+      })
+    ]
+  });
+}
 
 function formatKhbdRoleLine(line) {
   let content = String(line || "").replace(/<br\s*\/?>/gi, "<br>");
@@ -343,8 +535,12 @@ function createKhbdDocx({ mdFilePath, outputDocxPath, lessonInfo, illustrations 
     children: [...headerElements, ...bodyElements]
   };
 
+  const fullLessonInfo = { mdFilePath, outputDocxPath, ...lessonInfo };
+  if (typeof Header === 'function') {
+    section.headers = { default: new Header({ children: [createKhbdPageHeader(generator, fullLessonInfo)] }) };
+  }
   if (typeof Footer === 'function') {
-    section.footers = { default: new Footer({ children: footerElements }) };
+    section.footers = { default: new Footer({ children: [createKhbdPageFooter(generator, fullLessonInfo)] }) };
   }
 
   const doc = new Document({
@@ -615,8 +811,22 @@ function createMergedKhbdDocx({ lessons = [], outputDocxPath, docTitle }) {
       children: [...headerElements, ...bodyElements]
     };
 
+    const fullLessonInfo = {
+      outputDocxPath,
+      mdFilePath: item.mdFilePath,
+      mdFile: item.mdFile,
+      outFile: item.outFile,
+      branch: item.branch,
+      grade: item.grade,
+      subject: item.subject,
+      ...(item.lessonInfo || {})
+    };
+
+    if (typeof Header === 'function') {
+      section.headers = { default: new Header({ children: [createKhbdPageHeader(generator, fullLessonInfo)] }) };
+    }
     if (typeof Footer === 'function') {
-      section.footers = { default: new Footer({ children: footerElements }) };
+      section.footers = { default: new Footer({ children: [createKhbdPageFooter(generator, fullLessonInfo)] }) };
     }
 
     sections.push(section);

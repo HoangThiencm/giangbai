@@ -18,14 +18,35 @@ Hãy tự động đọc và trích xuất dữ liệu từ các tệp trong th�
 Dựa trên nguyên tắc sư phạm TINH GỌN - THỰC CHẤT - KHẢ THI (không nhồi nhét, không thừa trang), hãy thực hiện soạn KHBD theo đúng các quy chuẩn sau:
 
 ================================================================================
-0. BẢN VÁ V2.1: QUY CHUẨN HEADER TÀI LIỆU TINH GỌN (ẢNH 2)
+0. BẢN VÁ V2.2: QUY CHUẨN TIÊU ĐỀ ĐẦU BÀI VÀ HEADER / FOOTER TRANG WORD
 ================================================================================
-* BỎ HOÀN TOÀN bảng "Trường... Giáo viên..." ở đầu trang.
-* BỎ HOÀN TOÀN khối thông tin hành chính trùng lặp (Kế hoạch bài dạy chuẩn CV 5512, Trường, Tổ, Họ và tên giáo viên, Lớp, Chủ đề, Phân phối chương trình, Bộ sách...).
-* Tiêu đề đầu bài chỉ gồm đúng 2 dòng căn giữa:
-  - Dòng 1: Tiết X, Y, Z - BÀI XX: TÊN BÀI DẠY (In hoa đậm, font 13pt/26 half-points).
-  - Dòng 2: Thời lượng thực hiện: XX tiết (YY phút) (In nghiêng, font 13pt).
-* Sau 2 dòng tiêu đề, đi thẳng ngay vào "# I. MỤC TIÊU" -> "## 1. Về kiến thức".
+* TIÊU ĐỀ TRONG THÂN VĂN BẢN (BODY):
+  - BỎ HOÀN TOÀN bảng thông tin hành chính thủ công trong thân bài (không chèn bảng trường/lớp vào nội dung).
+  - Tiêu đề đầu bài chỉ gồm đúng 2 dòng căn giữa:
+    + Dòng 1: Tiết X, Y, Z - BÀI XX: TÊN BÀI DẠY (In hoa đậm, font 13pt/26 half-points).
+    + Dòng 2: Thời lượng thực hiện: XX tiết (YY phút) (In nghiêng, font 13pt).
+  - Sau 2 dòng tiêu đề, đi thẳng ngay vào "# I. MỤC TIÊU" -> "## 1. Về kiến thức".
+
+* HEADER & FOOTER ĐẦU VÀ CHÂN TRANG WORD (HIỂN THỊ TỰ ĐỘNG TRÊN TẤT CẢ CÁC TRANG):
+  - Header (Đầu trang): Bảng 2 cột, viền dưới đơn màu xanh (#5B9BD5).
+    + Cột trái: Trường THCS Trần Phú (font Times New Roman, 11pt).
+    + Cột phải: Giáo viên: Hoàng Tấn Thiên (font Times New Roman, 11pt, căn phải).
+  - Footer (Chân trang): Bảng 3 cột, viền trên đơn màu xanh (#5B9BD5).
+    + Cột trái: Tự động theo môn & phân môn:
+      * Toán 6 Số học: "Môn: Toán – Số học 6"
+      * Toán 6 Hình học: "Môn: Toán – Hình học 6"
+      * Toán 9 Đại số: "Môn: Toán – Đại số 9"
+      * Toán 9 Hình học: "Môn: Toán – Hình học 9"
+      * Tin học 6: "Môn: Tin học 6"
+    + Cột giữa: Đánh số trang tự động dạng: - Trang [X] - (căn giữa).
+    + Cột phải: Năm học: 2026-2027 (căn phải).
+
+* QUY CHUẨN ĐỒNG BỘ THỂ THỨC VÀ LÀM SẠCH VĂN BẢN:
+  - 100% công thức Toán dùng Word Equation native (OMML), cấm Unicode thô.
+  - 100% dấu ngoặc kép là cặp dấu nháy kép cong hành chính “...” chuẩn NĐ 30/2020/NĐ-CP (cấm dấu nháy thẳng typewriter ASCII ").
+  - Tuyệt đối không để lộ dấu sao Markdown rác (***, **), không để sót mã debug phantom (phantomA, phantomB...) và số dòng [4], [5]...
+  - Chuẩn hóa mã năng lực AI theo khối lớp (6.D1.1 cho Lớp 6, 9.D1.1 cho Lớp 9).
+  - Đảm bảo đủ các tiết kiểm tra đánh giá giữa kì theo PPCT ở cả 2 phân môn Số học/Đại số và Hình học.
 
 ================================================================================
 I. MỤC TIÊU TINH GỌN (THEO CHUẨN THÔNG TƯ 32 & KHUNG NLS/AI)

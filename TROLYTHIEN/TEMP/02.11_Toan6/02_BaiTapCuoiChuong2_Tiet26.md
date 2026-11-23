@@ -23,7 +23,7 @@ c) Năng lực số (NLS):
 - ***5.3.TC1a: HS sử dụng máy tính cầm tay phím phân tích thừa số nguyên tố FACT và phím chia hết để kiểm tra nhanh kết quả bài toán trắc nghiệm.***
 
 d) Năng lực Trí tuệ Nhân tạo (AI):
-- ***9.D1.1: HS ứng dụng trợ lý học tập AI để tạo ngân hàng câu hỏi trắc nghiệm rèn luyện phản xạ về số nguyên tố và dấu hiệu chia hết.***
+- ***6.D1.1: HS ứng dụng trợ lý học tập AI để tạo ngân hàng câu hỏi trắc nghiệm rèn luyện phản xạ về số nguyên tố và dấu hiệu chia hết.***
 
 ## 3. Về phẩm chất
 - Rèn luyện tính trung thực, cẩn trọng trong làm bài kiểm tra trắc nghiệm và tự luận.
@@ -48,7 +48,7 @@ d) Tổ chức thực hiện:
 ## B. HOẠT ĐỘNG 2: LUYỆN TẬP (32 phút)
 
 ### 1. Hoạt động 2.1: Hệ thống hoá kiến thức bằng Sơ đồ tư duy (10 phút)
-a) Mục tiêu: Hệ thống hóa toàn bộ kiến thức Chương II bằng sơ đồ tư duy trực quan, giúp học sinh nắm chắc mạch logic của chương; tích hợp chỉ báo AI 9.D1.1.
+a) Mục tiêu: Hệ thống hóa toàn bộ kiến thức Chương II bằng sơ đồ tư duy trực quan, giúp học sinh nắm chắc mạch logic của chương; tích hợp chỉ báo AI 6.D1.1.
 b) Nội dung: GV trình chiếu và hướng dẫn HS phân tích Sơ đồ tư duy Mindmap Tổng kết Chương II.
 
 ![Sơ đồ tư duy Tổng kết Chương II](khbd-ill:mindmap-tiet26)
@@ -58,7 +58,7 @@ d) Tổ chức thực hiện:
 
 | Hoạt động của GV và HS | Nội dung cần đạt |
 | :--- | :--- |
-| **+ Bước 1: Chuyển giao nhiệm vụ**<br>- **GV:** Trình chiếu Sơ đồ tư duy Tổng kết Chương II gồm 3 nhánh lớn:<br>  1. Quan hệ & Dấu hiệu chia hết.<br>  2. Số nguyên tố & Hợp số.<br>  3. Ước chung & Bội chung (ƯCLN, BCNN).<br>- Yêu cầu HS đọc sơ đồ và nhắc lại các dấu hiệu chia hết cho 2, 3, 5, 9.<br>- ***Tích hợp AI (9.D1.1): GV cho học sinh xem gợi ý của trợ lý AI phân tích mẹo ghi nhớ: chia hết cho 2 và 5 nhìn vào chữ số tận cùng; chia hết cho 3 và 9 nhìn vào tổng các chữ số.***<br><br>**+ Bước 2: Thực hiện nhiệm vụ**<br>- **HS:** Quan sát sơ đồ tư duy, hệ thống lại kiến thức và ghi chép vào vở.<br><br>**+ Bước 3: Báo cáo, thảo luận**<br>- Đại diện HS thuyết minh lại 3 nhánh chính của sơ đồ tư duy.<br><br>**+ Bước 4: Kết luận, nhận định**<br>- **GV:** Chốt lại mạch kiến thức và chuyển sang luyện giải bài tập tự luận. | **Hệ thống kiến thức Chương II (Mindmap):**<br>1. **Chia hết & Dấu hiệu:**<br>  - $a$ chia hết cho $m$ và $b$ chia hết cho $m \Rightarrow a + b$ chia hết cho $m$.<br>  - Tận cùng là 0, 2, 4, 6, 8 thì chia hết cho 2.<br>  - Tận cùng là 0 hoặc 5 thì chia hết cho 5.<br>  - Tổng các chữ số chia hết cho 3 (hoặc 9) thì chia hết cho 3 (hoặc 9).<br>2. **Số nguyên tố & Hợp số:**<br>  - Số nguyên tố nhỏ nhất và chẵn duy nhất là 2.<br>  - Phân tích số tự nhiên ra thừa số nguyên tố.<br>3. **ƯCLN & BCNN:**<br>  - ƯCLN lấy thừa số chung với số mũ nhỏ nhất.<br>  - BCNN lấy thừa số chung và riêng với số mũ lớn nhất. |
+| **+ Bước 1: Chuyển giao nhiệm vụ**<br>- **GV:** Trình chiếu Sơ đồ tư duy Tổng kết Chương II gồm 3 nhánh lớn:<br>  1. Quan hệ & Dấu hiệu chia hết.<br>  2. Số nguyên tố & Hợp số.<br>  3. Ước chung & Bội chung (ƯCLN, BCNN).<br>- Yêu cầu HS đọc sơ đồ và nhắc lại các dấu hiệu chia hết cho 2, 3, 5, 9.<br>- ***Tích hợp AI (6.D1.1): GV cho học sinh xem gợi ý của trợ lý AI phân tích mẹo ghi nhớ: chia hết cho 2 và 5 nhìn vào chữ số tận cùng; chia hết cho 3 và 9 nhìn vào tổng các chữ số.***<br><br>**+ Bước 2: Thực hiện nhiệm vụ**<br>- **HS:** Quan sát sơ đồ tư duy, hệ thống lại kiến thức và ghi chép vào vở.<br><br>**+ Bước 3: Báo cáo, thảo luận**<br>- Đại diện HS thuyết minh lại 3 nhánh chính của sơ đồ tư duy.<br><br>**+ Bước 4: Kết luận, nhận định**<br>- **GV:** Chốt lại mạch kiến thức và chuyển sang luyện giải bài tập tự luận. | **Hệ thống kiến thức Chương II (Mindmap):**<br>1. **Chia hết & Dấu hiệu:**<br>  - $a$ chia hết cho $m$ và $b$ chia hết cho $m \Rightarrow a + b$ chia hết cho $m$.<br>  - Tận cùng là 0, 2, 4, 6, 8 thì chia hết cho 2.<br>  - Tận cùng là 0 hoặc 5 thì chia hết cho 5.<br>  - Tổng các chữ số chia hết cho 3 (hoặc 9) thì chia hết cho 3 (hoặc 9).<br>2. **Số nguyên tố & Hợp số:**<br>  - Số nguyên tố nhỏ nhất và chẵn duy nhất là 2.<br>  - Phân tích số tự nhiên ra thừa số nguyên tố.<br>3. **ƯCLN & BCNN:**<br>  - ƯCLN lấy thừa số chung với số mũ nhỏ nhất.<br>  - BCNN lấy thừa số chung và riêng với số mũ lớn nhất. |
 
 ### 2. Hoạt động 2.2: Giải quyết bài tập tự luận trọng tâm (22 phút)
 a) Mục tiêu: Rèn luyện kỹ năng phân tích thừa số nguyên tố, tìm ƯCLN, BCNN và xét tính chia hết; tích hợp chỉ báo NLS 5.3.TC1a.

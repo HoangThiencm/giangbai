@@ -21,7 +21,7 @@ c) Năng lực số (NLS):
 - ***5.3.TC1a: HS sử dụng thành thạo máy tính cầm tay phím phân tích thừa số nguyên tố FACT, phím tính lũy thừa và hàm GCD, LCM để kiểm tra kết quả tính toán.***
 
 d) Năng lực Trí tuệ Nhân tạo (AI):
-- ***9.D1.1: HS phối hợp sử dụng trợ lý học tập AI để tra cứu bảng tổng hợp các lỗi sai trừ điểm phổ biến khi làm bài thi giữa kì môn Toán 6.***
+- ***6.D1.1: HS phối hợp sử dụng trợ lý học tập AI để tra cứu bảng tổng hợp các lỗi sai trừ điểm phổ biến khi làm bài thi giữa kì môn Toán 6.***
 
 ## 3. Về phẩm chất
 - Rèn luyện tính cẩn thận, kỷ luật, tự kiểm tra lại bài làm bằng máy tính cầm tay trước khi nộp bài.
@@ -45,7 +45,7 @@ d) Tổ chức thực hiện:
 ## B. HOẠT ĐỘNG 2: LUYỆN TẬP (65 phút)
 
 ### 1. Hoạt động 2.1: Hệ thống hoá kiến thức bằng Sơ đồ tư duy (Tiết 27) (20 phút)
-a) Mục tiêu: Hệ thống hóa toàn bộ kiến thức Chương I và Chương II bằng Sơ đồ tư duy trực quan; tích hợp chỉ báo AI 9.D1.1.
+a) Mục tiêu: Hệ thống hóa toàn bộ kiến thức Chương I và Chương II bằng Sơ đồ tư duy trực quan; tích hợp chỉ báo AI 6.D1.1.
 b) Nội dung: GV trình chiếu và hướng dẫn HS phân tích Sơ đồ tư duy Mindmap Ôn tập Số học giữa HKI.
 
 ![Sơ đồ tư duy Ôn tập Số học giữa Học kì I](khbd-ill:mindmap-tiet27-28)
@@ -55,7 +55,7 @@ d) Tổ chức thực hiện:
 
 | Hoạt động của GV và HS | Nội dung cần đạt |
 | :--- | :--- |
-| **+ Bước 1: Chuyển giao nhiệm vụ**<br>- **GV:** Trình chiếu Sơ đồ tư duy Mindmap Ôn tập Số học giữa HKI gồm 3 nhánh lớn:<br>  1. Chương I: Số tự nhiên (Phép tính, lũy thừa, thứ tự thực hiện).<br>  2. Chương II: Chia hết & Dấu hiệu chia hết.<br>  3. Chương II: Số nguyên tố, ƯCLN & BCNN.<br>- Yêu cầu HS đọc sơ đồ và nhắc lại các công thức nhân, chia hai lũy thừa cùng cơ số.<br>- ***Tích hợp AI (9.D1.1): GV chiếu bảng cảnh báo do AI tổng hợp về các lỗi sai học sinh hay mắc phải: (1) Tính $a^m \cdot a^n = a^{m \cdot n}$ (sai, đúng phải là cộng số mũ); (2) Quên tính lũy thừa trước khi nhân chia; (3) Nhầm lẫn giữa tìm ƯCLN và BCNN.***<br><br>**+ Bước 2: Thực hiện nhiệm vụ**<br>- **HS:** Quan sát sơ đồ tư duy, hệ thống lại kiến thức và ghi chép vào vở.<br><br>**+ Bước 3: Báo cáo, thảo luận**<br>- HS đứng tại chỗ nêu rõ từng quy tắc lũy thừa và thứ tự thực hiện phép tính.<br><br>**+ Bước 4: Kết luận, nhận định**<br>- **GV:** Chốt lại quy tắc và chuyển sang luyện giải các dạng bài tập trọng tâm. | **Hệ thống kiến thức cốt lõi (Mindmap):**<br>1. **Công thức lũy thừa:**<br>  $a^m \cdot a^n = a^{m+n}$; $a^m : a^n = a^{m-n}$ ($a \ne 0, m \ge n$); $a^0 = 1$ ($a \ne 0$).<br>2. **Thứ tự thực hiện phép tính:**<br>  - Biểu thức không có ngoặc: Lũy thừa $\rightarrow$ Nhân, chia $\rightarrow$ Cộng, trừ.<br>  - Biểu thức có dấu ngoặc: $( ) \rightarrow [ ] \rightarrow \{ \}$.<br>3. **Tính chất chia hết & Dấu hiệu:**<br>  - Chia hết cho 2 (tận cùng chẵn), cho 5 (tận cùng 0 hoặc 5).<br>  - Chia hết cho 3, cho 9 (tổng chữ số chia hết cho 3, cho 9).<br>4. **ƯCLN và BCNN:**<br>  - ƯCLN: Thừa số chung với số mũ nhỏ nhất.<br>  - BCNN: Thừa số chung và riêng với số mũ lớn nhất. |
+| **+ Bước 1: Chuyển giao nhiệm vụ**<br>- **GV:** Trình chiếu Sơ đồ tư duy Mindmap Ôn tập Số học giữa HKI gồm 3 nhánh lớn:<br>  1. Chương I: Số tự nhiên (Phép tính, lũy thừa, thứ tự thực hiện).<br>  2. Chương II: Chia hết & Dấu hiệu chia hết.<br>  3. Chương II: Số nguyên tố, ƯCLN & BCNN.<br>- Yêu cầu HS đọc sơ đồ và nhắc lại các công thức nhân, chia hai lũy thừa cùng cơ số.<br>- ***Tích hợp AI (6.D1.1): GV chiếu bảng cảnh báo do AI tổng hợp về các lỗi sai học sinh hay mắc phải: (1) Tính $a^m \cdot a^n = a^{m \cdot n}$ (sai, đúng phải là cộng số mũ); (2) Quên tính lũy thừa trước khi nhân chia; (3) Nhầm lẫn giữa tìm ƯCLN và BCNN.***<br><br>**+ Bước 2: Thực hiện nhiệm vụ**<br>- **HS:** Quan sát sơ đồ tư duy, hệ thống lại kiến thức và ghi chép vào vở.<br><br>**+ Bước 3: Báo cáo, thảo luận**<br>- HS đứng tại chỗ nêu rõ từng quy tắc lũy thừa và thứ tự thực hiện phép tính.<br><br>**+ Bước 4: Kết luận, nhận định**<br>- **GV:** Chốt lại quy tắc và chuyển sang luyện giải các dạng bài tập trọng tâm. | **Hệ thống kiến thức cốt lõi (Mindmap):**<br>1. **Công thức lũy thừa:**<br>  $a^m \cdot a^n = a^{m+n}$; $a^m : a^n = a^{m-n}$ ($a \ne 0, m \ge n$); $a^0 = 1$ ($a \ne 0$).<br>2. **Thứ tự thực hiện phép tính:**<br>  - Biểu thức không có ngoặc: Lũy thừa $\rightarrow$ Nhân, chia $\rightarrow$ Cộng, trừ.<br>  - Biểu thức có dấu ngoặc: $( ) \rightarrow [ ] \rightarrow \{ \}$.<br>3. **Tính chất chia hết & Dấu hiệu:**<br>  - Chia hết cho 2 (tận cùng chẵn), cho 5 (tận cùng 0 hoặc 5).<br>  - Chia hết cho 3, cho 9 (tổng chữ số chia hết cho 3, cho 9).<br>4. **ƯCLN và BCNN:**<br>  - ƯCLN: Thừa số chung với số mũ nhỏ nhất.<br>  - BCNN: Thừa số chung và riêng với số mũ lớn nhất. |
 
 ### 2. Hoạt động 2.2: Luyện giải các dạng bài tập trọng tâm (Tiết 28) (45 phút)
 a) Mục tiêu: Rèn luyện kỹ năng thực hiện phép tính hợp lý, tìm số tự nhiên $x$ và giải bài toán thực tế; tích hợp chỉ báo NLS 5.3.TC1a.

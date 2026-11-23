@@ -42,6 +42,8 @@ const lessons = [
       caption: "Sơ đồ tư duy Ôn tập Giữa Học kì I - Môn Tin học 6"
     }] : [],
     lessonInfo: {
+      subject: "Tin học",
+      grade: "6",
       topic: "ÔN TẬP KIỂM TRA ĐÁNH GIÁ GIỮA HỌC KÌ I",
       ppct: "Tiết 09",
       lessonScope: "Tiết 09",
@@ -52,8 +54,20 @@ const lessons = [
     id: "02",
     mdFile: "02_KiemTraGiuaHK1_Tin6_Tiet10.md",
     outFile: "02_KHBD_Tin6_KiemTraGiuaHK1_Tiet10.docx",
-    illustrations: [],
+    illustrations: (function() {
+      const imgP = path.join(tempDir, "hinh_ve", "tin6_gk1_cau30.png");
+      if (fs.existsSync(imgP)) {
+        return [{
+          id: "tin6-gk1-cau30",
+          dataUrl: `data:image/png;base64,${fs.readFileSync(imgP).toString("base64")}`,
+          caption: "Bức tranh chữ H dạng lưới 6x9 ô vuông"
+        }];
+      }
+      return [];
+    })(),
     lessonInfo: {
+      subject: "Tin học",
+      grade: "6",
       topic: "KIỂM TRA ĐÁNH GIÁ GIỮA HỌC KÌ I (TIN HỌC 6)",
       ppct: "Tiết 10",
       lessonScope: "Tiết 10",
@@ -72,6 +86,8 @@ const lessons = [
       caption: "Sơ đồ tư duy Bài 6: Mạng thông tin toàn cầu (World Wide Web)"
     }] : [],
     lessonInfo: {
+      subject: "Tin học",
+      grade: "6",
       topic: "BÀI 6: MẠNG THÔNG TIN TOÀN CẦU",
       ppct: "Tiết 11, 12",
       lessonScope: "Tiết 11, 12",
@@ -92,7 +108,7 @@ async function runBatch() {
       const res = await createKhbdDocx({
         mdFilePath: mdPath,
         outputDocxPath: docxPath,
-        lessonInfo: item.lessonInfo,
+        lessonInfo: { ...item.lessonInfo, subject: "Tin học", grade: "6" },
         illustrations: item.illustrations
       });
       console.log(` -> THÀNH CÔNG: ${path.basename(res.path)} (${res.size} bytes)`);
@@ -108,7 +124,9 @@ async function runBatch() {
   console.log("\n=== BẮT ĐẦU GHÉP TỆP CHUYÊN ĐỀ TIN HỌC 6 (TUẦN 9 - 12) ===");
   const allTinLessons = lessons.map(l => ({
     mdFilePath: path.join(tempDir, l.mdFile),
-    lessonInfo: l.lessonInfo,
+    subject: "Tin học",
+    grade: "6",
+    lessonInfo: { ...l.lessonInfo, subject: "Tin học", grade: "6" },
     illustrations: l.illustrations
   }));
 

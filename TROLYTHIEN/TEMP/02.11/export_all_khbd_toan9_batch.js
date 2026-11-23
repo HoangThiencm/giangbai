@@ -77,6 +77,44 @@ const lessons = [
     }
   },
   {
+    id: "03b",
+    branch: "DaiSo",
+    mdFile: "04b_KHBD_Toan9_KiemTraGiuaHK1_Tiet26.md",
+    outFile: "04b_KHBD_Toan9_KiemTraGiuaHK1_Tiet26.docx",
+    illustrations: [
+      {
+        id: "toan9-gk1-hinh1",
+        dataUrl: (function() {
+          const p = path.join(tempDir, "hinh_ve", "toan9_gk1_hinh1.png");
+          return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p).toString("base64")}` : null;
+        })(),
+        caption: "Hình 1: Tam giác ABC vuông tại A"
+      },
+      {
+        id: "toan9-gk1-hinh2",
+        dataUrl: (function() {
+          const p = path.join(tempDir, "hinh_ve", "toan9_gk1_hinh2.jpeg");
+          return fs.existsSync(p) ? `data:image/jpeg;base64,${fs.readFileSync(p).toString("base64")}` : null;
+        })(),
+        caption: "Hình 2: Bài toán đo chiều cao cây"
+      },
+      {
+        id: "toan9-gk1-hinh3",
+        dataUrl: (function() {
+          const p = path.join(tempDir, "hinh_ve", "toan9_gk1_hinh3.png");
+          return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p).toString("base64")}` : null;
+        })(),
+        caption: "Hình 3: Mảnh đất hình tam giác ABC"
+      }
+    ],
+    lessonInfo: {
+      topic: "KIỂM TRA ĐÁNH GIÁ GIỮA HỌC KÌ I",
+      ppct: "Tiết 26",
+      lessonScope: "Tiết 26",
+      duration: "01 buổi (60 phút)"
+    }
+  },
+  {
     id: "04",
     branch: "HinhHoc",
     mdFile: "04_OnTapGiuaHK1_HinhHoc.md",
@@ -92,6 +130,44 @@ const lessons = [
       topic: "ÔN TẬP GIỮA HỌC KÌ I (HÌNH HỌC)",
       ppct: "Tiết 13",
       lessonScope: "Tiết 13",
+      duration: "01 tiết (45 phút)"
+    }
+  },
+  {
+    id: "04c",
+    branch: "HinhHoc",
+    mdFile: "04c_KHBD_Toan9_KiemTraGiuaHK1_HinhHoc_Tiet14.md",
+    outFile: "04c_KHBD_Toan9_KiemTraGiuaHK1_HinhHoc_Tiet14.docx",
+    illustrations: [
+      {
+        id: "toan9-gk1-hinh1",
+        dataUrl: (function() {
+          const p = path.join(tempDir, "hinh_ve", "toan9_gk1_hinh1.png");
+          return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p).toString("base64")}` : null;
+        })(),
+        caption: "Hình 1: Tam giác ABC vuông tại A"
+      },
+      {
+        id: "toan9-gk1-hinh2",
+        dataUrl: (function() {
+          const p = path.join(tempDir, "hinh_ve", "toan9_gk1_hinh2.jpeg");
+          return fs.existsSync(p) ? `data:image/jpeg;base64,${fs.readFileSync(p).toString("base64")}` : null;
+        })(),
+        caption: "Hình 2: Bài toán đo chiều cao cây"
+      },
+      {
+        id: "toan9-gk1-hinh3",
+        dataUrl: (function() {
+          const p = path.join(tempDir, "hinh_ve", "toan9_gk1_hinh3.png");
+          return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p).toString("base64")}` : null;
+        })(),
+        caption: "Hình 3: Mảnh đất hình tam giác ABC"
+      }
+    ],
+    lessonInfo: {
+      topic: "KIỂM TRA ĐÁNH GIÁ GIỮA HỌC KÌ I (HÌNH HỌC)",
+      ppct: "Tiết 14",
+      lessonScope: "Tiết 14",
       duration: "01 tiết (45 phút)"
     }
   },
@@ -188,7 +264,7 @@ const lessons = [
 ];
 
 async function runBatch() {
-  console.log("=== BẮT ĐẦU XUẤT 10 TỆP KHBD TOÁN 9 ĐƠN LẺ ===");
+  console.log("=== BẮT ĐẦU XUẤT 12 TỆP KHBD TOÁN 9 ĐƠN LẺ ===");
   
   for (const item of lessons) {
     const mdPath = path.join(tempDir, item.mdFile);
@@ -199,7 +275,7 @@ async function runBatch() {
       const res = await createKhbdDocx({
         mdFilePath: mdPath,
         outputDocxPath: docxPath,
-        lessonInfo: item.lessonInfo,
+        lessonInfo: { ...item.lessonInfo, branch: item.branch, grade: "9", subject: "Toán" },
         illustrations: item.illustrations
       });
       console.log(` -> THÀNH CÔNG: ${path.basename(res.path)} (${res.size} bytes)`);
@@ -213,7 +289,10 @@ async function runBatch() {
     .filter(l => l.branch === "DaiSo")
     .map(l => ({
       mdFilePath: path.join(tempDir, l.mdFile),
-      lessonInfo: l.lessonInfo,
+      branch: l.branch,
+      grade: "9",
+      subject: "Toán",
+      lessonInfo: { ...l.lessonInfo, branch: l.branch, grade: "9", subject: "Toán" },
       illustrations: l.illustrations
     }));
 
@@ -234,7 +313,10 @@ async function runBatch() {
     .filter(l => l.branch === "HinhHoc")
     .map(l => ({
       mdFilePath: path.join(tempDir, l.mdFile),
-      lessonInfo: l.lessonInfo,
+      branch: l.branch,
+      grade: "9",
+      subject: "Toán",
+      lessonInfo: { ...l.lessonInfo, branch: l.branch, grade: "9", subject: "Toán" },
       illustrations: l.illustrations
     }));
 

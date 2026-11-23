@@ -92,6 +92,36 @@ const lessons = [
     }
   },
   {
+    id: "03b",
+    branch: "SoHoc",
+    mdFile: "04_KHBD_Toan6_KiemTraGiuaHK1_Tiet29.md",
+    outFile: "04_KHBD_Toan6_KiemTraGiuaHK1_Tiet29.docx",
+    illustrations: [
+      {
+        id: "toan6-gk1-hinh1",
+        dataUrl: (function() {
+          const p = path.join(tempDir, "hinh_ve", "toan6_gk1_hinh1.png");
+          return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p).toString("base64")}` : null;
+        })(),
+        caption: "Hình 1: Các hình tam giác"
+      },
+      {
+        id: "toan6-gk1-hinh-tuong",
+        dataUrl: (function() {
+          const p = path.join(tempDir, "hinh_ve", "toan6_gk1_hinh_tuong.png");
+          return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p).toString("base64")}` : null;
+        })(),
+        caption: "Mảng tường trang trí ốp đá"
+      }
+    ],
+    lessonInfo: {
+      topic: "KIỂM TRA ĐÁNH GIÁ GIỮA HỌC KÌ I",
+      ppct: "Tiết 29",
+      lessonScope: "Tiết 29",
+      duration: "01 buổi (60 phút)"
+    }
+  },
+  {
     id: "04",
     branch: "SoHoc",
     mdFile: "04_Bai13_TapHopCacSoNguyen_Tiet30-31.md",
@@ -150,6 +180,36 @@ const lessons = [
     }
   },
   {
+    id: "07b",
+    branch: "HinhHoc",
+    mdFile: "07b_KHBD_Toan6_KiemTraGiuaHK1_HinhHoc_Tiet10.md",
+    outFile: "07b_KHBD_Toan6_KiemTraGiuaHK1_HinhHoc_Tiet10.docx",
+    illustrations: [
+      {
+        id: "toan6-gk1-hinh1",
+        dataUrl: (function() {
+          const p = path.join(tempDir, "hinh_ve", "toan6_gk1_hinh1.png");
+          return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p).toString("base64")}` : null;
+        })(),
+        caption: "Hình 1: Các hình tam giác"
+      },
+      {
+        id: "toan6-gk1-hinh-tuong",
+        dataUrl: (function() {
+          const p = path.join(tempDir, "hinh_ve", "toan6_gk1_hinh_tuong.png");
+          return fs.existsSync(p) ? `data:image/png;base64,${fs.readFileSync(p).toString("base64")}` : null;
+        })(),
+        caption: "Mảng tường trang trí ốp đá"
+      }
+    ],
+    lessonInfo: {
+      topic: "KIỂM TRA ĐÁNH GIÁ GIỮA HỌC KÌ I (HÌNH HỌC)",
+      ppct: "Tiết 10",
+      lessonScope: "Tiết 10",
+      duration: "01 tiết (45 phút)"
+    }
+  },
+  {
     id: "08",
     branch: "HinhHoc",
     mdFile: "08_LuyenTapChung_HinhHoc_Tiet11.md",
@@ -190,7 +250,7 @@ const lessons = [
 ];
 
 async function runBatch() {
-  console.log("=== BẮT ĐẦU XUẤT 9 TỆP KHBD TOÁN 6 ĐƠN LẺ ===");
+  console.log("=== BẮT ĐẦU XUẤT 11 TỆP KHBD TOÁN 6 ĐƠN LẺ ===");
   
   for (const item of lessons) {
     const mdPath = path.join(tempDir, item.mdFile);
@@ -201,7 +261,7 @@ async function runBatch() {
       const res = await createKhbdDocx({
         mdFilePath: mdPath,
         outputDocxPath: docxPath,
-        lessonInfo: item.lessonInfo,
+        lessonInfo: { ...item.lessonInfo, branch: item.branch, grade: "6", subject: "Toán" },
         illustrations: item.illustrations
       });
       console.log(` -> THÀNH CÔNG: ${path.basename(res.path)} (${res.size} bytes)`);
@@ -219,7 +279,10 @@ async function runBatch() {
     .filter(l => l.branch === "SoHoc")
     .map(l => ({
       mdFilePath: path.join(tempDir, l.mdFile),
-      lessonInfo: l.lessonInfo,
+      branch: l.branch,
+      grade: "6",
+      subject: "Toán",
+      lessonInfo: { ...l.lessonInfo, branch: l.branch, grade: "6", subject: "Toán" },
       illustrations: l.illustrations
     }));
 
@@ -236,12 +299,15 @@ async function runBatch() {
     console.error(" -> LỖI ghép Số học:", err);
   }
 
-  console.log("\n=== BẮT ĐẦU GHÉP TỆP CHUYÊN ĐỀ HÌNH HỌC (3 BÀI) ===");
+  console.log("\n=== BẮT ĐẦU GHÉP TỆP CHUYÊN ĐỀ HÌNH HỌC (4 BÀI) ===");
   const hinhHocLessons = lessons
     .filter(l => l.branch === "HinhHoc")
     .map(l => ({
       mdFilePath: path.join(tempDir, l.mdFile),
-      lessonInfo: l.lessonInfo,
+      branch: l.branch,
+      grade: "6",
+      subject: "Toán",
+      lessonInfo: { ...l.lessonInfo, branch: l.branch, grade: "6", subject: "Toán" },
       illustrations: l.illustrations
     }));
 

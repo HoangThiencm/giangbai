@@ -110,6 +110,7 @@
         // Loại bỏ dấu bao bọc $ hoặc $$
         s = s.replace(/^\$\$|\$\$$/g, "").replace(/^\$|\$$/g, "").trim();
         if (this.isGarbageLatexMathInner(s)) return "";
+        s = s.replace(/\\phantom\s*\{[^{}]*\}/g, "");
         s = s.replace(/(?:\\(?:quad|qquad)\s*){3,}/g, " ");
     
         // Fallback Unicode cho hệ phương trình không được để token begin/end lọt ra Word.
@@ -200,6 +201,7 @@
        */
       normalizeLatexForMath(latex) {
         let source = String(latex || "");
+        source = source.replace(/\\phantom\s*\{[^{}]*\}/g, "");
         source = source.replace(/\u000bdots/g, "\\vdots");
         source = source.replace(/\u000crac/g, "\\frac");
         source = source.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "");
@@ -1413,7 +1415,15 @@
       createDocumentFooter(lessonInfo = {}) {
         if (!window.docx) return [];
         const { Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType, PageNumber } = window.docx;
-        const subject = String(lessonInfo.subject || "Toán").trim() || "Toán";
+        let subject = String(lessonInfo.subject || "").trim();
+        if (!subject) {
+          const t = (String(lessonInfo.topic || "") + " " + String(lessonInfo.unitName || "")).toUpperCase();
+          if (t.includes("TIN HỌC") || t.includes("TIN 6") || t.includes("TIN6")) {
+            subject = "Tin học";
+          } else {
+            subject = "Toán";
+          }
+        }
         const year = String(lessonInfo.academicYear || "").trim() || "";
         const spacing = { before: 0, after: 0, line: this.lineSpacing, lineRule: this.lineRule };
         const col = Math.round(this.tableWidth / 3);

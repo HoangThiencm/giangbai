@@ -21,7 +21,7 @@ c) Năng lực số (NLS):
 - ***5.3.TC1a: HS sử dụng máy tính cầm tay phím FACT để phân tích số ra thừa số nguyên tố và dùng hàm GCD, LCM để kiểm tra nhanh kết quả ƯCLN, BCNN.***
 
 d) Năng lực Trí tuệ Nhân tạo (AI):
-- ***9.D1.1: HS ứng dụng trợ lý học tập AI để tra cứu các tình huống thực tiễn ứng dụng của BCNN trong thiên văn và đời sống.***
+- ***6.D1.1: HS ứng dụng trợ lý học tập AI để tra cứu các tình huống thực tiễn ứng dụng của BCNN trong thiên văn và đời sống.***
 
 ## 3. Về phẩm chất
 - Rèn luyện tính cẩn thận, chính xác trong tính toán số học.
@@ -46,7 +46,7 @@ d) Tổ chức thực hiện:
 ## B. HOẠT ĐỘNG 2: LUYỆN TẬP (32 phút)
 
 ### 1. Hoạt động 2.1: Hệ thống hoá kiến thức bằng Sơ đồ tư duy (10 phút)
-a) Mục tiêu: Hệ thống hóa quy tắc tìm ƯCLN, BCNN và các ứng dụng cốt lõi thông qua sơ đồ tư duy trực quan; tích hợp chỉ báo AI 9.D1.1.
+a) Mục tiêu: Hệ thống hóa quy tắc tìm ƯCLN, BCNN và các ứng dụng cốt lõi thông qua sơ đồ tư duy trực quan; tích hợp chỉ báo AI 6.D1.1.
 b) Nội dung: GV trình chiếu và hướng dẫn HS phân tích Sơ đồ tư duy Mindmap Luyện tập chung Chương II.
 
 ![Sơ đồ tư duy Luyện tập chung Chương II](khbd-ill:mindmap-tiet25)
@@ -56,7 +56,7 @@ d) Tổ chức thực hiện:
 
 | Hoạt động của GV và HS | Nội dung cần đạt |
 | :--- | :--- |
-| **+ Bước 1: Chuyển giao nhiệm vụ**<br>- **GV:** Chiếu Sơ đồ tư duy Mindmap Luyện tập chung Chương II gồm 3 nhánh lớn:<br>  1. Ước chung lớn nhất (ƯCLN) & Rút gọn phân số.<br>  2. Bội chung nhỏ nhất (BCNN) & Quy đồng mẫu số.<br>  3. Ứng dụng thực tế đời sống (chia tổ, chu kỳ lặp lại).<br>- Yêu cầu HS quan sát sơ đồ và so sánh điểm giống/khác nhau giữa quy tắc tìm ƯCLN và BCNN.<br>- ***Tích hợp AI (9.D1.1): GV cho học sinh xem gợi ý của trợ lý AI giải thích thuật toán Euclid tìm ƯCLN của hai số lớn cực nhanh bằng phép chia có dư liên tiếp.***<br><br>**+ Bước 2: Thực hiện nhiệm vụ**<br>- **HS:** Quan sát sơ đồ tư duy, thảo luận cặp đôi và ghi chép vào vở.<br><br>**+ Bước 3: Báo cáo, thảo luận**<br>- Đại diện HS thuyết minh lại 3 nhánh chính của sơ đồ tư duy.<br><br>**+ Bước 4: Kết luận, nhận định**<br>- **GV:** Chốt lại bảng so sánh và chuyển sang phần giải bài tập rèn kỹ năng. | **So sánh quy tắc tìm ƯCLN và BCNN:**<br>- **Bước 1:** Phân tích các số ra thừa số nguyên tố.<br>- **Bước 2 (Chọn thừa số):**<br>  + ƯCLN: Chỉ chọn các thừa số nguyên tố *chung*.<br>  + BCNN: Chọn các thừa số nguyên tố *chung và riêng*.<br>- **Bước 3 (Lập tích):**<br>  + ƯCLN: Mỗi thừa số lấy với số mũ *nhỏ nhất*.<br>  + BCNN: Mỗi thừa số lấy với số mũ *lớn nhất*. |
+| **+ Bước 1: Chuyển giao nhiệm vụ**<br>- **GV:** Chiếu Sơ đồ tư duy Mindmap Luyện tập chung Chương II gồm 3 nhánh lớn:<br>  1. Ước chung lớn nhất (ƯCLN) & Rút gọn phân số.<br>  2. Bội chung nhỏ nhất (BCNN) & Quy đồng mẫu số.<br>  3. Ứng dụng thực tế đời sống (chia tổ, chu kỳ lặp lại).<br>- Yêu cầu HS quan sát sơ đồ và so sánh điểm giống/khác nhau giữa quy tắc tìm ƯCLN và BCNN.<br>- ***Tích hợp AI (6.D1.1): GV cho học sinh xem gợi ý của trợ lý AI giải thích thuật toán Euclid tìm ƯCLN của hai số lớn cực nhanh bằng phép chia có dư liên tiếp.***<br><br>**+ Bước 2: Thực hiện nhiệm vụ**<br>- **HS:** Quan sát sơ đồ tư duy, thảo luận cặp đôi và ghi chép vào vở.<br><br>**+ Bước 3: Báo cáo, thảo luận**<br>- Đại diện HS thuyết minh lại 3 nhánh chính của sơ đồ tư duy.<br><br>**+ Bước 4: Kết luận, nhận định**<br>- **GV:** Chốt lại bảng so sánh và chuyển sang phần giải bài tập rèn kỹ năng. | **So sánh quy tắc tìm ƯCLN và BCNN:**<br>- **Bước 1:** Phân tích các số ra thừa số nguyên tố.<br>- **Bước 2 (Chọn thừa số):**<br>  + ƯCLN: Chỉ chọn các thừa số nguyên tố *chung*.<br>  + BCNN: Chọn các thừa số nguyên tố *chung và riêng*.<br>- **Bước 3 (Lập tích):**<br>  + ƯCLN: Mỗi thừa số lấy với số mũ *nhỏ nhất*.<br>  + BCNN: Mỗi thừa số lấy với số mũ *lớn nhất*. |
 
 ### 2. Hoạt động 2.2: Giải quyết bài tập trọng tâm (22 phút)
 a) Mục tiêu: Rèn kỹ năng rút gọn phân số, quy đồng mẫu số và giải bài toán thực tế; tích hợp chỉ báo NLS 5.3.TC1a.
