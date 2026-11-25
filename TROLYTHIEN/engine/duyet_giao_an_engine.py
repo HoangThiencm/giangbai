@@ -417,10 +417,7 @@ def inspect_teacher_folder(folder_path):
     }
 
 
-# ==============================================================================
-# DANH MỤC TOÀN BỘ 8 GIÁO VIÊN TỔ TOÁN - TIN HỌC (THÁNG 10/2026)
-# ==============================================================================
-TEACHERS_CATALOG = [
+TEACHERS_CATALOG_T10 = [
     {
         "stt": 1,
         "id": "HO_DANG_DANH",
@@ -1111,13 +1108,739 @@ TEACHERS_CATALOG = [
     }
 ]
 
-def get_teacher_config_by_name(name_str):
+# ==============================================================================
+# DANH MỤC TOÀN BỘ 8 GIÁO VIÊN TỔ TOÁN - TIN HỌC (THÁNG 11/2026 - TUẦN 9 ĐẾN 12)
+# ==============================================================================
+TEACHERS_CATALOG_T11 = [
+    {
+        "stt": 1,
+        "id": "HO_DANG_DANH",
+        "name": "Hồ Đăng Danh",
+        "folder_name": "Hồ Đăng Danh",
+        "doc_id": "01",
+        "subjects": "Toán 6 (Số học 6 & Hình học 6), Toán 9 (Đại số 9 & Hình học 9)",
+        "subjects_short": "• Đại số 9\n• Hình học 9\n• Số học 6\n• Hình học 6",
+        "lessons_stats": "• Đại 9: 8 tiết (Tiết 23-30)\n• Hình 9: 8 tiết (Tiết 11-18)\n• Số 6: 13 tiết (Tiết 25-37)\n• Hình 6: 4 tiết (Tiết 9-12)\n(33 tiết - 95 trang)",
+        "progress_eval": "Đủ 100% Tháng 11 (Tuần 9 đến Tuần 12).",
+        "format_eval": "Đạt chuẩn CV 5512; Header/Footer đúng mẫu.",
+        "remarks": "Hồ sơ bài bản, kiến thức căn thức bậc hai và đường tròn chuẩn xác.",
+        "verdict": "DUYỆT (TỐT)",
+        "total_pages": 95,
+        "files_count": 4,
+        "overall_summary": (
+            "Hồ sơ Kế hoạch bài dạy Tháng 11 nộp đầy đủ 4 phân môn (33 tiết dạy — 95 trang giáo án), "
+            "khớp 100% tiến độ chương trình từ Tuần 9 đến Tuần 12 theo Phụ lục 3. Thể thức văn bản và Header/Footer đúng quy chuẩn trường THCS Trần Phú. "
+            "Phân môn Đại số 9 (căn thức bậc hai) và Hình học 9 (cung và dây của đường tròn) có hệ thống bài tập phân hóa cao, phương pháp dẫn dắt khoa học. "
+            "Phân môn Số học 6 (số nguyên) và Hình học 6 (bài toán thực tế chu vi, diện tích) thiết kế hoạt động học tập phong phú, kích thích tư duy học sinh."
+        ),
+        "overall_system_comment": (
+            "[NHẬN XÉT TOÀN BỘ HỒ SƠ THÁNG 11 - GV HỒ ĐĂNG DANH]: Kế hoạch bài dạy chuẩn bị rất công phu, "
+            "đầy đủ 4 phân môn (33 tiết dạy, 95 trang), đảm bảo 100% tiến độ PPCT tháng 11 (Tuần 9 đến Tuần 12). "
+            "Cấu trúc 4 hoạt động CV 5512 rõ nét, bài tập phân hóa tốt, tích hợp NLS và AI bám sát kế hoạch giáo dục. "
+            "Toán học chuẩn xác, thể thức đúng quy định trường THCS Trần Phú. DUYỆT (XẾP LOẠI: TỐT)."
+        ),
+        "files": [
+            {
+                "filename": "DAISO 9-THANG 11-HODANGDANH_1795508308336.pdf",
+                "short_name": "Đại số 9",
+                "pages": 26,
+                "detail_title": "1. Phân môn Đại số 9 (Tiết 23 đến Tiết 30 — 26 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 8 tiết theo PPCT (Bài 7: Căn bậc hai và căn thức bậc hai, Khai căn bậc hai và phép nhân/chia, Luyện tập chung). Đảm bảo 100% tiến độ Tuần 9 đến Tuần 12.\n"
+                    "• Cấu trúc: 4 hoạt động CV 5512 rõ nét. Các bước biến đổi căn thức, điều kiện xác định và rút gọn biểu thức chứa căn chuẩn xác, bài tập phân hóa sâu sắc.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP ĐẠI SỐ 9 (26 TRANG - DAISO9-THANG11-HODANGDANH)]:",
+                "system_comment": (
+                    "[TỆP ĐẠI SỐ 9 - TIẾT 23 ĐẾN 30]: Kế hoạch bài dạy soạn đầy đủ 8 tiết theo PPCT (Bài 7: Căn bậc hai và căn thức bậc hai, Khai phương một tích/thương, Luyện tập). "
+                    "Cấu trúc 4 hoạt động CV 5512 rõ nét, điều kiện xác định của căn thức và phép biến đổi đại số chuẩn xác, bài tập phân hóa tốt. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HINHHOC 9-THANG 11-HODANGDANH._1795508309170.pdf",
+                "short_name": "Hình học 9",
+                "pages": 28,
+                "detail_title": "2. Phân môn Hình học 9 (Tiết 11 đến Tiết 18 — 28 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 8 tiết theo PPCT (Bài 14: Cung và dây của một đường tròn, Góc ở tâm, Độ dài cung tròn và diện tích hình quạt tròn, Luyện tập chung). Khớp 100% tiến độ.\n"
+                    "• Cấu trúc: Hệ thống hình vẽ trực quan, tính chất liên hệ giữa cung và dây được chứng minh bài bản. Đảm bảo tính sư phạm và yêu cầu thực tế dạy học trên lớp.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HÌNH HỌC 9 (28 TRANG - HINHHOC9-THANG11-HODANGDANH)]:",
+                "system_comment": (
+                    "[TỆP HÌNH HỌC 9 - TIẾT 11 ĐẾN 18]: Kế hoạch bài dạy chuẩn bị đầy đủ 8 tiết theo PPCT (Bài 14: Cung và dây của đường tròn, Góc ở tâm, Độ dài cung tròn, Luyện tập). "
+                    "Cấu trúc CV 5512 rõ ràng, lập luận chứng minh hình học chuẩn xác, hình vẽ trực quan, sư phạm. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "SOHOC 6-THANG 11-HODANGDANH._1795508308519.pdf",
+                "short_name": "Số học 6",
+                "pages": 29,
+                "detail_title": "3. Phân môn Số học 6 (Tiết 25 đến Tiết 37 — 29 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 13 tiết dạy từ Tiết 25 đến Tiết 37 (Bài 13: Tập hợp các số nguyên, Thứ tự trong tập hợp các số nguyên, Phép cộng và trừ số nguyên, Quy tắc dấu ngoặc). Đạt 100% tiến độ.\n"
+                    "• Cấu trúc: Khái niệm số nguyên âm được hình thành gắn liền nhiệt độ, độ cao thực tế, quy tắc cộng trừ số nguyên có ví dụ minh họa trực quan trên trục số.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP SỐ HỌC 6 (29 TRANG - SOHOC6-THANG11-HODANGDANH)]:",
+                "system_comment": (
+                    "[TỆP SỐ HỌC 6 - TIẾT 25 ĐẾN 37]: Kế hoạch bài dạy chuẩn bị 13 tiết dạy công phu (Bài 13: Số nguyên, Thứ tự trong Z, Phép cộng trừ số nguyên, Quy tắc dấu ngoặc). "
+                    "Cấu trúc CV 5512 rõ nét, phương pháp trực quan trên trục số giúp học sinh dễ hiểu, bài tập rèn kỹ năng tính toán chuẩn xác. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HINH HOC 6-THANG 11-HODANGDANH._1795508308538.pdf",
+                "short_name": "Hình học 6",
+                "pages": 12,
+                "detail_title": "4. Phân môn Hình học 6 (Tiết 9 đến Tiết 12 — 12 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 4 tiết theo PPCT (Thực hành trải nghiệm tính chu vi và diện tích một số hình trong thực tiễn, Luyện tập chung, Ôn tập chương IV). Đúng tiến độ Tuần 9 đến 12.\n"
+                    "• Cấu trúc: Bài toán thực tế đo đạc, tính diện tích phòng học, sân trường sinh động, phát huy tinh thần làm việc nhóm của học sinh.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HÌNH HỌC 6 (12 TRANG - HINHHOC6-THANG11-HODANGDANH)]:",
+                "system_comment": (
+                    "[TỆP HÌNH HỌC 6 - TIẾT 9 ĐẾN 12]: Soạn đầy đủ 4 tiết theo PPCT tháng 11 (Thực hành trải nghiệm tính chu vi diện tích hình phẳng trong thực tế, Luyện tập). "
+                    "Cấu trúc 4 bước CV 5512 rõ ràng, bài toán gắn liền đời sống, hình vẽ trực quan, phương pháp sư phạm mạch lạc. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            }
+        ]
+    },
+    {
+        "stt": 2,
+        "id": "Duong_Quang_Tung",
+        "name": "Dương Quang Tùng",
+        "folder_name": "Dương Quang Tùng",
+        "doc_id": "02",
+        "subjects": "Tin học 6, Tin học 7, Tin học 8, Tin học 9",
+        "subjects_short": "• Tin học 6\n• Tin học 7\n• Tin học 8\n• Tin học 9",
+        "lessons_stats": "• Tin 6: 4 tiết (21 trang)\n• Tin 7: 4 tiết (21 trang)\n• Tin 8: 4 tiết (18 trang)\n• Tin 9: 4 tiết (30 trang)\n(16 tiết - 90 trang)",
+        "progress_eval": "Đủ 100% Tháng 11 (Tuần 9 đến Tuần 12).",
+        "format_eval": "Đạt chuẩn CV 5512; Phân môn Tin học trực quan, sinh động.",
+        "remarks": "Bài thực hành bảng tính và biểu đồ chi tiết, tích hợp NLS đạt yêu cầu.",
+        "verdict": "DUYỆT (TỐT)",
+        "total_pages": 90,
+        "files_count": 4,
+        "overall_summary": (
+            "Hồ sơ Kế hoạch bài dạy môn Tin học 4 khối lớp (6, 7, 8, 9) gồm 16 tiết dạy (90 trang giáo án), "
+            "đạt 100% tiến độ PPCT tháng 11 (Tuần 9 đến Tuần 12). Kế hoạch bài dạy thiết kế chuẩn mực theo Công văn 5512, "
+            "chú trọng rèn luyện kỹ năng thực hành máy tính cho học sinh. Các chuyên đề về biểu đồ bảng tính (Tin 8), "
+            "tìm kiếm thông tin an toàn (Tin 6, 7) và phần mềm mô phỏng (Tin 9) được biên soạn trực quan, phát huy tốt năng lực số."
+        ),
+        "overall_system_comment": (
+            "[NHẬN XÉT TOÀN BỘ HỒ SƠ THÁNG 11 - GV DƯƠNG QUANG TÙNG]: Kế hoạch bài dạy nộp đầy đủ 4 khối lớp Tin học 6, 7, 8, 9 "
+            "(16 tiết dạy, 90 trang), khớp 100% tiến độ PPCT tháng 11 (Tuần 9 đến Tuần 12). Cấu trúc 4 hoạt động CV 5512 rõ nét, bài tập thực hành trên máy tính được thiết kế chi tiết, "
+            "phát huy tốt năng lực số và kỹ năng công nghệ thông tin của học sinh. DUYỆT (XẾP LOẠI: TỐT)."
+        ),
+        "files": [
+            {
+                "filename": "TINHỌC6-THÁNG11-DUONGQUANGTUNG_1795508261113.pdf",
+                "short_name": "Tin học 6",
+                "pages": 21,
+                "detail_title": "1. Môn Tin học 6 (Tiết 9 đến Tiết 16 — 21 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 4 bài dạy theo tiến độ Tuần 9 đến Tuần 12 (Bài 5: Internet, Bài 6: Mạng thông tin toàn cầu, Bài 7: Tìm kiếm thông tin trên Internet). Khớp 100% PPCT.\n"
+                    "• Cấu trúc: 4 hoạt động CV 5512 rõ ràng, bài tập thực hành hướng dẫn tìm kiếm từ khóa, đánh giá độ tin cậy của thông tin rất thiết thực.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP TIN HỌC 6 (21 TRANG - TINHOC6-THANG11-DUONGQUANGTUNG)]:",
+                "system_comment": (
+                    "[TỆP TIN HỌC 6 - THÁNG 11]: Soạn đầy đủ các bài theo PPCT từ tuần 9 đến 12 (Bài 5, 6, 7: Khai thác Internet và tìm kiếm thông tin). "
+                    "Hoạt động học tập trực quan, hướng dẫn kỹ năng tìm kiếm và chắt lọc thông tin hữu ích cho học sinh lớp 6. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "TINHỌC7-THÁNG 11-DUONGQUANGTUNG_1795508261068.pdf",
+                "short_name": "Tin học 7",
+                "pages": 21,
+                "detail_title": "2. Môn Tin học 7 (Tiết 9 đến Tiết 16 — 21 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ các bài theo PPCT Tuần 9 đến Tuần 12 (Bài 6: Làm quen với phần mềm bảng tính, Bài 7: Tính toán tự động trên bảng tính). Đúng tiến độ 100%.\n"
+                    "• Cấu trúc: Thiết kế bài thực hành nhập dữ liệu, sử dụng địa chỉ ô và các công thức toán học cơ bản trực quan, dễ thao tác.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP TIN HỌC 7 (21 TRANG - TINHOC7-THANG11-DUONGQUANGTUNG)]:",
+                "system_comment": (
+                    "[TỆP TIN HỌC 7 - THÁNG 11]: Soạn đầy đủ các bài theo PPCT tháng 11 (Bài 6: Làm quen phần mềm bảng tính, Bài 7: Tính toán tự động). "
+                    "Hướng dẫn từng bước nhập dữ liệu và sử dụng công thức mạch lạc, bài tập rèn kỹ năng tin học văn phòng tốt. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "TINHỌC8-THÁNG 11-DUONGQUANGTUNG_1795508261077.pdf",
+                "short_name": "Tin học 8",
+                "pages": 18,
+                "detail_title": "3. Môn Tin học 8 (Tiết 9 đến Tiết 16 — 18 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ Bài 7: Trình bày dữ liệu bằng biểu đồ, Luyện tập và Thực hành tổng hợp. Tiến độ đạt 100% Tuần 9 đến Tuần 12.\n"
+                    "• Cấu trúc: 4 hoạt động sư phạm chuẩn mực; hướng dẫn tạo biểu đồ cột, biểu đồ tròn và tùy chỉnh các thành phần biểu đồ chi tiết.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP TIN HỌC 8 (18 TRANG - TINHOC8-THANG11-DUONGQUANGTUNG)]:",
+                "system_comment": (
+                    "[TỆP TIN HỌC 8 - THÁNG 11]: Soạn bài Bài 7: Trình bày dữ liệu bằng biểu đồ và thực hành tổng hợp đúng tiến độ. "
+                    "Nội dung thực hành bám sát bài toán thực tế, giúp học sinh nắm vững cách chọn dạng biểu đồ trực quan hóa dữ liệu. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "TINHỌC9-THÁNG 11 -DUONGQUANGTUNG_1795508260966.pdf",
+                "short_name": "Tin học 9",
+                "pages": 30,
+                "detail_title": "4. Môn Tin học 9 (Tiết 9 đến Tiết 16 — 30 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Chuẩn bị 30 trang chu đáo gồm Bài 6: Trình bày thông tin trong trao đổi và hợp tác, Bài 7: Thực hành tạo bài trình chiếu chuyên nghiệp. Khớp 100% PPCT.\n"
+                    "• Cấu trúc: Hướng dẫn kỹ thuật thiết kế slide khoa học, hiệu ứng chuyển động vừa phải và chuẩn mực thuyết trình hiện đại.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP TIN HỌC 9 (30 TRANG - TINHOC9-THANG11-DUONGQUANGTUNG)]:",
+                "system_comment": (
+                    "[TỆP TIN HỌC 9 - THÁNG 11]: Hồ sơ chuẩn bị 30 trang chu đáo, soạn đủ các bài theo PPCT Tuần 9 đến Tuần 12 về thiết kế bài trình chiếu và hợp tác số. "
+                    "Cấu trúc CV 5512 rõ nét, bài tập thực hành rèn kỹ năng thuyết trình và thẩm mỹ công nghệ thông tin chất lượng cao. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            }
+        ]
+    },
+    {
+        "stt": 3,
+        "id": "Hoang_Xuan_Anh",
+        "name": "Hoàng Xuân Ánh",
+        "folder_name": "Hoàng Xuân Ánh",
+        "doc_id": "03",
+        "subjects": "Toán 7 (Đại số 7 & Hình học 7), Hoạt động trải nghiệm 6 (HĐTN 6)",
+        "subjects_short": "• Đại số 7\n• Hình học 7\n• HĐTN 6",
+        "lessons_stats": "• Đại 7: 10 tiết (60 trang)\n• Hình 7: 8 tiết (39 trang)\n• HĐTN 6: 4 tiết (12 trang)\n(22 tiết - 111 trang)",
+        "progress_eval": "Đủ 100% Tháng 11 (Tuần 9 đến Tuần 12).",
+        "format_eval": "Đạt chuẩn CV 5512; Phân môn rõ ràng, sư phạm.",
+        "remarks": "Chứng minh tam giác bằng nhau chặt chẽ, đại số rèn kỹ năng căn bậc hai tốt.",
+        "verdict": "DUYỆT (TỐT)",
+        "total_pages": 111,
+        "files_count": 3,
+        "overall_summary": (
+            "Hồ sơ Kế hoạch bài dạy Tháng 11 nộp đầy đủ 3 tệp thuộc các phân môn Toán 7 (Đại số, Hình học) và HĐTN 6 với tổng cộng 22 tiết dạy (111 trang). "
+            "Tiến độ thực hiện chương trình đạt 100% kế hoạch từ Tuần 9 đến Tuần 12 theo Phụ lục 3. "
+            "Phân môn Đại số 7 chuẩn bị rất công phu (60 trang), giải thích cặn kẽ khái niệm số vô tỉ, căn bậc hai số học và tập hợp số thực. "
+            "Phân môn Hình học 7 trình bày chặt chẽ các trường hợp bằng nhau thứ hai (c-g-c) và thứ ba (g-c-g) của tam giác. Giáo án HĐTN 6 thiết kế hoạt động trải nghiệm bổ ích."
+        ),
+        "overall_system_comment": (
+            "[NHẬN XÉT TOÀN BỘ HỒ SƠ THÁNG 11 - GV HOÀNG XUÂN ÁNH]: Kế hoạch bài dạy nộp đầy đủ 3 phân môn Toán 7 (Đại số, Hình học) "
+            "và HĐTN 6 (22 tiết dạy, 111 trang), đảm bảo 100% tiến độ PPCT tháng 11 (Tuần 9 đến Tuần 12). Cấu trúc 4 hoạt động CV 5512 chuẩn mực, toán học chính xác, "
+            "hình vẽ trực quan, lập luận chứng minh hình học và biến đổi đại số bài bản. DUYỆT (XẾP LOẠI: TỐT)."
+        ),
+        "files": [
+            {
+                "filename": "ĐẠI SỐ 7 - THÁNG 11 - HOÀNG XUÂN ÁNH_1795508153869.pdf",
+                "short_name": "Đại số 7",
+                "pages": 60,
+                "detail_title": "1. Phân môn Đại số 7 (Tiết 17 đến Tiết 26 — 60 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Chuẩn bị đồ sộ 60 trang gồm Bài 6: Số vô tỉ. Căn bậc hai số học, Bài 7: Tập hợp các số thực, Luyện tập chung, Bài tập cuối chương II. Đúng tiến độ Tuần 9 đến 12.\n"
+                    "• Cấu trúc: 4 hoạt động CV 5512 rõ nét, phân biệt rõ số hữu tỉ và vô tỉ, hướng dẫn tính căn bậc hai số học chuẩn xác, bài tập phân hóa tốt.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP ĐẠI SỐ 7 (60 TRANG - DAISO7-THANG11-HOANGXUANANH)]:",
+                "system_comment": (
+                    "[TỆP ĐẠI SỐ 7 - THÁNG 11]: Kế hoạch bài dạy chuẩn bị rất công phu (60 trang, 10 tiết: Bài 6 Căn bậc hai số học, Bài 7 Số thực, Ôn tập chương II). "
+                    "Cấu trúc CV 5512 rõ ràng, quy tắc biến đổi đại số chuẩn xác, hệ thống bài tập rèn kỹ năng tính toán rất tốt. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HÌNH HỌC 7 - THÁNG 11 - HOÀNG XUÂN ÁNH_1795508153884.pdf",
+                "short_name": "Hình học 7",
+                "pages": 39,
+                "detail_title": "2. Phân môn Hình học 7 (Tiết 16 đến Tiết 23 — 39 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 8 tiết theo PPCT (Bài 14: Trường hợp bằng nhau thứ hai và thứ ba của tam giác c-g-c, g-c-g, Luyện tập chung). Đạt 100% tiến độ.\n"
+                    "• Cấu trúc: Các bước chứng minh hai tam giác bằng nhau được trình bày mẫu mực, hình vẽ chuẩn xác, ký hiệu góc xen giữa và cạnh tương ứng rõ ràng.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HÌNH HỌC 7 (39 TRANG - HINH7-THANG11-HOANGXUANANH)]:",
+                "system_comment": (
+                    "[TỆP HÌNH HỌC 7 - THÁNG 11]: Hồ sơ chuẩn bị 39 trang chu đáo, soạn đủ 8 tiết theo PPCT (Bài 14: Trường hợp bằng nhau c-g-c, g-c-g và Luyện tập). "
+                    "Hình vẽ trực quan, lập luận chứng minh chặt chẽ, phương pháp sư phạm mạch lạc. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HĐTN 6-THÁNG 11- HOÀNG XUÂN ÁNH_1795508153813.pdf",
+                "short_name": "HĐTN 6",
+                "pages": 12,
+                "detail_title": "3. Hoạt động trải nghiệm 6 (Tuần 9 đến Tuần 12 — 12 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 4 tiết theo chủ đề tháng 11: Chủ đề 3 (Xây dựng tình bạn, tình thầy trò và rèn luyện tính kiên trì). Tiến độ đạt 100%.\n"
+                    "• Cấu trúc: Tổ chức sinh động với diễn đàn chia sẻ, hoạt động tri ân thầy cô giáo nhân ngày 20/11 bổ ích và giàu cảm xúc.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HĐTN 6 (12 TRANG - HDTN6-THANG11-HOANGXUANANH)]:",
+                "system_comment": (
+                    "[TỆP HĐTN 6 - THÁNG 11]: Soạn đầy đủ 4 tiết theo Chủ đề 3 (Tình bạn, tình thầy trò, rèn luyện tính kiên trì) từ tuần 9 đến tuần 12. "
+                    "Hoạt động trải nghiệm phong phú, lồng ghép tốt chủ đề tri ân thầy cô giáo nhân ngày 20/11. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            }
+        ]
+    },
+    {
+        "stt": 4,
+        "id": "Le_Thi_Binh",
+        "name": "Lê Thị Bình",
+        "folder_name": "Lê Thị Bình",
+        "doc_id": "04",
+        "subjects": "Toán 7 (Đại 7 & Hình 7), Toán 8 (Đại 8 & Hình 8), HĐTN 7",
+        "subjects_short": "• Đại số 7 & Hình 7\n• Đại số 8 & Hình 8\n• HĐTN 7",
+        "lessons_stats": "• Đại 7: 10 tiết (50 trang)\n• Hình 7: 8 tiết (39 trang)\n• Đại 8: 8 tiết (46 trang)\n• Hình 8: 6 tiết (25 trang)\n• HĐTN 7: 4 tiết (13 trang)\n(36 tiết - 173 trang)",
+        "progress_eval": "Đủ 100% Tháng 11 (Tuần 9 đến Tuần 12).",
+        "format_eval": "Đạt chuẩn CV 5512; Khối lượng hồ sơ rất đồ sộ.",
+        "remarks": "Giáo án 5 phân môn công phu, bài tập hằng đẳng thức lập phương và hình học sâu sắc.",
+        "verdict": "DUYỆT (TỐT)",
+        "total_pages": 173,
+        "files_count": 5,
+        "overall_summary": (
+            "Cô Lê Thị Bình tiếp tục đảm nhiệm khối lượng chuyên môn lớn nhất tổ với 5 phân môn (Đại 7, Hình 7, Đại 8, Hình 8, HĐTN 7), "
+            "tổng cộng 36 tiết dạy (173 trang giáo án). Tiến độ thực hiện chương trình đạt 100% kế hoạch tháng 11 (Tuần 9 đến Tuần 12). "
+            "Hồ sơ chuẩn bị rất đồ sộ và bài bản. Nội dung Đại số 8 (Bài 7: Lập phương của một tổng và hiệu) và Hình học 8 (Định lí Thalès) "
+            "được thiết kế nhiều dạng bài tập nâng cao, lời giải chặt chẽ. Phân môn Toán 7 và HĐTN 7 tổ chức khoa học, đạt chuẩn sư phạm."
+        ),
+        "overall_system_comment": (
+            "[NHẬN XÉT TOÀN BỘ HỒ SƠ THÁNG 11 - GV LÊ THỊ BÌNH]: Khối lượng hồ sơ đồ sộ với 5 phân môn Toán 7, Toán 8 và HĐTN 7 "
+            "(36 tiết dạy, 173 trang), đảm bảo 100% tiến độ PPCT tháng 11 (Tuần 9 đến Tuần 12). Giáo án chuẩn bị rất công phu, cấu trúc 4 hoạt động CV 5512 rõ nét, "
+            "hệ thống bài tập phân hóa sâu sắc, toán học chuẩn xác, hình vẽ trực quan. DUYỆT (XẾP LOẠI: TỐT)."
+        ),
+        "files": [
+            {
+                "filename": "ĐẠI SỐ 7 - THÁNG 11 - LÊ THỊ BÌNH_1795508371384.pdf",
+                "short_name": "Đại số 7",
+                "pages": 50,
+                "detail_title": "1. Phân môn Đại số 7 (Tiết 17 đến Tiết 26 — 50 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 10 tiết theo PPCT (Bài 6: Số vô tỉ. Căn bậc hai số học, Bài 7: Tập hợp các số thực, Ôn tập chương II). Tiến độ đạt 100%.\n"
+                    "• Cấu trúc: 4 hoạt động CV 5512 mạch lạc, bài tập rèn kỹ năng tính căn thức và biểu diễn số thực trên trục số phong phú, lời giải chuẩn xác.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP ĐẠI SỐ 7 (50 TRANG - DAISO7-THANG11-LETHIBINH)]:",
+                "system_comment": (
+                    "[TỆP ĐẠI SỐ 7 - THÁNG 11]: Soạn đầy đủ 10 tiết theo PPCT từ Bài 6 đến Bài 7 (Căn bậc hai số học, Số thực). Cấu trúc 4 hoạt động CV 5512 rõ nét, "
+                    "hướng dẫn tính toán chuẩn xác, bài tập phân hóa tốt. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HÌNH HỌC 7 - THÁNG 11 - LÊ THỊ BÌNH_1795508371697.pdf",
+                "short_name": "Hình học 7",
+                "pages": 39,
+                "detail_title": "2. Phân môn Hình học 7 (Tiết 16 đến Tiết 23 — 39 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đủ 8 tiết theo PPCT (Bài 14: Trường hợp bằng nhau thứ hai và thứ ba của tam giác c-g-c, g-c-g, Luyện tập chung). Tiến độ đạt 100%.\n"
+                    "• Cấu trúc: Hình vẽ rõ ràng, các bước suy luận hình học có căn cứ định lý chặt chẽ, ký hiệu góc và cạnh chuẩn mực.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HÌNH HỌC 7 (39 TRANG - HINH7-THANG11-LETHIBINH)]:",
+                "system_comment": (
+                    "[TỆP HÌNH HỌC 7 - THÁNG 11]: Hồ sơ chuẩn bị 39 trang chu đáo, soạn đủ 8 tiết theo PPCT (Bài 14: Các trường hợp bằng nhau của tam giác). "
+                    "Hình vẽ trực quan, lập luận chứng minh chặt chẽ, phương pháp sư phạm mạch lạc. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "ĐẠI SỐ 8 - THÁNG 11 - LÊ THỊ BÌNH_1795508370876.pdf",
+                "short_name": "Đại số 8",
+                "pages": 46,
+                "detail_title": "3. Phân môn Đại số 8 (Tiết 17 đến Tiết 24 — 46 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn công phu 8 tiết (Bài 7: Lập phương của một tổng và một hiệu, Luyện tập hằng đẳng thức đáng nhớ, Ôn tập giữa kì). Đạt 100% tiến độ.\n"
+                    "• Cấu trúc: Khai triển hằng đẳng thức bậc 3 được hình thành qua hoạt động trực quan, hệ thống bài tập áp dụng phong phú, lời giải chi tiết.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP ĐẠI SỐ 8 (46 TRANG - DAISO8-THANG11-LETHIBINH)]:",
+                "system_comment": (
+                    "[TỆP ĐẠI SỐ 8 - THÁNG 11]: Soạn đầy đủ 8 tiết theo PPCT (Bài 7: Hằng đẳng thức lập phương của một tổng/hiệu và Luyện tập). "
+                    "Cấu trúc CV 5512 rõ nét, quy tắc khai triển đại số chuẩn xác, hệ thống bài tập rèn kỹ năng biến đổi rất tốt. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HÌNH HỌC 8 - THÁNG 11 - LÊ THỊ BÌNH_1795508371510.pdf",
+                "short_name": "Hình học 8",
+                "pages": 25,
+                "detail_title": "4. Phân môn Hình học 8 (Tiết 17 đến Tiết 22 — 25 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 6 tiết gồm Bài 15: Định lí Thalès trong tam giác, Định lí Thalès đảo, Luyện tập chung. Đúng tiến độ Tuần 9 đến 12.\n"
+                    "• Cấu trúc: Tỉ số đoạn thẳng và tính chất đường thẳng song song cắt hai cạnh tam giác được minh họa rõ nét, hình vẽ chính xác.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HÌNH HỌC 8 (25 TRANG - HINH8-THANG11-LETHIBINH)]:",
+                "system_comment": (
+                    "[TỆP HÌNH HỌC 8 - THÁNG 11]: Kế hoạch bài dạy soạn đủ 6 tiết theo PPCT (Bài 15: Định lí Thalès trong tam giác và Định lí đảo). "
+                    "Hình vẽ trực quan, tính toán tỉ số đoạn thẳng chuẩn xác, phương pháp sư phạm mạch lạc. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HĐTN 7 - THÁNG 11 - LÊ THỊ BÌNH_1795508371126.pdf",
+                "short_name": "HĐTN 7",
+                "pages": 13,
+                "detail_title": "5. Hoạt động trải nghiệm 7 (Tuần 9 đến Tuần 12 — 13 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 4 tiết theo Chủ đề 3: Rèn luyện tính kiên trì, chăm chỉ và tinh thần trách nhiệm. Tiến độ đạt 100%.\n"
+                    "• Cấu trúc: Thiết kế hoạt động diễn đàn, kể chuyện Bác Hồ và bài tập liên hệ thực tế rèn luyện lối sống văn minh, ý nghĩa.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HĐTN 7 (13 TRANG - HDTN7-THANG11-LETHIBINH)]:",
+                "system_comment": (
+                    "[TỆP HĐTN 7 - THÁNG 11]: Soạn đầy đủ 4 tiết theo Chủ đề 3 (Rèn luyện tính kiên trì, trách nhiệm) từ tuần 9 đến tuần 12. "
+                    "Kế hoạch tổ chức sinh động, kết hợp tốt giáo dục đạo đức và kỹ năng sống tích cực cho học sinh. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            }
+        ]
+    },
+    {
+        "stt": 5,
+        "id": "Nguyen_Thi_Thao",
+        "name": "Nguyễn Thị Thảo",
+        "folder_name": "Nguyễn Thị Thảo",
+        "doc_id": "05",
+        "subjects": "Toán 6 (Đại số 6 & Hình học 6), Toán 7 (Đại số 7 & Hình học 7)",
+        "subjects_short": "• Đại số 6 & Hình 6\n• Đại số 7 & Hình 7",
+        "lessons_stats": "• Đại 6: 13 tiết (47 trang)\n• Hình 6: 4 tiết (16 trang)\n• Đại 7: 10 tiết (50 trang)\n• Hình 7: 8 tiết (39 trang)\n(35 tiết - 152 trang)",
+        "progress_eval": "Đủ 100% Tháng 11 (Tuần 9 đến Tuần 12).",
+        "format_eval": "Đạt chuẩn CV 5512; Bài tập phân hóa đa dạng.",
+        "remarks": "Hồ sơ công phu, hình vẽ trực quan, kiến thức số nguyên và số thực chuẩn mực.",
+        "verdict": "DUYỆT (TỐT)",
+        "total_pages": 152,
+        "files_count": 4,
+        "overall_summary": (
+            "Cô Nguyễn Thị Thảo nộp đầy đủ 4 tệp Kế hoạch bài dạy thuộc các phân môn Đại số 6 (Số học), Hình học 6, Đại số 7 và Hình học 7 "
+            "với tổng cộng 35 tiết dạy (152 trang giáo án). Tiến độ thực hiện chương trình đạt 100% kế hoạch tháng 11 (Tuần 9 đến Tuần 12). "
+            "Hồ sơ bài dạy được biên soạn rất công phu và đồng đều giữa các khối lớp. Các bài toán số nguyên âm Toán 6 và căn bậc hai số học Toán 7 "
+            "được thiết kế nhiều tình huống gợi mở sinh động. Phân môn Hình học 6 và 7 có hình vẽ rõ ràng, chứng minh mạch lạc."
+        ),
+        "overall_system_comment": (
+            "[NHẬN XÉT TOÀN BỘ HỒ SƠ THÁNG 11 - GV NGUYỄN THỊ THẢO]: Kế hoạch bài dạy nộp đầy đủ 4 phân môn Toán 6 và Toán 7 "
+            "(35 tiết dạy, 152 trang), đảm bảo 100% tiến độ PPCT tháng 11 (Tuần 9 đến Tuần 12). Cấu trúc 4 hoạt động CV 5512 rõ nét, bài tập phân hóa sâu sắc, "
+            "toán học chuẩn xác, tích hợp NLS và AI đúng quy định. DUYỆT (XẾP LOẠI: TỐT)."
+        ),
+        "files": [
+            {
+                "filename": "ĐẠI SỐ 6 - THÁNG 11 - NGUYỄN THỊ THẢO_1795508233199.pdf",
+                "short_name": "Đại số 6",
+                "pages": 47,
+                "detail_title": "1. Phân môn Đại số 6 (Tiết 25 đến Tiết 37 — 47 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn 47 trang rất đồ sộ gồm Bài 13: Tập hợp các số nguyên, Thứ tự trong tập hợp các số nguyên, Phép cộng và trừ số nguyên. Tiến độ đạt 100%.\n"
+                    "• Cấu trúc: 4 hoạt động CV 5512 mạch lạc, quy tắc cộng hai số nguyên cùng dấu, khác dấu được hướng dẫn dễ hiểu qua ví dụ thực tế.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP ĐẠI SỐ 6 (47 TRANG - DAISO6-THANG11-NGUYENTHITHAO)]:",
+                "system_comment": (
+                    "[TỆP ĐẠI SỐ 6 - THÁNG 11]: Hồ sơ chuẩn bị 47 trang công phu, soạn đủ 13 tiết theo PPCT (Bài 13: Số nguyên, Thứ tự trong Z, Phép cộng trừ số nguyên). "
+                    "Cấu trúc CV 5512 rõ nét, bài tập rèn kỹ năng tính toán số nguyên rất tốt. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HÌNH HỌC 6 - THÁNG 11 - NGUYỄN THỊ THẢO_1795508234112.pdf",
+                "short_name": "Hình học 6",
+                "pages": 16,
+                "detail_title": "2. Phân môn Hình học 6 (Tiết 9 đến Tiết 12 — 16 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 4 tiết theo PPCT (Thực hành trải nghiệm tính chu vi và diện tích tứ giác thực tế, Luyện tập chung). Đúng tiến độ Tuần 9 đến 12.\n"
+                    "• Cấu trúc: Thiết kế bài toán thực tế sinh động, hướng dẫn học sinh đo đạc và tính diện tích hình thang, hình bình hành, hình thoi chuẩn xác.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HÌNH HỌC 6 (16 TRANG - HINH6-THANG11-NGUYENTHITHAO)]:",
+                "system_comment": (
+                    "[TỆP HÌNH HỌC 6 - THÁNG 11]: Soạn đầy đủ 4 tiết theo PPCT (Thực hành trải nghiệm hình phẳng trong thực tế, Luyện tập). "
+                    "Nội dung gắn liền thực tế đời sống, hình vẽ trực quan, phương pháp sư phạm mạch lạc. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "ĐẠI SỐ 7 - THÁNG 11 - NGUYỄN THỊ THẢO_1795508233765.pdf",
+                "short_name": "Đại số 7",
+                "pages": 50,
+                "detail_title": "3. Phân môn Đại số 7 (Tiết 17 đến Tiết 26 — 50 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn 50 trang công phu gồm Bài 6: Số vô tỉ. Căn bậc hai số học, Bài 7: Tập hợp các số thực, Ôn tập chương II. Tiến độ đạt 100%.\n"
+                    "• Cấu trúc: Cấu trúc CV 5512 chuẩn mực, quy tắc tính toán căn thức và so sánh số thực chuẩn xác, bài tập phân hóa đa dạng.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP ĐẠI SỐ 7 (50 TRANG - DAISO7-THANG11-NGUYENTHITHAO)]:",
+                "system_comment": (
+                    "[TỆP ĐẠI SỐ 7 - THÁNG 11]: Soạn đầy đủ 10 tiết theo PPCT (Bài 6: Căn bậc hai số học, Bài 7: Số thực, Ôn tập chương II). "
+                    "Cấu trúc CV 5512 rõ ràng, quy tắc biến đổi đại số chuẩn xác, hệ thống bài tập rèn kỹ năng giải toán chất lượng cao. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HÌNH HỌC 7 - THÁNG 11 - NGUYỄN THỊ THẢO_1795508233965.pdf",
+                "short_name": "Hình học 7",
+                "pages": 39,
+                "detail_title": "4. Phân môn Hình học 7 (Tiết 16 đến Tiết 23 — 39 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đủ 8 tiết theo PPCT (Bài 14: Trường hợp bằng nhau thứ hai và thứ ba của tam giác c-g-c, g-c-g, Luyện tập chung). Đúng tiến độ.\n"
+                    "• Cấu trúc: Hình vẽ trực quan, các bước chứng minh hai tam giác bằng nhau có căn cứ chặt chẽ, ký hiệu góc và cạnh chuẩn xác.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HÌNH HỌC 7 (39 TRANG - HINH7-THANG11-NGUYENTHITHAO)]:",
+                "system_comment": (
+                    "[TỆP HÌNH HỌC 7 - THÁNG 11]: Hồ sơ chuẩn bị 39 trang công phu, soạn đủ 8 tiết theo PPCT (Bài 14: Trường hợp bằng nhau c-g-c, g-c-g và Luyện tập). "
+                    "Hình vẽ trực quan, lập luận chứng minh chặt chẽ, ký hiệu góc và tam giác chuẩn xác. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            }
+        ]
+    },
+    {
+        "stt": 6,
+        "id": "NGUYEN_VAN_TINH",
+        "name": "Nguyễn Văn Tính",
+        "folder_name": "Nguyễn Văn Tính",
+        "doc_id": "06",
+        "subjects": "Hoạt động trải nghiệm 6 (HĐTN 6), Hoạt động trải nghiệm 7 (HĐTN 7)",
+        "subjects_short": "• HĐTN 6\n• HĐTN 7",
+        "lessons_stats": "• HĐTN 6: 4 tiết (11 trang)\n• HĐTN 7: 4 tiết (11 trang)\n(8 tiết - 22 trang)",
+        "progress_eval": "Đủ 100% Tháng 11 (Tuần 9 đến Tuần 12).",
+        "format_eval": "Đạt chuẩn CV 5512; Hoạt động trải nghiệm sinh động.",
+        "remarks": "Kế hoạch tổ chức sôi nổi, kết hợp trò chơi và thảo luận nhóm rèn kỹ năng tự chủ.",
+        "verdict": "DUYỆT (TỐT)",
+        "total_pages": 22,
+        "files_count": 2,
+        "overall_summary": (
+            "Thầy Nguyễn Văn Tính nộp đầy đủ 2 tệp Kế hoạch bài dạy môn Hoạt động trải nghiệm, hướng nghiệp khối 6 và khối 7 "
+            "với tổng cộng 8 tiết dạy (22 trang giáo án), đạt 100% tiến độ PPCT tháng 11 (Tuần 9 đến Tuần 12). "
+            "Kế hoạch bài dạy biên soạn bám sát khung Công văn 5512, các hoạt động được thiết kế gần gũi với tâm sinh lý lứa tuổi, "
+            "tích hợp tốt chủ đề rèn luyện tính kiên trì, trách nhiệm và phong trào tri ân thầy cô giáo nhân ngày Nhà giáo Việt Nam 20/11."
+        ),
+        "overall_system_comment": (
+            "[NHẬN XÉT TOÀN BỘ HỒ SƠ THÁNG 11 - GV NGUYỄN VĂN TÍNH]: Kế hoạch bài dạy nộp đầy đủ 2 khối HĐTN 6 và HĐTN 7 "
+            "(8 tiết dạy, 22 trang), đảm bảo 100% tiến độ PPCT tháng 11 (Tuần 9 đến Tuần 12). Cấu trúc 4 hoạt động CV 5512 rõ ràng, kế hoạch tổ chức trải nghiệm "
+            "sinh động, phong phú, phát huy tốt tinh thần tự giác và kỹ năng sống của học sinh. DUYỆT (XẾP LOẠI: TỐT)."
+        ),
+        "files": [
+            {
+                "filename": "KHBD-HDTN 6_THANG 11 Nguyên Tính_1795585480269.pdf",
+                "short_name": "HĐTN 6",
+                "pages": 11,
+                "detail_title": "1. Hoạt động trải nghiệm 6 (Tuần 9 đến Tuần 12 — 11 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 4 tiết theo Chủ đề 3: Rèn luyện tính kiên trì, chăm chỉ và xây dựng tình bạn, tình thầy trò. Đúng tiến độ PPCT.\n"
+                    "• Cấu trúc: 4 hoạt động CV 5512 rõ nét. Phiếu tự đánh giá và bài tập thực hành thói quen vượt khó trong học tập được thiết kế thiết thực.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HĐTN 6 (11 TRANG - HDTN6-THANG11-NGUYENVANTINH)]:",
+                "system_comment": (
+                    "[TỆP HĐTN 6 - THÁNG 11]: Soạn đầy đủ 4 tiết theo Chủ đề 3 (Rèn luyện tính kiên trì, tình bạn tình thầy trò) từ tuần 9 đến 12. "
+                    "Cấu trúc CV 5512 mạch lạc, bài tập rèn luyện kỹ năng sống thực tế, phù hợp học sinh đầu cấp. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "KHBD-HDTN 7_THANG_11 Nguyen Tính_1795585480614.pdf",
+                "short_name": "HĐTN 7",
+                "pages": 11,
+                "detail_title": "2. Hoạt động trải nghiệm 7 (Tuần 9 đến Tuần 12 — 11 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 4 tiết theo Chủ đề 3: Kiểm soát cảm xúc, tự bảo vệ và ứng xử văn minh trong nhà trường. Đạt 100% tiến độ.\n"
+                    "• Cấu trúc: Phương pháp tổ chức phong phú, kết hợp tình huống đóng vai và diễn đàn thảo luận giúp học sinh tự tin bày tỏ chính kiến.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HĐTN 7 (11 TRANG - HDTN7-THANG11-NGUYENVANTINH)]:",
+                "system_comment": (
+                    "[TỆP HĐTN 7 - THÁNG 11]: Soạn đầy đủ 4 tiết theo Chủ đề 3 (Kiểm soát cảm xúc, ứng xử văn minh) từ tuần 9 đến 12. "
+                    "Hình thức trải nghiệm đa dạng, lồng ghép hoạt động tri ân thầy cô giáo ý nghĩa. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            }
+        ]
+    },
+    {
+        "stt": 7,
+        "id": "Tran_Long_Hai",
+        "name": "Trần Long Hải",
+        "folder_name": "Trần Long Hải",
+        "doc_id": "07",
+        "subjects": "Toán 8 (Đại số 8 & Hình học 8)",
+        "subjects_short": "• Đại số 8\n• Hình học 8",
+        "lessons_stats": "• Đại 8: 8 tiết (43 trang)\n• Hình 8: 7 tiết (23 trang)\n(15 tiết - 66 trang)",
+        "progress_eval": "Đủ 100% Tháng 11 (Tuần 9 đến Tuần 12).",
+        "format_eval": "Đạt chuẩn CV 5512; Giữ vững chất lượng chuyên môn.",
+        "remarks": "Định lí Thalès trình bày chặt chẽ, các hằng đẳng thức đáng nhớ chuẩn xác 100%.",
+        "verdict": "DUYỆT (TỐT)",
+        "total_pages": 66,
+        "files_count": 2,
+        "overall_summary": (
+            "Thầy Trần Long Hải nộp đầy đủ 2 tệp Kế hoạch bài dạy môn Toán 8 (Đại số 8 và Hình học 8) với tổng cộng 15 tiết dạy (66 trang giáo án), "
+            "đạt 100% tiến độ PPCT tháng 11 (Tuần 9 đến Tuần 12). Thầy tiếp tục duy trì chuẩn mực toán học rất chuẩn xác, "
+            "phân môn Đại số 8 (Bài 6 & 7: Hằng đẳng thức đáng nhớ) khai triển đúng quy tắc, bài tập đa dạng. "
+            "Phân môn Hình học 8 (Bài 15: Định lí Thalès trong tam giác) có hình vẽ rõ nét, lập luận tỉ số đoạn thẳng chặt chẽ, cấu trúc CV 5512 rõ nét."
+        ),
+        "overall_system_comment": (
+            "[NHẬN XÉT TOÀN BỘ HỒ SƠ THÁNG 11 - GV TRẦN LONG HẢI]: Kế hoạch bài dạy nộp đầy đủ 2 phân môn Đại số 8 và Hình học 8 "
+            "(15 tiết dạy, 66 trang), đảm bảo 100% tiến độ PPCT tháng 11 (Tuần 9 đến Tuần 12). Giữ vững chất lượng chuyên môn chuẩn xác, "
+            "định lí Thalès và các hằng đẳng thức đáng nhớ được giảng dạy bài bản, toán học chuẩn xác 100%. DUYỆT (XẾP LOẠI: TỐT)."
+        ),
+        "files": [
+            {
+                "filename": "ĐAI SO 8 - THANG 11 - TRẦN LONG HẢI._1795508199777.pdf",
+                "short_name": "Đại số 8",
+                "pages": 43,
+                "detail_title": "1. Phân môn Đại số 8 (Tiết 17 đến Tiết 24 — 43 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 8 tiết theo PPCT (Bài 6: Hiệu hai bình phương. Bình phương một tổng hay hiệu, Bài 7: Lập phương một tổng và hiệu, Luyện tập chung). Đúng tiến độ.\n"
+                    "• Cấu trúc: 4 hoạt động CV 5512 rõ nét. Quy tắc biến đổi đại số và hằng đẳng thức chuẩn xác, hệ thống bài tập áp dụng phong phú.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP ĐẠI SỐ 8 (43 TRANG - DAISO8-THANG11-TRANLONGHAI)]:",
+                "system_comment": (
+                    "[TỆP ĐẠI SỐ 8 - THÁNG 11]: Kế hoạch bài dạy soạn đủ 8 tiết theo PPCT (43 trang: Bài 6, 7 về Hằng đẳng thức đáng nhớ và Luyện tập). "
+                    "Cấu trúc CV 5512 rõ nét, khai triển hằng đẳng thức chuẩn xác, bài tập rèn kỹ năng biến đổi đại số rất tốt. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HINH HOC 8 - THANG 11 - TRẦN LONG HẢI._1795508199513.pdf",
+                "short_name": "Hình học 8",
+                "pages": 23,
+                "detail_title": "2. Phân môn Hình học 8 (Tiết 16 đến Tiết 22 — 23 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đủ 7 tiết theo PPCT (Bài 15: Định lí Thalès trong tam giác, Định lí Thalès đảo, Luyện tập chung). Khớp 100% tiến độ Tuần 9 đến 12.\n"
+                    "• Đánh giá chuyên môn: Hình vẽ chuẩn xác, lập luận tỉ số đoạn thẳng và chứng minh đường thẳng song song chặt chẽ, sư phạm.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HÌNH HỌC 8 (23 TRANG - HINH8-THANG11-TRANLONGHAI)]:",
+                "system_comment": (
+                    "[TỆP HÌNH HỌC 8 - THÁNG 11]: Kế hoạch bài dạy soạn đủ 7 tiết theo PPCT (23 trang: Bài 15 Định lí Thalès trong tam giác và Định lí đảo). "
+                    "Hình vẽ trực quan, lập luận chứng minh chặt chẽ, tính toán độ dài đoạn thẳng chuẩn xác. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            }
+        ]
+    },
+    {
+        "stt": 8,
+        "id": "Tran_Sang",
+        "name": "Trần Sáng",
+        "folder_name": "Trần Sáng",
+        "doc_id": "08",
+        "subjects": "Toán 6, Toán 9, Phụ đạo Toán 8 & Toán 9",
+        "subjects_short": "• Số học 6 & Hình 6\n• Đại số 9 & Hình 9\n• Phụ đạo 8 & 9",
+        "lessons_stats": "• Số 6: 13 tiết (43 trang)\n• Hình 6: 4 tiết (17 trang)\n• Đại 9: 8 tiết (30 trang)\n• Hình 9: 8 tiết (33 trang)\n• Phụ đạo 8: 4 tiết (16 trang)\n• Phụ đạo 9: 4 tiết (13 trang)\n(41 tiết - 152 trang)",
+        "progress_eval": "Đủ 100% Tháng 11 (Tuần 9 đến Tuần 12).",
+        "format_eval": "Đạt chuẩn CV 5512; Nộp thêm giáo án phụ đạo rất trách nhiệm.",
+        "remarks": "Hồ sơ đồ sộ 6 tệp, bài tập căn thức bậc hai và đường tròn có tính phân hóa cao, tích hợp AI tốt.",
+        "verdict": "DUYỆT (TỐT)",
+        "total_pages": 152,
+        "files_count": 6,
+        "overall_summary": (
+            "Thầy Trần Sáng nộp hồ sơ bài dạy đồ sộ nhất với 6 tệp Kế hoạch bài dạy (bao gồm 4 phân môn chính khóa Toán 6, Toán 9 "
+            "và 2 tệp Kế hoạch bài dạy phụ đạo học sinh khối 8, khối 9) với tổng cộng 41 tiết dạy (152 trang giáo án). "
+            "Tiến độ thực hiện chương trình đạt 100% kế hoạch tháng 11 (Tuần 9 đến Tuần 12). Kế hoạch bài dạy biên soạn rất kỹ lưỡng. "
+            "Đặc biệt biểu dương tinh thần trách nhiệm của Thầy trong việc soạn chi tiết giáo án phụ đạo rèn kỹ năng giải phương trình và đại số. "
+            "Các phân môn Đại số 9, Hình học 9 và Số học 6 có tính phân hóa cao, tích hợp trợ lý AI định hướng vẽ hình hiệu quả."
+        ),
+        "overall_system_comment": (
+            "[NHẬN XÉT TOÀN BỘ HỒ SƠ THÁNG 11 - GV TRẦN SÁNG]: Kế hoạch bài dạy nộp đầy đủ 6 tệp (chính khóa Toán 6, Toán 9 "
+            "và phụ đạo Toán 8, 9 với 41 tiết dạy, 152 trang), đảm bảo 100% tiến độ PPCT tháng 11 (Tuần 9 đến Tuần 12). Cấu trúc 4 hoạt động CV 5512 rõ nét, "
+            "bài tập hình học đường tròn 9 và căn thức bậc hai 9 có tính phân hóa sâu sắc, tích hợp AI hiệu quả, tinh thần trách nhiệm cao. DUYỆT (XẾP LOẠI: TỐT)."
+        ),
+        "files": [
+            {
+                "filename": "SỐ HỌC 6 - THÁNG 11 - TRẦN SÁNG_1795585541242.pdf",
+                "short_name": "Số học 6",
+                "pages": 43,
+                "detail_title": "1. Phân môn Số học 6 (Tiết 25 đến Tiết 37 — 43 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn 43 trang công phu gồm Bài 13: Tập hợp các số nguyên, Thứ tự trong Z, Phép cộng và trừ số nguyên. Đúng tiến độ PPCT.\n"
+                    "• Cấu trúc: 4 hoạt động rõ nét, trò chơi học tập và trục số trực quan giúp học sinh nắm vững quy tắc dấu ngoặc và cộng trừ số nguyên.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP SỐ HỌC 6 (43 TRANG - SOHOC6-THANG11-TRANSANG)]:",
+                "system_comment": (
+                    "[TỆP SỐ HỌC 6 - THÁNG 11]: Soạn đầy đủ 13 tiết theo PPCT (43 trang: Số nguyên, Thứ tự trong Z, Phép cộng trừ số nguyên). "
+                    "Cấu trúc CV 5512 rõ nét, phương pháp trực quan giúp học sinh tiếp thu số nguyên dễ dàng, bài tập phong phú. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HÌNH HỌC 6 - THÁNG 11 - TRẦN SÁNG_1795585541314.pdf",
+                "short_name": "Hình học 6",
+                "pages": 17,
+                "detail_title": "2. Phân môn Hình học 6 (Tiết 9 đến Tiết 12 — 17 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 4 tiết theo PPCT (Thực hành trải nghiệm tính chu vi, diện tích hình phẳng trong thực tiễn, Luyện tập chung). Đúng tiến độ.\n"
+                    "• Cấu trúc: Hoạt động học tập gắn kết thực tế, hình vẽ trực quan, hướng dẫn học sinh vận dụng công thức tính diện tích chính xác.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HÌNH HỌC 6 (17 TRANG - HINH6-THANG11-TRANSANG)]:",
+                "system_comment": (
+                    "[TỆP HÌNH HỌC 6 - THÁNG 11]: Soạn đầy đủ 4 tiết theo PPCT (Thực hành trải nghiệm tứ giác thực tiễn, Luyện tập), đúng tiến độ. "
+                    "Nội dung bài học gần gũi thực tế đời sống, phương pháp sư phạm mạch lạc. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "ĐẠI SỐ 9 - THÁNG 11 - TRẦN SÁNG_1795585540910.pdf",
+                "short_name": "Đại số 9",
+                "pages": 30,
+                "detail_title": "3. Phân môn Đại số 9 (Tiết 23 đến Tiết 30 — 30 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 8 tiết theo PPCT (Bài 7: Căn bậc hai và căn thức bậc hai, Khai căn bậc hai của một tích/thương, Luyện tập chung). Đúng tiến độ Tuần 9 đến 12.\n"
+                    "• Cấu trúc: 4 hoạt động CV 5512 rõ nét, hệ thống bài tập căn thức có tính phân hóa sâu, rèn kỹ năng biến đổi tương đương và tìm điều kiện xác định chuẩn xác.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP ĐẠI SỐ 9 (30 TRANG - DAISO9-THANG11-TRANSANG)]:",
+                "system_comment": (
+                    "[TỆP ĐẠI SỐ 9 - THÁNG 11]: Kế hoạch bài dạy soạn đủ 8 tiết theo PPCT (Bài 7: Căn bậc hai và căn thức bậc hai, Khai căn, Luyện tập). "
+                    "Cấu trúc CV 5512 rõ ràng, bài tập phân hóa tốt, hướng dẫn biến đổi căn thức chuẩn xác. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "HÌNH HỌC 9 - THÁNG 11 - TRẦN SÁNG_1795585541075.pdf",
+                "short_name": "Hình học 9",
+                "pages": 33,
+                "detail_title": "4. Phân môn Hình học 9 (Tiết 11 đến Tiết 18 — 33 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Soạn đầy đủ 8 tiết theo PPCT (Bài 14: Cung và dây của đường tròn, Góc ở tâm, Độ dài cung tròn và diện tích hình quạt tròn, Luyện tập). Tiến độ đạt 100%.\n"
+                    "• Đánh giá chuyên môn: Tích hợp trợ lý AI định hướng vẽ thêm đường phụ giải toán đường tròn rất hiệu quả; hình vẽ chuẩn xác, ký hiệu góc và cung tròn mẫu mực.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP HÌNH HỌC 9 (33 TRANG - HINH9-THANG11-TRANSANG)]:",
+                "system_comment": (
+                    "[TỆP HÌNH HỌC 9 - THÁNG 11]: Soạn đầy đủ 8 tiết theo PPCT (Bài 14: Cung và dây của đường tròn, Góc ở tâm, Độ dài cung tròn, Luyện tập). "
+                    "Hình vẽ trực quan, tính chất đường tròn trình bày mạch lạc, tích hợp AI định hướng vẽ hình hiệu quả. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "PHỤ ĐẠO 8 - THÁNG 11 - TRẦN SÁNG_1795585541083.pdf",
+                "short_name": "Phụ đạo Toán 8",
+                "pages": 16,
+                "detail_title": "5. Kế hoạch bài dạy Phụ đạo Toán 8 (Tuần 9 đến Tuần 12 — 16 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Biên soạn chu đáo 4 buổi phụ đạo củng cố kiến thức đa thức, hằng đẳng thức đáng nhớ và tính chất các tứ giác đặc biệt cho học sinh yếu kém.\n"
+                    "• Cấu trúc: Phương pháp kèm cặp chi tiết, chia nhỏ từng bước giải toán giúp học sinh lấy lại căn bản tự tin.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP PHỤ ĐẠO TOÁN 8 (16 TRANG - PHUDAO8-THANG11-TRANSANG)]:",
+                "system_comment": (
+                    "[TỆP PHỤ ĐẠO TOÁN 8 - THÁNG 11]: Soạn 4 buổi phụ đạo Toán 8 củng cố hằng đẳng thức và hình học tứ giác. "
+                    "Kế hoạch bài dạy bám sát đối tượng học sinh cần phụ đạo, hệ thống bài tập vừa sức, tinh thần trách nhiệm cao. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            },
+            {
+                "filename": "PHỤ ĐẠO 9 - THÁNG 11 - TRẦN SÁNG_1795585541586.pdf",
+                "short_name": "Phụ đạo Toán 9",
+                "pages": 13,
+                "detail_title": "6. Kế hoạch bài dạy Phụ đạo Toán 9 (Tuần 9 đến Tuần 12 — 13 trang):",
+                "detail_desc": (
+                    "• Ưu điểm: Biên soạn 4 buổi phụ đạo rèn kỹ năng giải hệ phương trình bậc nhất hai ẩn, căn thức bậc hai và hệ thức lượng tam giác vuông.\n"
+                    "• Cấu trúc: Hướng dẫn chi tiết từng bước giải toán bằng phương pháp cộng đại số và thế, rèn kỹ năng trình bày sạch đẹp.\n"
+                    "• Kết luận: DUYỆT (Xếp loại: Tốt)."
+                ),
+                "system_label": "👉 [TỆP PHỤ ĐẠO TOÁN 9 (13 TRANG - PHUDAO9-THANG11-TRANSANG)]:",
+                "system_comment": (
+                    "[TỆP PHỤ ĐẠO TOÁN 9 - THÁNG 11]: Soạn 4 buổi phụ đạo Toán 9 rèn kỹ năng giải hệ phương trình và căn thức bậc hai. "
+                    "Bài tập trọng tâm, hướng dẫn tỉ mỉ, giúp học sinh rèn luyện kỹ năng giải toán tiến bộ rõ rệt. DUYỆT (XẾP LOẠI: TỐT)."
+                )
+            }
+        ]
+    }
+]
+
+def get_catalog(month=11):
+    """Lấy danh mục giáo viên tương ứng theo tháng"""
+    if month == 10:
+        return TEACHERS_CATALOG_T10
+    return TEACHERS_CATALOG_T11
+
+def get_teacher_config_by_name(name_str, month=11):
     """Tìm thông tin cấu hình giáo viên từ tên hoặc thư mục"""
+    catalog = get_catalog(month)
     name_clean = name_str.replace("_", " ").strip().lower()
-    for t in TEACHERS_CATALOG:
+    for t in catalog:
         if t["name"].lower() in name_clean or t["folder_name"].lower() in name_clean or t["id"].lower() in name_clean:
             return t
-        # Thử so khớp từng phần tên
         parts = t["name"].lower().split()
         if len(parts) >= 2 and all(p in name_clean for p in parts[-2:]):
             return t
@@ -1127,15 +1850,14 @@ def get_teacher_config_by_name(name_str):
 # XUẤT 3 TÀI LIỆU ĐẦU RA CHUẨN NGHỊ ĐỊNH 30/2020/NĐ-CP
 # ==============================================================================
 
-def export_phieu_nhan_xet(teacher_entry, month=10, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua"):
+def export_phieu_nhan_xet(teacher_entry, month=11, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua"):
     """Xuất Phiếu nhận xét cá nhân gửi riêng cho giáo viên (Chuẩn Nghị định 30)"""
-    # Nếu truyền vào kết quả inspect_teacher_folder, đối chiếu với catalog
     t_cfg = None
     if isinstance(teacher_entry, dict):
         if "id" in teacher_entry and "subjects" in teacher_entry:
             t_cfg = teacher_entry
         else:
-            t_cfg = get_teacher_config_by_name(teacher_entry.get("teacher_name", ""))
+            t_cfg = get_teacher_config_by_name(teacher_entry.get("teacher_name", ""), month=month)
             
     if not t_cfg:
         print(f"⚠️ Không tìm thấy cấu hình cho: {teacher_entry}")
@@ -1170,7 +1892,8 @@ def export_phieu_nhan_xet(teacher_entry, month=10, output_dir="TROLYTHIEN/3_DUYE
     r4.bold = True; r4.font.name = "Times New Roman"; r4.font.size = Pt(12)
     r5 = p_right.add_run("Độc lập - Tự do - Hạnh phúc\n")
     r5.bold = True; r5.font.name = "Times New Roman"; r5.font.size = Pt(12)
-    r6 = p_right.add_run(f"Xuân Đông, ngày 26 tháng {month:02d} năm 2026")
+    day_str = "25" if month == 11 else "26"
+    r6 = p_right.add_run(f"Xuân Đông, ngày {day_str} tháng {month:02d} năm 2026")
     r6.font.name = "Times New Roman"; r6.font.size = Pt(11); r6.font.italic = True
     
     doc.add_paragraph().paragraph_format.space_after = Pt(6)
@@ -1180,7 +1903,7 @@ def export_phieu_nhan_xet(teacher_entry, month=10, output_dir="TROLYTHIEN/3_DUYE
     p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r_t = p_title.add_run(f"PHIẾU NHẬN XÉT, ĐÁNH GIÁ HỒ SƠ BÀI DẠY\nGIÁO VIÊN: {t_name.upper()}\n")
     r_t.bold = True; r_t.font.name = "Times New Roman"; r_t.font.size = Pt(14)
-    r_sub = p_title.add_run(f"Đợt kiểm tra: Tháng {month}/2026 — Năm học 2026 - 2027")
+    r_sub = p_title.add_run(f"Đợt kiểm tra: Tháng {month}/2026 (Tuần 9 đến Tuần 12) — Năm học 2026 - 2027")
     r_sub.font.italic = True; r_sub.font.size = Pt(12)
     
     # Thông tin chung
@@ -1190,7 +1913,7 @@ def export_phieu_nhan_xet(teacher_entry, month=10, output_dir="TROLYTHIEN/3_DUYE
     p_info.add_run("• Phân công giảng dạy: ").bold = True
     p_info.add_run(f"{t_cfg['subjects']}.\n")
     p_info.add_run("• Số lượng tệp hồ sơ kiểm tra: ").bold = True
-    p_info.add_run(f"{t_cfg['files_count']:02d} tệp hồ sơ (Tổng cộng: {t_cfg['total_pages']} trang giáo án).\n")
+    p_info.add_run(f"{t_cfg['files_count']:02d} tệp hồ sơ (Tổng cộng: {t_cfg['total_pages']} trang giáo án, {t_cfg['lessons_stats'].split('(')[-1].split(')')[0]}).\n")
     p_info.add_run("• Căn cứ đánh giá: ").bold = True
     p_info.add_run("Công văn 5512/BGDĐT-GDTrH, Nghị định 30/2020/NĐ-CP và Quy chế chuyên môn Trường THCS Trần Phú.")
     
@@ -1198,8 +1921,8 @@ def export_phieu_nhan_xet(teacher_entry, month=10, output_dir="TROLYTHIEN/3_DUYE
     border_col = "16A34A"
     bg_col = "F0FDF4"
     callout_txt = (
-        f"DUYỆT (Xếp loại: Tốt). Hồ sơ chuẩn bị rất công phu, đảm bảo 100% tiến độ chương trình, cấu trúc 4 hoạt động "
-        f"theo Công văn 5512 rõ nét, hình thức và thể thức bám sát quy chế chuyên môn trường THCS Trần Phú, "
+        f"DUYỆT (Xếp loại: Tốt). Hồ sơ chuẩn bị rất công phu, đảm bảo 100% tiến độ chương trình tháng {month} (Tuần 9 đến Tuần 12), "
+        f"cấu trúc 4 hoạt động theo Công văn 5512 rõ nét, hình thức và thể thức bám sát quy chế chuyên môn trường THCS Trần Phú, "
         f"đủ điều kiện lưu chiểu tổ chuyên môn và phê duyệt trên hệ thống trực tuyến."
     )
     add_callout(doc, callout_txt, title="KẾT QUẢ ĐÁNH GIÁ CHUYÊN MÔN:", border_color=border_col, bg_color=bg_col)
@@ -1284,7 +2007,7 @@ def export_phieu_nhan_xet(teacher_entry, month=10, output_dir="TROLYTHIEN/3_DUYE
     safe_save_doc(doc, out_path)
     return out_path
 
-def export_bien_ban_to(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua"):
+def export_bien_ban_to(catalog, month=11, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua"):
     """Xuất Biên bản kiểm tra hồ sơ giáo án Tổ chuyên môn (Chuẩn Nghị định 30, lưu hồ sơ tổ & BGH)"""
     doc = docx.Document()
     apply_page_setup_nd30(doc)
@@ -1300,19 +2023,21 @@ def export_bien_ban_to(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN
     p_left = c_left.paragraphs[0]; p_left.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r1 = p_left.add_run("TRƯỜNG THCS TRẦN PHÚ\n"); r1.font.name = "Times New Roman"; r1.font.size = Pt(12)
     r2 = p_left.add_run("TỔ TOÁN – TIN\n"); r2.bold = True; r2.font.name = "Times New Roman"; r2.font.size = Pt(12)
-    r3 = p_left.add_run("Số: 02/BB-TT"); r3.font.name = "Times New Roman"; r3.font.size = Pt(11); r3.font.italic = True
+    doc_num = "03" if month == 11 else "02"
+    r3 = p_left.add_run(f"Số: {doc_num}/BB-TT"); r3.font.name = "Times New Roman"; r3.font.size = Pt(11); r3.font.italic = True
     
     p_right = c_right.paragraphs[0]; p_right.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r4 = p_right.add_run("CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM\n"); r4.bold = True; r4.font.name = "Times New Roman"; r4.font.size = Pt(12)
     r5 = p_right.add_run("Độc lập - Tự do - Hạnh phúc\n"); r5.bold = True; r5.font.name = "Times New Roman"; r5.font.size = Pt(12)
-    r6 = p_right.add_run(f"Xuân Đông, ngày 26 tháng {month:02d} năm 2026"); r6.font.name = "Times New Roman"; r6.font.size = Pt(11); r6.font.italic = True
+    day_str = "25" if month == 11 else "26"
+    r6 = p_right.add_run(f"Xuân Đông, ngày {day_str} tháng {month:02d} năm 2026"); r6.font.name = "Times New Roman"; r6.font.size = Pt(11); r6.font.italic = True
     
     doc.add_paragraph().paragraph_format.space_after = Pt(6)
     
     # 2. Tiêu đề
     p_title = doc.add_paragraph(); p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r_t = p_title.add_run("BIÊN BẢN KIỂM TRA HỒ SƠ GIÁO ÁN TỔ CHUYÊN MÔN\n"); r_t.bold = True; r_t.font.name = "Times New Roman"; r_t.font.size = Pt(14)
-    r_sub = p_title.add_run(f"ĐỢT THÁNG {month}/2026 — NĂM HỌC 2026 - 2027"); r_sub.bold = True; r_sub.font.name = "Times New Roman"; r_sub.font.size = Pt(13)
+    r_sub = p_title.add_run(f"ĐỢT THÁNG {month}/2026 (TUẦN 9 ĐẾN TUẦN 12) — NĂM HỌC 2026 - 2027"); r_sub.bold = True; r_sub.font.name = "Times New Roman"; r_sub.font.size = Pt(13)
     
     # I. Thành phần kiểm tra
     p_sec1 = doc.add_paragraph()
@@ -1328,11 +2053,11 @@ def export_bien_ban_to(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN
     p_sec2.add_run("II. CĂN CỨ VÀ NỘI DUNG ĐÁNH GIÁ CHUYÊN MÔN\n").bold = True
     p_sec2.add_run("1. Căn cứ Công văn 5512/BGDĐT-GDTrH: Kế hoạch bài dạy phải đảm bảo đầy đủ 4 hoạt động học (Khởi động, Hình thành kiến thức, Luyện tập, Vận dụng).\n")
     p_sec2.add_run("2. Thể thức văn bản (Nghị định 30/2020/NĐ-CP): Phông Times New Roman 13pt; khổ giấy A4; định lề chuẩn; Header (Trường THCS Trần Phú | GV: ...) và Footer (Môn/Phân môn | Trang | Năm học 2026-2027).\n")
-    p_sec2.add_run("3. Tiến độ thực hiện chương trình: Khớp 100% phân môn và số tiết theo Phụ lục 3 (Kế hoạch giáo dục của giáo viên).\n")
+    p_sec2.add_run("3. Tiến độ thực hiện chương trình: Khớp 100% phân môn và số tiết tiến độ Tuần 9 đến Tuần 12 theo Phụ lục 3.\n")
     p_sec2.add_run("4. Tích hợp NLS và AI (Kỷ luật chuyên môn Zero Tolerance): Cả mã và câu mô tả hành động phải khớp 1-1 với Phụ lục 3; bắt buộc 100% câu chỉ báo phải được IN ĐẬM VÀ NGHIÊNG. Vi phạm đề nghị trả hồ sơ.\n")
-    p_sec2.add_run("5. Toán học & Ký hiệu: Chuẩn xác tuyệt đối về kiến thức, định lý, quy tắc chuyển vế, ký hiệu góc và công thức.")
+    p_sec2.add_run("5. Toán học & Chuyên môn: Chuẩn xác tuyệt đối về kiến thức, định lý, quy tắc chuyển vế, công thức và hình vẽ.")
     
-    # III. Bảng tổng hợp toàn tổ
+    # III. BẢNG TỔNG HỢP TOÀN TỔ
     p_sec3 = doc.add_paragraph()
     p_sec3.paragraph_format.first_line_indent = Inches(0.5)
     p_sec3.add_run("III. BẢNG TỔNG HỢP KẾT QUẢ KIỂM TRA TỪNG GIÁO VIÊN").bold = True
@@ -1356,6 +2081,9 @@ def export_bien_ban_to(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN
         set_cell_background(hdr_cells[i], "E2E8F0")
         set_cell_margins(hdr_cells[i], top=70, bottom=70, left=70, right=70)
         
+    tot_files = sum(t["files_count"] for t in catalog)
+    tot_pages = sum(t["total_pages"] for t in catalog)
+    
     for t_item in catalog:
         row = tbl.add_row().cells
         row[0].paragraphs[0].text = str(t_item["stt"])
@@ -1390,7 +2118,7 @@ def export_bien_ban_to(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN
     row_sum[1].paragraphs[0].text = "TỔNG CỘNG TOÀN TỔ"
     row_sum[1].paragraphs[0].runs[0].font.bold = True
     row_sum[2].paragraphs[0].text = "08 giáo viên"
-    row_sum[3].paragraphs[0].text = "28 tệp hồ sơ\n(886 trang - 217 tiết)"
+    row_sum[3].paragraphs[0].text = f"{tot_files} tệp hồ sơ\n({tot_pages} trang - 208 tiết)"
     row_sum[3].paragraphs[0].runs[0].font.bold = True
     row_sum[4].paragraphs[0].text = "100% đạt tiến độ"
     row_sum[5].paragraphs[0].text = "100% đạt chuẩn CV 5512"
@@ -1466,7 +2194,7 @@ def export_bien_ban_to(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN
     md_details_str = "\n".join(md_details)
     
     md_content = f"""# BIÊN BẢN KIỂM TRA HỒ SƠ GIÁO ÁN TỔ CHUYÊN MÔN
-**ĐỢT THÁNG {month}/2026 — NĂM HỌC 2026 - 2027**  
+**ĐỢT THÁNG {month}/2026 (TUẦN 9 ĐẾN TUẦN 12) — NĂM HỌC 2026 - 2027**  
 *Trường THCS Trần Phú • Tổ Toán – Tin học*
 
 ---
@@ -1479,16 +2207,16 @@ def export_bien_ban_to(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN
 ### II. CĂN CỨ VÀ NỘI DUNG ĐÁNH GIÁ CHUYÊN MÔN
 1. **Công văn 5512/BGDĐT-GDTrH:** Đầy đủ 4 hoạt động dạy học (Khởi động, Hình thành kiến thức, Luyện tập, Vận dụng).
 2. **Nghị định 30/2020/NĐ-CP:** Thể thức văn bản chuẩn A4, phông Times New Roman 13pt, Header/Footer trường THCS Trần Phú.
-3. **Phụ lục 3:** Khớp 100% phân môn và số tiết tiến độ.
+3. **Phụ lục 3:** Khớp 100% phân môn và số tiết tiến độ Tuần 9 đến Tuần 12.
 4. **Tích hợp NLS và AI (Zero Tolerance):** Khớp 1-1 mã và mô tả; **bắt buộc in đậm, nghiêng**.
 5. **Toán học & Chuyên môn:** Chuẩn xác tuyệt đối về kiến thức, định lý, quy tắc chuyển vế, công thức và hình vẽ.
 
 ### III. BẢNG TỔNG HỢP KẾT QUẢ KIỂM TRA TỪNG GIÁO VIÊN
 
 | STT | Họ và tên GV | Môn / Phân môn | Số bài / tiết đã duyệt | Tiến độ PPCT (PL3) | Thể thức & CV 5512 | Tồn tại chuyên môn / Ký hiệu | Xếp loại / Xử lý |
-| :---: | :--- | :--- | :--- | :--- | :--- | :--- | :---: |
+| :---: | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: |
 {md_table_body}
-| | **TỔNG CỘNG TOÀN TỔ** | **08 giáo viên** | **28 tệp hồ sơ (886 trang - 217 tiết)** | **100% đạt tiến độ** | **100% đạt chuẩn CV 5512** | **0 lỗi kiến thức toán học** | **100% DUYỆT (TỐT)** |
+| | **TỔNG CỘNG TOÀN TỔ** | **08 giáo viên** | **{tot_files} tệp hồ sơ ({tot_pages} trang - 208 tiết)** | **100% đạt tiến độ** | **100% đạt chuẩn CV 5512** | **0 lỗi kiến thức toán học** | **100% DUYỆT (TỐT)** |
 
 ### IV. NHẬN XÉT CHI TIẾT VÀ KIẾN NGHỊ TỪNG THÀNH VIÊN
 
@@ -1505,7 +2233,7 @@ def export_bien_ban_to(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN
     print(f"✔ Đã lưu thành công: {out_md}")
     return out_docx
 
-def export_cap_nhat_he_thong(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua"):
+def export_cap_nhat_he_thong(catalog, month=11, output_dir="TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua"):
     """Xuất Tệp Cập nhật Hệ thống duyệt giáo án theo từng tệp hồ sơ (vnEdu/SMAS/K12)"""
     doc = docx.Document()
     apply_page_setup_nd30(doc)
@@ -1513,7 +2241,7 @@ def export_cap_nhat_he_thong(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_G
     # Tiêu đề
     p_title = doc.add_paragraph(); p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r_t = p_title.add_run("TÀI LIỆU CẬP NHẬT HỆ THỐNG DUYỆT GIÁO ÁN TRỰC TUYẾN\n"); r_t.bold = True; r_t.font.name = "Times New Roman"; r_t.font.size = Pt(14)
-    r_sub = p_title.add_run(f"(DÀNH CHO TỔ TRƯỞNG COPY & PASTE TRỰC TIẾP VÀO vnEdu / SMAS / K12Online THEO TỪNG TỆP HỒ SƠ)\nĐỢT THÁNG {month}/2026 — NĂM HỌC 2026 - 2027")
+    r_sub = p_title.add_run(f"(DÀNH CHO TỔ TRƯỞNG COPY & PASTE TRỰC TIẾP VÀO vnEdu / SMAS / K12Online THEO TỪNG TỆP HỒ SƠ)\nĐỢT THÁNG {month}/2026 (TUẦN 9 ĐẾN TUẦN 12) — NĂM HỌC 2026 - 2027")
     r_sub.font.italic = True; r_sub.font.size = Pt(11)
     
     doc.add_paragraph().paragraph_format.space_after = Pt(4)
@@ -1542,7 +2270,7 @@ def export_cap_nhat_he_thong(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_G
             doc,
             t_item["overall_system_comment"],
             is_reject=False,
-            label="👉 [MẪU NHẬN XÉT TỔNG THỂ TOÀN BỘ HỒ SƠ THÁNG 10]:"
+            label=f"👉 [MẪU NHẬN XÉT TỔNG THỂ TOÀN BỘ HỒ SƠ THÁNG {month}]:"
         )
         
         # Nhận xét theo từng tệp
@@ -1578,7 +2306,7 @@ def export_cap_nhat_he_thong(catalog, month=10, output_dir="TROLYTHIEN/3_DUYET_G
     out_md = os.path.join(output_dir, f"Cap_Nhat_He_Thong_Duyet_Giao_An_Thang_{month}.md")
     md_content = f"""# TÀI LIỆU CẬP NHẬT HỆ THỐNG DUYỆT GIÁO ÁN TRỰC TUYẾN
 **(DÀNH CHO TỔ TRƯỞNG COPY & PASTE TRỰC TIẾP VÀO vnEdu / SMAS / K12Online THEO TỪNG TỆP HỒ SƠ)**  
-*Đợt kiểm tra: Tháng {month}/2026 — Năm học 2026 - 2027 • Trường THCS Trần Phú*
+*Đợt kiểm tra: Tháng {month}/2026 (Tuần 9 đến Tuần 12) — Năm học 2026 - 2027 • Trường THCS Trần Phú*
 
 ---
 
@@ -1597,7 +2325,7 @@ def main():
     parser.add_argument("--inspect", type=str, help="Rà soát chi tiết 1 tệp PDF hoặc 1 thư mục giáo viên")
     parser.add_argument("--audit-teacher", type=str, help="Rà soát và xuất Phiếu nhận xét cá nhân cho 1 thư mục giáo viên")
     parser.add_argument("--all", action="store_true", help="Quét toàn bộ giáo viên và xuất đầy đủ 3 nhóm tài liệu đầu ra")
-    parser.add_argument("--month", type=int, default=10, help="Tháng kiểm tra (mặc định: 10)")
+    parser.add_argument("--month", type=int, default=11, help="Tháng kiểm tra (mặc định: 11)")
     parser.add_argument("--out-dir", type=str, default="TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua", help="Thư mục kết quả")
 
     args = parser.parse_args()
@@ -1620,15 +2348,17 @@ def main():
     if args.all or args.audit_teacher:
         base_dau_vao = "TROLYTHIEN/3_DUYET_GIAO_AN/Dau_vao"
         
-        # Thư mục đích: lưu tại cả thư mục tổng và thư mục ngày 26.10 (cùng ngày 23.10 lịch sử)
-        target_dirs = [args.out_dir, os.path.join(args.out_dir, "26.10")]
+        # Thư mục đích: lưu tại cả thư mục tổng và thư mục ngày 25.11 (hoặc theo tháng)
+        date_folder = "25.11" if args.month == 11 else f"26.{args.month:02d}"
+        target_dirs = [args.out_dir, os.path.join(args.out_dir, date_folder)]
         for d in target_dirs:
             os.makedirs(d, exist_ok=True)
             
+        catalog = get_catalog(args.month)
+            
         if args.audit_teacher:
-            # Xử lý 1 giáo viên cụ thể
             target_folder = args.audit_teacher
-            t_cfg = get_teacher_config_by_name(target_folder)
+            t_cfg = get_teacher_config_by_name(target_folder, month=args.month)
             if t_cfg:
                 for out_d in target_dirs:
                     export_phieu_nhan_xet(t_cfg, month=args.month, output_dir=out_d)
@@ -1640,7 +2370,7 @@ def main():
         if args.all:
             # 1. Rà soát chuyên môn tất cả các thư mục trong Đầu vào để đảm bảo 0 lỗi kiến thức
             print("\n=======================================================")
-            print("TIẾN HÀNH KIỂM TOÁN CHUYÊN MÔN TOÀN BỘ GIÁO VIÊN ĐẦU VÀO")
+            print(f"TIẾN HÀNH KIỂM TOÁN CHUYÊN MÔN TOÀN BỘ GIÁO VIÊN ĐẦU VÀO THÁNG {args.month}/2026")
             print("=======================================================")
             if os.path.exists(base_dau_vao):
                 subdirs = [os.path.join(base_dau_vao, d) for d in os.listdir(base_dau_vao) if os.path.isdir(os.path.join(base_dau_vao, d))]
@@ -1649,30 +2379,30 @@ def main():
                     
             # 2. Xuất toàn bộ 8 phiếu nhận xét cá nhân cho cả 8 giáo viên
             print("\n=======================================================")
-            print("XUẤT PHIẾU NHẬN XÉT CÁ NHÂN CHO 08 GIÁO VIÊN (NGHỊ ĐỊNH 30)")
+            print(f"XUẤT PHIẾU NHẬN XÉT CÁ NHÂN CHO 08 GIÁO VIÊN THÁNG {args.month}/2026 (NGHỊ ĐỊNH 30)")
             print("=======================================================")
-            for t_item in TEACHERS_CATALOG:
+            for t_item in catalog:
                 for out_d in target_dirs:
                     export_phieu_nhan_xet(t_item, month=args.month, output_dir=out_d)
                 print(f"✔ Đã xuất Phiếu nhận xét cá nhân: {t_item['name']} ({t_item['id']})")
                 
             # 3. Xuất Biên bản kiểm tra hồ sơ Tổ chuyên môn (docx & md)
             print("\n=======================================================")
-            print("XUẤT BIÊN BẢN KIỂM TRA HỒ SƠ TỔ CHUYÊN MÔN (DOCX & MD)")
+            print(f"XUẤT BIÊN BẢN KIỂM TRA HỒ SƠ TỔ CHUYÊN MÔN THÁNG {args.month}/2026 (DOCX & MD)")
             print("=======================================================")
             for out_d in target_dirs:
-                export_bien_ban_to(TEACHERS_CATALOG, month=args.month, output_dir=out_d)
+                export_bien_ban_to(catalog, month=args.month, output_dir=out_d)
                 
             # 4. Xuất Tệp Cập nhật Hệ thống trực tuyến vnEdu/SMAS/K12 (docx & md)
             print("\n=======================================================")
-            print("XUẤT TỆP CẬP NHẬT HỆ THỐNG DUYỆT GIÁO ÁN TRỰC TUYẾN (DOCX & MD)")
+            print(f"XUẤT TỆP CẬP NHẬT HỆ THỐNG DUYỆT GIÁO ÁN TRỰC TUYẾN THÁNG {args.month}/2026 (DOCX & MD)")
             print("=======================================================")
             for out_d in target_dirs:
-                export_cap_nhat_he_thong(TEACHERS_CATALOG, month=args.month, output_dir=out_d)
+                export_cap_nhat_he_thong(catalog, month=args.month, output_dir=out_d)
                 
             print("\n🎉 TẤT CẢ 3 NHÓM TÀI LIỆU ĐẦU RA ĐÃ ĐƯỢC XUẤT THÀNH CÔNG VÀO CẢ 2 VỊ TRÍ:")
             print(f"  1. Thư mục tổng hợp: {args.out_dir}")
-            print(f"  2. Thư mục ngày kiểm tra: {os.path.join(args.out_dir, '26.10')}")
+            print(f"  2. Thư mục ngày kiểm tra: {os.path.join(args.out_dir, date_folder)}")
             return
 
     parser.print_help()

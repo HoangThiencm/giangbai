@@ -34,6 +34,9 @@ TROLYTHIEN/**/Ket_qua/**/*
 !TROLYTHIEN/**/Ket_qua/*.md
 !TROLYTHIEN/**/Ket_qua/*/*.md
 !TROLYTHIEN/**/Ket_qua/*/*/*.md
+!TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/*/
+!TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/*.docx
+!TROLYTHIEN/3_DUYET_GIAO_AN/Ket_qua/*/*.docx
 TROLYTHIEN/14_NHAN_DIEN_VAN_BAN/Ket_qua/_crops_ca3_hinh_vector/
 TROLYTHIEN/2_TAO_BAI_TAP/Ket_qua/hinh_ve/
 
