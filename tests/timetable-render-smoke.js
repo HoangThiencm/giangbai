@@ -500,4 +500,26 @@ assert.match(html, /id="email-tt-week"/, 'tab TKB của tôi chọn tuần áp d
     assert.doesNotMatch(thao, /NGHỈ PHÉP/);
 }
 
-console.log('PASS: timetable view loads numeric IDs and JSON data, uses a compact responsive layout, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');
+{
+    const oldPhase = { teachers: [{ id: 'teacher', timetable: { marker: 'old' } }] };
+    const currentPhase = { teachers: [{ id: 'teacher', timetable: { marker: 'before' } }] };
+    const context = vm.createContext({
+        state: { info: { current_phase_id: 'current' }, teachers: [{ id: 'teacher', timetable: { marker: 'live' } }], phase_assignments: { old: oldPhase, current: currentPhase } },
+        normalizeTeacherTimetable: value => value, JSON, String
+    });
+    vm.runInContext(declaration('persistTeacherTimetable'), context);
+    vm.runInContext("persistTeacherTimetable('teacher', { marker: 'new' })", context);
+    assert.equal(oldPhase.teachers[0].timetable.marker, 'old', 'saving a timetable preserves an earlier phase snapshot');
+    assert.equal(currentPhase.teachers[0].timetable.marker, 'new', 'saving a timetable updates the current phase snapshot');
+    assert.match(html, /function onTimetableApplyWeekChange\(/, 'week selector change handler exists');
+    assert.match(html, /function saveTimetableForSelectedWeek\(/, 'weekly timetable save handler exists');
+}
+
+{
+    const context = vm.createContext({ state: { info: { school_year: '2026-2027' }, bao_giang: { start_date: '' }, phases: [{ date_start: '2025-09-05' }] }, Date, Number, String });
+    vm.runInContext(['effectiveSchoolStartDate', 'baoGiangDate', 'baoGiangIso', 'baoGiangSchoolWeekRange', 'baoGiangTeachingWeek', 'timetableWeekKeyForDate'].map(declaration).join('\n'), context);
+    assert.equal(vm.runInContext("timetableWeekKeyForDate('2026-11-16')", context), 'W11');
+    assert.equal(vm.runInContext('baoGiangSchoolWeekRange(12).start', context), '2026-11-23');
+    assert.match(declaration('saveTimetableForTeacherWeek'), /if \(!currentWeek \|\| week >= currentWeek\) snapshotPreviousWeekBeforeOverride/);
+}
+console.log('PASS: timetable view loads numeric IDs and JSON data, preserves phase history, supports weekly snapshots, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');

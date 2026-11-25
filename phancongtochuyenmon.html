@@ -3425,8 +3425,24 @@
         }
 
         // ================= LỊCH BÁO GIẢNG: TKB + PPCT + NGOẠI LỆ =================
+        function effectiveSchoolStartDate(referenceDate = null) {
+            const configured = baoGiangDate(state.bao_giang && state.bao_giang.start_date);
+            if (configured) return configured;
+            const yearMatch = String(state.info?.school_year || '').match(/(20\d{2})\s*[-–]\s*(20\d{2})/);
+            const ref = referenceDate instanceof Date ? referenceDate : (referenceDate ? baoGiangDate(referenceDate) : new Date());
+            const year = yearMatch ? Number(yearMatch[1]) : ref.getFullYear() - (ref.getMonth() < 7 ? 1 : 0);
+            const dates = (Array.isArray(state.phases) ? state.phases : [])
+                .map(phase => baoGiangDate(phase && phase.date_start)).filter(Boolean)
+                .sort((a, b) => a - b);
+            const phaseStart = dates.find(date => date.getFullYear() === year);
+            if (phaseStart) return phaseStart;
+            const fallback = baoGiangDate(`${year}-09-05`);
+            if (fallback.getDay() === 6) fallback.setDate(fallback.getDate() + 2);
+            if (fallback.getDay() === 0) fallback.setDate(fallback.getDate() + 1);
+            return fallback;
+        }
         function baoGiangSchoolWeekRange(weekNumber) {
-            const start = baoGiangDate(state.bao_giang && state.bao_giang.start_date);
+            const start = effectiveSchoolStartDate();
             const week = Number(weekNumber);
             if (!start || !week || week < 1) return null;
             const firstMonday = new Date(start);
@@ -3438,7 +3454,8 @@
             return { start: baoGiangIso(monday), end: baoGiangIso(sunday), key: `W${week}` };
         }
         function timetableWeekKeyForDate(dateValue) {
-            const week = baoGiangTeachingWeek(dateValue, state.bao_giang && state.bao_giang.start_date);
+            const start = effectiveSchoolStartDate(dateValue);
+            const week = start ? baoGiangTeachingWeek(dateValue, baoGiangIso(start)) : 0;
             if (!week || week < 1) return '';
             return `W${week}`;
         }
@@ -3451,9 +3468,22 @@
             const phases = Array.isArray(state.phases) ? state.phases : [];
             for (let index = 0; index < phases.length; index++) {
                 const phase = phases[index];
-                const from = phase && phase.date_start;
-                const to = phase && phase.date_end;
-                if (!from || !to || iso < from || iso > to) continue;
+                if (!phase) continue;
+                let from = phase.date_start || '';
+                let to = phase.date_end || '';
+                const fromWeek = Number(phase.from_week), toWeek = Number(phase.to_week);
+                if ((!from || !to) && fromWeek) {
+                    const weekFrom = baoGiangSchoolWeekRange(fromWeek);
+                    const weekTo = baoGiangSchoolWeekRange(toWeek || fromWeek);
+                    from = from || weekFrom?.start || '';
+                    to = to || weekTo?.end || '';
+                }
+                if (from && !to) {
+                    const next = phases.slice(index + 1).map(item => item?.date_start).filter(Boolean).sort()[0];
+                    if (next) { const before = baoGiangDate(next); before.setDate(before.getDate() - 1); to = baoGiangIso(before); }
+                    else { to = '9999-12-31'; }
+                }
+                if (!from || iso < from || iso > to) continue;
                 const teachers = (((state.phase_assignments || {})[phase.id] || {}).teachers) || [];
                 const found = teachers.find(item => String(item.id) === String(teacher.id));
                 const timetable = found ? normalizeTeacherTimetable(found.timetable) : null;
@@ -3514,7 +3544,7 @@
         function refreshBaoGiangPersonalLessonOptions() { const select = document.getElementById('bg-ex-lesson'), date = document.getElementById('bg-ex-date-from')?.value, scope = document.getElementById('bg-ex-scope')?.value; if (!select) return; baoGiangPersonalLessonChoices = []; if (scope !== 'self_lesson') { select.disabled = true; select.innerHTML = '<option value="">Chỉ dùng khi chọn “Đúng một tiết/bài của tôi”</option>'; return; } select.disabled = false; if (!date) { select.innerHTML = '<option value="">Chọn ngày trước</option>'; return; } const rows = decorateBaoGiangRows(date).rows.filter(row => row.date === date && baoGiangMatchesCurrentUser(row)); baoGiangPersonalLessonChoices = rows; select.innerHTML = rows.length ? `<option value="">Chọn tiết/bài cần nghỉ</option>${rows.map((row, index) => `<option value="${index}">${escapeHtml(`${row.class_name} · ${row.subject} · ${row.session === 'morning' ? 'Sáng' : 'Chiều'} tiết ${row.period} · ${row.lesson?.lesson || 'Chưa ghép PPCT'}`)}</option>`).join('')}` : '<option value="">Không có tiết của tôi trong ngày này</option>'; }
         function addBaoGiangException() { const start_date = document.getElementById('bg-ex-date-from')?.value, end_date = document.getElementById('bg-ex-date-to')?.value || start_date, type = document.getElementById('bg-ex-type')?.value, scope = document.getElementById('bg-ex-scope')?.value, session = document.getElementById('bg-ex-session')?.value || 'all_day', reason = document.getElementById('bg-ex-reason')?.value.trim() || '', teacherSelect = document.getElementById('bg-ex-teacher'), targetInput = document.getElementById('bg-ex-target'); let target = targetInput?.value.trim() || '', teacher_id = '', teacher_name = ''; if (!start_date) return showToast('Hãy chọn từ ngày áp dụng ngoại lệ.', 'error'); if (end_date < start_date) return showToast('Đến ngày không được trước từ ngày.', 'error'); if (scope === 'teacher') { teacher_id = teacherSelect?.value || ''; teacher_name = teacherSelect?.selectedOptions?.[0]?.dataset?.name || ''; if (!teacher_id && !teacher_name) return showToast('Hãy chọn giáo viên nghỉ.', 'error'); target = teacher_id || teacher_name; } if (scope === 'self_lesson') { if (type !== 'off') return showToast('Chọn đúng tiết/bài chỉ áp dụng cho Nghỉ học.', 'error'); const choice = baoGiangPersonalLessonChoices[Number(document.getElementById('bg-ex-lesson')?.value)]; if (!choice) return showToast('Hãy chọn đúng tiết/bài của thầy cần nghỉ.', 'error'); state.bao_giang.exceptions.push({ id: `bg_${Date.now()}`, date: start_date, start_date, end_date, type, scope, session: choice.session, reason, target: `${choice.class_name} | ${choice.subject} | ${choice.lesson?.lesson || ''}`, teacher_id: choice.teacher_id, teacher_name: choice.teacher_name, class_name: choice.class_name, subject: choice.subject, period: choice.period, lesson: choice.lesson?.lesson || '' }); } else { if ((type === 'makeup' || (scope !== 'all' && scope !== 'self')) && !target) return showToast(type === 'makeup' ? 'Dạy bù cần nhập “Lớp | Môn”, ví dụ 8A1 | Toán.' : 'Hãy nhập lớp hoặc tên môn cho ngoại lệ này.', 'error'); state.bao_giang.exceptions.push({ id: `bg_${Date.now()}`, date: start_date, start_date, end_date, session, type, scope, teacher_id, teacher_name, target, reason }); } saveToLocal(); renderBaoGiangView(); }
         function removeBaoGiangException(id) { state.bao_giang.exceptions = state.bao_giang.exceptions.filter(x => x.id !== id); saveToLocal(); renderBaoGiangView(); }
-        function baoGiangRows(until) { const cfg = state.bao_giang, start = baoGiangDate(cfg.start_date); if (!start) return []; const end = baoGiangDate(until); if (!end || end < start) return []; const rows = []; for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) { const day = baoGiangDayKey(date); if (!day) continue; state.teachers.forEach(teacher => { const timetable = normalizeTeacherTimetable(teacher.timetable); ['morning', 'afternoon'].forEach(session => Object.entries(timetable[session]?.[day] || {}).sort((a, b) => Number(a[0]) - Number(b[0])).forEach(([period, cell]) => { const value = parseTimetableCell(cell); if (!value?.class_name || !value?.subject) return; const row = { date: baoGiangIso(date), session, period, class_name: value.class_name, subject: value.subject, teacher_id: teacher.id, teacher_name: teacher.name }; const off = cfg.exceptions.some(ex => { const from = ex.start_date || ex.date, to = ex.end_date || from, exSession = ex.session || 'all_day'; return ex.type === 'off' && from <= row.date && row.date <= to && (exSession === 'all_day' || exSession === row.session) && baoGiangMatchesException(ex, row); }); if (!off) rows.push(row); })); }); cfg.exceptions.filter(ex => ex.type === 'makeup' && (ex.start_date || ex.date) <= baoGiangIso(date) && baoGiangIso(date) <= (ex.end_date || ex.start_date || ex.date)).forEach(ex => { const [className, subject] = String(ex.target || '').split('|').map(x => x.trim()); if (!className || !subject) return; const teacher = state.teachers.find(t => Object.values(t.timetable || {}).some(session => Object.values(session || {}).some(day => Object.values(day || {}).some(cell => { const c = parseTimetableCell(cell); return c && foldText(c.class_name) === foldText(className) && foldText(c.subject) === foldText(subject); })))); rows.push({ date: baoGiangIso(date), session: 'makeup', period: 'Bù', class_name: className, subject, teacher_id: teacher?.id || '', teacher_name: teacher?.name || 'Chưa xác định GV' }); }); } return rows.sort((a, b) => `${a.date}|${a.session}|${String(a.period).padStart(2, '0')}`.localeCompare(`${b.date}|${b.session}|${String(b.period).padStart(2, '0')}`)); }
+        function baoGiangRows(until) { const cfg = state.bao_giang, start = effectiveSchoolStartDate(); if (!start) return []; const end = baoGiangDate(until); if (!end || end < start) return []; const rows = []; for (let date = new Date(start); date <= end; date.setDate(date.getDate() + 1)) { const day = baoGiangDayKey(date); if (!day) continue; state.teachers.forEach(teacher => { const timetable = getTeacherTimetableForDate(teacher, date); ['morning', 'afternoon'].forEach(session => Object.entries(timetable[session]?.[day] || {}).sort((a, b) => Number(a[0]) - Number(b[0])).forEach(([period, cell]) => { const value = parseTimetableCell(cell); if (!value?.class_name || !value?.subject) return; const row = { date: baoGiangIso(date), session, period, class_name: value.class_name, subject: value.subject, teacher_id: teacher.id, teacher_name: teacher.name }; const off = cfg.exceptions.some(ex => { const from = ex.start_date || ex.date, to = ex.end_date || from, exSession = ex.session || 'all_day'; return ex.type === 'off' && from <= row.date && row.date <= to && (exSession === 'all_day' || exSession === row.session) && baoGiangMatchesException(ex, row); }); if (!off) rows.push(row); })); }); cfg.exceptions.filter(ex => ex.type === 'makeup' && (ex.start_date || ex.date) <= baoGiangIso(date) && baoGiangIso(date) <= (ex.end_date || ex.start_date || ex.date)).forEach(ex => { const [className, subject] = String(ex.target || '').split('|').map(x => x.trim()); if (!className || !subject) return; const teacher = state.teachers.find(t => Object.values(t.timetable || {}).some(session => Object.values(session || {}).some(day => Object.values(day || {}).some(cell => { const c = parseTimetableCell(cell); return c && foldText(c.class_name) === foldText(className) && foldText(c.subject) === foldText(subject); })))); rows.push({ date: baoGiangIso(date), session: 'makeup', period: 'Bù', class_name: className, subject, teacher_id: teacher?.id || '', teacher_name: teacher?.name || 'Chưa xác định GV' }); }); } return rows.sort((a, b) => `${a.date}|${a.session}|${String(a.period).padStart(2, '0')}`.localeCompare(`${b.date}|${b.session}|${String(b.period).padStart(2, '0')}`)); }
         function legacyRenderBaoGiangViewUnused() { const cfg = state.bao_giang, today = new Date(), fallbackStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`; if (!cfg.start_date) cfg.start_date = fallbackStart; const startInput = document.getElementById('bg-start-date'), viewInput = document.getElementById('bg-view-date'), curriculum = document.getElementById('bg-curriculum'); if (!startInput) return; if (!viewInput.value) viewInput.value = cfg.start_date; startInput.value = cfg.start_date; curriculum.value = cfg.curriculum_text || ''; const days = Math.min(90, Math.max(7, Number(document.getElementById('bg-days')?.value) || 14)), viewStart = baoGiangDate(viewInput.value), viewEnd = new Date(viewStart); viewEnd.setDate(viewEnd.getDate() + days - 1); const plan = parseBaoGiangCurriculum(cfg.curriculum_text), allRows = baoGiangRows(baoGiangIso(viewEnd)), counters = new Map(); const decorated = allRows.map(row => { const key = baoGiangKey(row.class_name, row.subject), index = counters.get(key) || 0; counters.set(key, index + 1); return { ...row, lesson: baoGiangPlanFor(plan, row.class_name, row.subject)[index] || null }; }), visible = decorated.filter(row => row.date >= viewInput.value && row.date <= baoGiangIso(viewEnd)); const schedule = document.getElementById('bg-schedule'); const exceptions = document.getElementById('bg-exceptions'); exceptions.innerHTML = cfg.exceptions.length ? cfg.exceptions.map(ex => `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:.85rem;"><b>${escapeHtml(ex.date)}</b><span>${ex.type === 'off' ? 'Nghỉ học' : 'Dạy bù'}</span><span>${escapeHtml(ex.scope === 'all' ? 'Toàn trường' : ex.target)}</span><button class="btn-small" onclick="removeBaoGiangException('${ex.id}')">Xóa</button></div>`).join('') : '<p style="color:#64748b;font-size:.85rem;">Chưa có ngoại lệ.</p>'; const recipients = document.getElementById('bg-recipient-list'); recipients.innerHTML = `<div style="font-weight:800;margin-bottom:6px;">Người nhận email</div><div style="display:flex;flex-wrap:wrap;gap:8px;">${state.teachers.map(t => `<label style="padding:7px;border:1px solid #cbd5e1;border-radius:8px;font-size:.82rem;"><input type="checkbox" ${cfg.recipient_ids.includes(t.id) ? 'checked' : ''} onchange="toggleBaoGiangRecipient('${t.id}',this.checked)"> ${escapeHtml(t.name)} <input aria-label="Email ${escapeHtml(t.name)}" value="${escapeHtml(t.email || '')}" placeholder="email" style="width:150px;border:0;border-bottom:1px solid #cbd5e1;margin-left:4px;" onchange="setBaoGiangEmail('${t.id}',this.value)"></label>`).join('')}</div>`; schedule.innerHTML = visible.length ? `<div style="overflow:auto;"><table class="data-table"><thead><tr><th>Ngày</th><th>Lớp</th><th>Môn</th><th>Tiết</th><th>GV</th><th>Tiết PPCT</th><th>Bài dạy</th><th>Phân đoạn</th></tr></thead><tbody>${visible.map(row => `<tr><td>${escapeHtml(row.date)}</td><td>${escapeHtml(row.class_name)}</td><td>${escapeHtml(row.subject)}</td><td>${escapeHtml(row.session === 'makeup' ? 'Dạy bù' : `${row.session === 'morning' ? 'Sáng' : 'Chiều'} ${row.period}`)}</td><td>${escapeHtml(row.teacher_name)}</td><td>${row.lesson?.ppct || '<span style="color:#b45309">Chưa có</span>'}</td><td>${escapeHtml(row.lesson?.lesson || 'Chưa khai báo PPCT')}</td><td>${escapeHtml(row.lesson?.segment || '—')}</td></tr>`).join('')}</tbody></table></div>` : '<p style="padding:16px;color:#64748b;">Chưa có tiết TKB trong khoảng ngày này. Hãy nhập TKB, ngày áp dụng và PPCT.</p>'; }
         function baoGiangMonthRange(value) { const match = String(value || '').match(/^(\d{4})-(\d{2})$/), d = match ? new Date(+match[1], +match[2] - 1, 1) : new Date(), start = new Date(d.getFullYear(), d.getMonth(), 1), end = new Date(d.getFullYear(), d.getMonth() + 1, 0); return { start: baoGiangIso(start), end: baoGiangIso(end), month: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}` }; }
         function baoGiangMonthChanged(value) { const range = baoGiangMonthRange(value), date = document.getElementById('bg-view-date'), days = document.getElementById('bg-days'); if (date) date.value = range.start; if (days) days.value = String(Math.round((baoGiangDate(range.end) - baoGiangDate(range.start)) / 86400000) + 1); renderBaoGiangView(); }
@@ -4999,6 +5029,9 @@
             const resultLabel = document.getElementById('qp-range-calc-result');
 
             if (!isNaN(fromW) && !isNaN(toW) && toW >= fromW) {
+                const fromRange = baoGiangSchoolWeekRange(fromW), toRange = baoGiangSchoolWeekRange(toW);
+                if (fromRange) document.getElementById('qp-date-start').value = fromRange.start;
+                if (toRange) document.getElementById('qp-date-end').value = toRange.end;
                 const count = (toW - fromW + 1);
                 document.getElementById('qp-weeks').value = count;
                 resultLabel.textContent = `(Từ tuần ${fromW} đến ${toW} = ${count} tuần)`;
@@ -5011,14 +5044,23 @@
             const name = document.getElementById('qp-name').value.trim();
             const semester = document.getElementById('qp-semester').value || 'HK1';
             const weeks_count = parseFloat(document.getElementById('qp-weeks').value) || 0;
-            const date_start = document.getElementById('qp-date-start').value;
-            const date_end = document.getElementById('qp-date-end').value;
+            let date_start = document.getElementById('qp-date-start').value;
+            let date_end = document.getElementById('qp-date-end').value;
+            const from_week = Number(document.getElementById('qp-from-week')?.value) || 0;
+            const to_week = Number(document.getElementById('qp-to-week')?.value) || 0;
             const note = document.getElementById('qp-note').value.trim();
             const inherit = document.getElementById('qp-inherit-assignments').checked;
 
             if (!name) {
                 alert("Vui lòng nhập tên đợt phân công!");
                 return;
+            }
+
+            if (from_week && to_week && to_week >= from_week) {
+                const fromRange = baoGiangSchoolWeekRange(from_week);
+                const toRange = baoGiangSchoolWeekRange(to_week);
+                if (!date_start && fromRange) date_start = fromRange.start;
+                if (!date_end && toRange) date_end = toRange.end;
             }
 
             saveCurrentPhaseSnapshot();
@@ -5031,6 +5073,8 @@
                 weeks_count,
                 date_start,
                 date_end,
+                from_week: from_week || undefined,
+                to_week: to_week || undefined,
                 note
             };
 
@@ -6843,6 +6887,8 @@
         let ttImageDataUrl = '';
         let ttPasteBound = false;
         let selectedTimetableTeacherId = '';
+        // Empty means the current phase's default timetable; W1..W35 means a dated snapshot.
+        let selectedTimetableWeekKey = '';
         let selectedTimetableTeacherIds = new Set();
         let ttTeacherFilter = 'all';
         let ttCellSaveTimer = null;
@@ -7064,7 +7110,7 @@
             if (!confirmWordTimetablePeriodRange(entries)) return;
             const warnings = validateTimetableRules(entries); const warningBox = document.getElementById('word-tkb-warnings');
             if (warnings.length && !confirm(`Phát hiện ${warnings.length} cảnh báo. Vẫn nạp TKB?\n\n${warnings.slice(0, 5).join('\n')}`)) { if (warningBox) warningBox.innerHTML = `<b>Cảnh báo cần rà soát:</b><br>${warnings.map(escapeHtml).join('<br>')}`; return; }
-            entries.forEach(({ teacher, timetable }) => { persistTeacherTimetable(teacher.id, timetable); try { applyTimetableToAssignments(teacher.id, { silent: true, skipRender: true }); } catch (e) { console.warn(e); } });
+            entries.forEach(({ teacher, timetable }) => { saveTimetableForTeacherWeek(teacher.id, timetable); try { applyTimetableToAssignments(teacher.id, { silent: true, skipRender: true }); } catch (e) { console.warn(e); } });
             saveCurrentPhaseSnapshot(); saveToLocal(); hasUnsavedChanges = true; renderTimetableTeacherList(); renderTimetableWorkspace(); closeWordTimetableModal(); showToast(`Đã nạp TKB cho ${entries.length} giáo viên, tổng ${entries.reduce((n, e) => n + countTimetableLessons(e.timetable), 0)} tiết học.`, 'success');
         }
 
@@ -7081,7 +7127,7 @@
                 const entries = rows.map(row => { const teacher = (state.teachers || []).find(t => String(t.id) === String(row.teacher_id)); if (!teacher) throw new Error(`Không tìm thấy Teacher ID: ${row.teacher_id || '(trống)'}.`); return { teacher, timetable: wordTimetableForImport(row, false) }; });
                 if (!confirmWordTimetablePeriodRange(entries)) return;
                 const warnings = validateTimetableRules(entries); if (warnings.length && !confirm(`Phát hiện ${warnings.length} cảnh báo. Vẫn nạp JSON AI?\n\n${warnings.slice(0, 5).join('\n')}`)) return;
-                entries.forEach(({ teacher, timetable }) => { persistTeacherTimetable(teacher.id, timetable); applyTimetableToAssignments(teacher.id, { silent: true, skipRender: true }); }); saveCurrentPhaseSnapshot(); saveToLocal(); hasUnsavedChanges = true; renderTimetableTeacherList(); renderTimetableWorkspace(); closeWordTimetableModal(); showToast(`Đã nạp JSON AI cho ${entries.length} giáo viên.`, 'success');
+                entries.forEach(({ teacher, timetable }) => { saveTimetableForTeacherWeek(teacher.id, timetable); applyTimetableToAssignments(teacher.id, { silent: true, skipRender: true }); }); saveCurrentPhaseSnapshot(); saveToLocal(); hasUnsavedChanges = true; renderTimetableTeacherList(); renderTimetableWorkspace(); closeWordTimetableModal(); showToast(`Đã nạp JSON AI cho ${entries.length} giáo viên.`, 'success');
             } catch (error) { showToast(error.message || 'JSON AI không hợp lệ.', 'error'); }
         }
 
@@ -7187,7 +7233,95 @@
                 if (t) t.timetable = JSON.parse(JSON.stringify(copy));
             };
             apply(state.teachers);
-            Object.values(state.phase_assignments || {}).forEach(snap => apply(snap.teachers));
+            const currentSnapshot = (state.phase_assignments || {})[state.info?.current_phase_id];
+            if (currentSnapshot) apply(currentSnapshot.teachers);
+        }
+
+        function getTeacherTimetableForWeekKey(teacher, weekKey) {
+            if (!weekKey) return normalizeTeacherTimetable(teacher?.timetable);
+            const week = Number(String(weekKey).replace(/^W/, ''));
+            const range = baoGiangSchoolWeekRange(week);
+            if (range) return getTeacherTimetableForDate(teacher, range.start);
+            for (let index = week; index >= 1; index--) {
+                const key = `W${index}`;
+                if (weeklyTimetableSaved(key, teacher?.id)) return normalizeTeacherTimetable(state.weekly_timetables[key][String(teacher.id)]);
+            }
+            return normalizeTeacherTimetable(teacher?.timetable);
+        }
+
+        function timetableWeekLabel(weekKey) {
+            const week = Number(String(weekKey || '').replace(/^W/, ''));
+            const range = baoGiangSchoolWeekRange(week);
+            return range ? `Tuần ${week} (${formatVnDate(range.start).slice(0, 5)} – ${formatVnDate(range.end).slice(0, 5)})` : `Tuần ${week}`;
+        }
+
+        function populateTimetableApplyWeekSelect() {
+            const select = document.getElementById('tt-apply-week');
+            const hint = document.getElementById('tt-apply-week-hint');
+            if (!select) return;
+            select.innerHTML = '<option value="">Theo Đợt hiện tại (mặc định)</option>' + Array.from({ length: 35 }, (_, index) => {
+                const key = `W${index + 1}`, range = baoGiangSchoolWeekRange(index + 1);
+                const saved = selectedTimetableTeacherId && weeklyTimetableSaved(key, selectedTimetableTeacherId) ? ' ✓ Đã lưu riêng' : '';
+                const dates = range ? ` (${formatVnDate(range.start).slice(0, 5)} – ${formatVnDate(range.end).slice(0, 5)})` : '';
+                return `<option value="${key}">Tuần ${index + 1}${dates}${saved}</option>`;
+            }).join('');
+            select.value = selectedTimetableWeekKey;
+            if (!hint) return;
+            if (!selectedTimetableWeekKey) hint.textContent = 'Đang sửa TKB mặc định của Đợt hiện tại.';
+            else if (selectedTimetableTeacherId && weeklyTimetableSaved(selectedTimetableWeekKey, selectedTimetableTeacherId)) hint.textContent = `${timetableWeekLabel(selectedTimetableWeekKey)} đã lưu riêng cho giáo viên đang chọn.`;
+            else hint.textContent = `${timetableWeekLabel(selectedTimetableWeekKey)} đang kế thừa TKB gần nhất trước đó hoặc TKB của Đợt.`;
+            if (!state.bao_giang?.start_date) hint.textContent += ` Mốc Tuần 1 đang dùng: ${formatVnDate(baoGiangIso(effectiveSchoolStartDate()))}; hãy kiểm tra hoặc đặt ngày bắt đầu Tuần 1.`;
+        }
+
+        function onTimetableApplyWeekChange(weekKey) {
+            selectedTimetableWeekKey = String(weekKey || '');
+            if (selectedTimetableTeacherId) selectTimetableTeacher(selectedTimetableTeacherId);
+            else populateTimetableApplyWeekSelect();
+        }
+
+        function snapshotPreviousWeekBeforeOverride(teacherId, targetWeekNum) {
+            if (targetWeekNum <= 1 || !teacherId) return;
+            const teacher = (state.teachers || []).find(item => String(item.id) === String(teacherId));
+            const hasEarlier = Array.from({ length: targetWeekNum - 1 }, (_, index) => weeklyTimetableSaved(`W${index + 1}`, teacherId)).some(Boolean);
+            const priorRange = baoGiangSchoolWeekRange(targetWeekNum - 1);
+            const historic = priorRange && teacher ? phaseTimetableForDate(teacher, priorRange.start) : null;
+            const snapshot = historic || teacher?.timetable;
+            if (!hasEarlier && teacher && timetableHasLessons(snapshot)) {
+                state.weekly_timetables = state.weekly_timetables || {};
+                state.weekly_timetables.W1 = state.weekly_timetables.W1 || {};
+                state.weekly_timetables.W1[String(teacherId)] = JSON.parse(JSON.stringify(normalizeTeacherTimetable(snapshot)));
+            }
+        }
+
+        function saveTimetableForTeacherWeek(teacherId, timetable, weekKey = selectedTimetableWeekKey) {
+            if (!weekKey) { persistTeacherTimetable(teacherId, timetable); return; }
+            const week = Number(String(weekKey).replace(/^W/, ''));
+            if (!week) { persistTeacherTimetable(teacherId, timetable); return; }
+            state.weekly_timetables = state.weekly_timetables || {};
+            const currentWeek = Number(String(timetableWeekKeyForDate(baoGiangIso(new Date()))).replace(/^W/, '')) || 0;
+            const teacher = (state.teachers || []).find(item => String(item.id) === String(teacherId));
+            if (currentWeek && week < currentWeek && teacher && !weeklyTimetableSaved(`W${currentWeek}`, teacherId)) {
+                state.weekly_timetables[`W${currentWeek}`] = state.weekly_timetables[`W${currentWeek}`] || {};
+                state.weekly_timetables[`W${currentWeek}`][String(teacherId)] = JSON.parse(JSON.stringify(normalizeTeacherTimetable(teacher.timetable)));
+            }
+            if (!currentWeek || week >= currentWeek) snapshotPreviousWeekBeforeOverride(teacherId, week);
+            state.weekly_timetables[weekKey] = state.weekly_timetables[weekKey] || {};
+            state.weekly_timetables[weekKey][String(teacherId)] = JSON.parse(JSON.stringify(normalizeTeacherTimetable(timetable)));
+            if (!currentWeek || week >= currentWeek) persistTeacherTimetable(teacherId, timetable);
+        }
+
+        function saveTimetableForSelectedWeek() {
+            const select = document.getElementById('tt-apply-week');
+            let weekKey = String(select?.value || selectedTimetableWeekKey || '');
+            if (!weekKey) weekKey = timetableWeekKeyForDate(baoGiangIso(new Date()));
+            if (!weekKey) return showToast('Chưa xác định được tuần. Hãy đặt ngày bắt đầu Tuần 1 hoặc chọn một tuần.', 'error');
+            selectedTimetableWeekKey = weekKey;
+            if (!selectedTimetableTeacherId) return showToast('Hãy chọn giáo viên.', 'error');
+            saveTimetableForTeacherWeek(selectedTimetableTeacherId, editingTimetable, weekKey);
+            saveCurrentPhaseSnapshot(); saveToLocal({ autoSave: false }); hasUnsavedChanges = true;
+            populateTimetableApplyWeekSelect(); renderTimetableTeacherList(); renderTimetableWorkspace();
+            const teacher = (state.teachers || []).find(item => String(item.id) === String(selectedTimetableTeacherId));
+            showToast(`Đã lưu TKB riêng cho ${timetableWeekLabel(weekKey)} của GV ${teacher?.name || ''}.`, 'success');
         }
 
         function populateTimetableTeacherSelect(selectedId) {
@@ -7224,7 +7358,7 @@
             editingTimetable.school_year = document.getElementById('tt-school-year')?.value.trim() || state.info?.school_year || '';
             editingTimetable.semester = document.getElementById('tt-semester')?.value.trim() || state.info?.semester || '';
             editingTimetable.updated_at = new Date().toISOString().slice(0, 10);
-            persistTeacherTimetable(teacherId, editingTimetable);
+            saveTimetableForTeacherWeek(teacherId, editingTimetable);
             saveCurrentPhaseSnapshot();
             saveToLocal({ autoSave: false });
             hasUnsavedChanges = true;
@@ -7253,6 +7387,7 @@
         function renderTimetableView() {
             refreshTimetableGeminiModelLabel();
             bindTimetableInputEvents();
+            if (typeof populateTimetableApplyWeekSelect === 'function') populateTimetableApplyWeekSelect();
             const targetId = selectedTimetableTeacherId || (state.teachers[0] ? state.teachers[0].id : null);
             if (targetId) {
                 selectTimetableTeacher(targetId);
@@ -7494,7 +7629,7 @@
         }
 
         function timetableEmailSessionTable(teacher, session, weekRange = null) {
-            const timetable = normalizeTeacherTimetable(teacher.timetable);
+            const timetable = weekRange?.start && typeof getTeacherTimetableForDate === 'function' ? getTeacherTimetableForDate(teacher, weekRange.start) : normalizeTeacherTimetable(teacher.timetable);
             const periods = periodsForTimetableSession(session, timetable);
             const title = session === 'morning' ? 'Buổi sáng' : 'Buổi chiều';
             const dates = weekRange ? holidayDatesForWeek(baoGiangWeekValueFromDate(weekRange.start)) : [];
@@ -7597,7 +7732,9 @@
             if (!teacherId) return;
             selectedTimetableTeacherId = teacherId;
             const teacher = (state.teachers || []).find(t => String(t.id) === String(teacherId));
-            editingTimetable = normalizeTeacherTimetable(teacher?.timetable);
+            editingTimetable = typeof getTeacherTimetableForWeekKey === 'function'
+                ? getTeacherTimetableForWeekKey(teacher, selectedTimetableWeekKey)
+                : normalizeTeacherTimetable(teacher?.timetable);
             if (!editingTimetable.school_year) editingTimetable.school_year = state.info?.school_year || '';
             if (!editingTimetable.semester) editingTimetable.semester = state.info?.semester || '';
             ttImageDataUrl = '';
@@ -7606,6 +7743,7 @@
             const clearBtn = document.getElementById('tt-clear-preview');
             if (clearBtn) clearBtn.style.display = 'none';
             renderTimetableTeacherList();
+            if (typeof populateTimetableApplyWeekSelect === 'function') populateTimetableApplyWeekSelect();
             renderTimetableWorkspace();
         }
 
@@ -9293,13 +9431,14 @@ ${listText}`;
             return js + 1;
         }
 
-        function getTimetableDaySlots(teacher, session, dayNum) {
+        function getTimetableDaySlots(teacher, session, dayNum, dateValue = '') {
             if (session === 'all_day') {
                 return ['morning', 'afternoon']
-                    .flatMap(part => getTimetableDaySlots(teacher, part, dayNum))
+                    .flatMap(part => getTimetableDaySlots(teacher, part, dayNum, dateValue))
                     .sort((a, b) => a.period_num - b.period_num);
             }
-            const block = teacher?.timetable?.[session === 'afternoon' ? 'afternoon' : 'morning'];
+            const resolvedTimetable = (dateValue && typeof getTeacherTimetableForDate === 'function') ? getTeacherTimetableForDate(teacher, dateValue) : teacher?.timetable;
+            const block = resolvedTimetable?.[session === 'afternoon' ? 'afternoon' : 'morning'];
             const day = block?.[String(dayNum)] || {};
             return Object.keys(day).map(period => {
                 const parsed = parseTimetableCell(day[period]);
@@ -9326,8 +9465,8 @@ ${listText}`;
                 return false;
             }
 
-            const morningSlots = getTimetableDaySlots(teacher, 'morning', dayNum);
-            const afternoonSlots = getTimetableDaySlots(teacher, 'afternoon', dayNum);
+            const morningSlots = getTimetableDaySlots(teacher, 'morning', dayNum, date);
+            const afternoonSlots = getTimetableDaySlots(teacher, 'afternoon', dayNum, date);
             const slotList = (slots, emptyText) => slots.length
                 ? slots.map(slot => `<span style="display:inline-block;margin:5px 5px 0 0;padding:4px 7px;border-radius:7px;background:#fff;border:1px solid #e2e8f0;font-size:.82rem;"><b>Tiết ${slot.period_num}</b> · ${escapeHtml(slot.class_name || 'Chưa rõ lớp')} · ${escapeHtml(slot.subject || 'Chưa rõ môn')}</span>`).join('')
                 : `<span style="font-size:.82rem;color:#64748b;font-style:italic;">${emptyText}</span>`;
@@ -9339,7 +9478,9 @@ ${listText}`;
             preview.hidden = false;
             const noLessons = !morningSlots.length && !afternoonSlots.length
                 ? `<div role="alert" style="margin:0 0 10px;padding:9px;border-radius:8px;background:#fef3c7;color:#92400e;font-weight:700;">⚠️ Thầy/cô ${escapeHtml(teacher.name)} không có lịch dạy vào ${escapeHtml(TT_DAY_LABELS[dayNum] || '')}, ngày ${escapeHtml(date)}. Không có tiết cần phân công dạy thay.</div>` : '';
-            preview.innerHTML = `${noLessons}<div style="font-weight:800;color:#92400e;margin-bottom:8px;">📅 Lịch dạy ${escapeHtml(TT_DAY_LABELS[dayNum] || '')} của thầy/cô ${escapeHtml(teacher.name)}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;"><div style="padding:9px;border-radius:9px;background:#fff7d6;"><b style="color:#a16207;">☀️ Buổi sáng</b><div>${slotList(morningSlots, 'Không có tiết buổi sáng.')}</div></div><div style="padding:9px;border-radius:9px;background:#eff6ff;"><b style="color:#1d4ed8;">🌙 Buổi chiều</b><div>${slotList(afternoonSlots, 'Không có tiết buổi chiều.')}</div></div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${buttons}</div>`;
+            const weekLabel = typeof timetableWeekKeyForDate === 'function' ? timetableWeekKeyForDate(date) : '';
+            const dateCaption = typeof formatVnDate === 'function' ? formatVnDate(date) : date;
+            preview.innerHTML = `${noLessons}<div style="font-weight:800;color:#92400e;margin-bottom:8px;">📅 Lịch dạy ${escapeHtml(TT_DAY_LABELS[dayNum] || '')} (${escapeHtml(dateCaption)}${weekLabel ? ` · Tuần ${escapeHtml(weekLabel.slice(1))}` : ''}) của thầy/cô ${escapeHtml(teacher.name)}</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;"><div style="padding:9px;border-radius:9px;background:#fff7d6;"><b style="color:#a16207;">☀️ Buổi sáng</b><div>${slotList(morningSlots, 'Không có tiết buổi sáng.')}</div></div><div style="padding:9px;border-radius:9px;background:#eff6ff;"><b style="color:#1d4ed8;">🌙 Buổi chiều</b><div>${slotList(afternoonSlots, 'Không có tiết buổi chiều.')}</div></div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${buttons}</div>`;
 
             const autoSession = morningSlots.length && afternoonSlots.length ? 'all_day' : (morningSlots.length ? 'morning' : (afternoonSlots.length ? 'afternoon' : ''));
             const sessionEl = document.getElementById('new-sub-session');
@@ -9369,11 +9510,12 @@ ${listText}`;
                 if (!silentEmpty) showToast('Hãy chọn ngày dạy từ Thứ 2 đến Thứ 7.', 'info');
                 return false;
             }
-            if (!timetableHasLessons(teacher.timetable)) {
+            const effectiveTt = typeof getTeacherTimetableForDate === 'function' ? getTeacherTimetableForDate(teacher, date) : teacher.timetable;
+            if (!timetableHasLessons(effectiveTt)) {
                 if (!silentEmpty) showToast(`${teacher.name} chưa có Thời khoá biểu. Hãy mở TKB Giáo viên để nhập hoặc nhận diện ảnh.`, 'info');
                 return false;
             }
-            const slots = getTimetableDaySlots(teacher, session, dayNum);
+            const slots = getTimetableDaySlots(teacher, session, dayNum, date);
             if (!slots.length) {
                 if (!silentEmpty) showToast(`${teacher.name} không có tiết ${getSessionLabel(session).toLowerCase()} ${TT_DAY_LABELS[dayNum] || ''}.`, 'info');
                 return false;
@@ -9458,7 +9600,7 @@ ${listText}`;
             const needed = [...new Set((neededPeriods || []).map(n => parseInt(n, 10)).filter(n => n > 0))];
             (state.teachers || []).forEach(teacher => {
                 if (String(teacher.id) === String(forTeacherId)) return;
-                const slots = getTimetableDaySlots(teacher, session, dayNum);
+                const slots = getTimetableDaySlots(teacher, session, dayNum, date);
                 const busyPeriods = slots.map(slot => slot.period_num);
                 const item = { teacher, slots, busyPeriods, neededPeriods: needed };
                 if (!slots.length) result.freeSessionTeachers.push(item);
@@ -9486,7 +9628,7 @@ ${listText}`;
             }
 
             const absentTeacher = (state.teachers || []).find(teacher => String(teacher.id) === String(forTeacherId));
-            const absentSlots = getTimetableDaySlots(absentTeacher, session, availability.dayNum);
+            const absentSlots = getTimetableDaySlots(absentTeacher, session, availability.dayNum, date);
             if (!absentSlots.length) {
                 panel.innerHTML = `<div role="alert" style="padding:10px;border-radius:8px;background:#eff6ff;color:#1e3a8a;font-weight:700;">ℹ️ Thầy/cô ${escapeHtml(absentTeacher?.name || '')} không có tiết dạy trong ${escapeHtml(getSessionLabel(session))} này. Hãy chọn buổi khác hoặc ngày khác có lịch dạy để hệ thống đề xuất.</div>`;
                 return;
@@ -9786,7 +9928,7 @@ ${listText}`;
             if (type === 'replacement') {
                 const absentTeacher = (state.teachers || []).find(item => String(item.id) === String(for_teacher_id));
                 const dayNum = weekdayNumberFromDate(date);
-                if (!absentTeacher || !dayNum || !getTimetableDaySlots(absentTeacher, session, dayNum).length) {
+                if (!absentTeacher || !dayNum || !getTimetableDaySlots(absentTeacher, session, dayNum, date).length) {
                     alert('Giáo viên nghỉ không có tiết trong ngày/buổi đã chọn. Không cần phân công dạy thay; hãy chọn ngày hoặc buổi có lịch dạy.');
                     return;
                 }
@@ -10467,6 +10609,11 @@ ${listText}`;
 
         function generateDefaultPhases() {
             editingConfig.phases = JSON.parse(JSON.stringify(DEFAULT_PHASES));
+            const match = String(editingConfig.info?.school_year || state.info?.school_year || '').match(/(20\d{2})/);
+            const year = match ? Number(match[1]) : effectiveSchoolStartDate().getFullYear();
+            editingConfig.phases.forEach(phase => {
+                ['date_start', 'date_end'].forEach(key => { phase[key] = phase[key].replace(/^\d{4}/, old => String(year + Number(old) - 2025)); });
+            });
             renderConfigPhasesTable();
             showToast("Đã tạo 4 đợt chuẩn theo năm học!", "info");
         }

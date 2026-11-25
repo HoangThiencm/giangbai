@@ -1,23 +1,33 @@
-# IMPLEMENT — Ngày nghỉ tuần, TKB email và LBG
+# IMPLEMENT
 
-**Ngày:** 2026-11-22  
-**Nguồn:** `docs/handoff/PLAN.md`
+## Sửa theo VERIFY (FAIL)
 
-## Đã làm
+- Không tạo snapshot tuần trước khi sửa tuần quá khứ; bảo vệ tuần hiện hành.
+- Suy mốc năm học khi thiếu cấu hình hoặc mốc Đợt cũ lệch năm; hiển thị mốc đang dùng và cập nhật năm của Đợt mẫu.
+- Khi nhập khoảng tuần trong tạo Đợt nhanh, tự điền khoảng ngày tương ứng; người dùng vẫn có thể sửa ngày sau đó.
+- Đã chạy lại hai smoke test và `git diff --check`: PASS. Cần `/verify` lại các luồng tích hợp.
+
+## Đã triển khai
+
+- Bổ sung mốc năm học dùng chung, tra TKB theo tuần/ngày và theo Đợt; hỗ trợ Đợt chỉ có tuần áp dụng hoặc không có ngày kết thúc.
+- Hoàn thiện chọn/lưu TKB riêng từng tuần, bao gồm bảo toàn TKB tuần trước và bảo vệ TKB hiện hành khi quay lại sửa tuần quá khứ.
+- Giới hạn cập nhật `persistTeacherTimetable` vào Đợt hiện tại, không còn ghi đè mọi snapshot Đợt cũ.
+- Kết nối TKB hiệu lực theo ngày vào Sổ Dạy Thay - Bù, Lịch báo giảng và email TKB.
+- Bổ sung smoke test cho hồi quy TKB Tuần 11/Tuần 12 và bảo toàn snapshot Đợt.
+
+## Tệp đã thay đổi
 
 - `phancongtochuyenmon.html`
-  - Modal `#modal-manage-holidays`: chọn nhiều ngày trong một tuần, khoảng ngày dài, đối tượng Toàn trường hoặc giáo viên, buổi, lý do, bảng ngày nghỉ và xóa.
-  - Nút Quản lý Ngày nghỉ ở tab Thời khóa biểu GV, tab Gửi email, tab Lịch báo giảng và trong modal PPCT.
-  - Tuần áp dụng TKB: `#email-tt-week` và `#email-tt-week-all`, nhãn `Tuần N (Từ dd/mm đến dd/mm/yyyy) — N ngày nghỉ (...)`.
-  - Nút gửi riêng TKB tuần cho từng GV đã chọn.
-  - `isTeacherDayOff` đối chiếu `state.bao_giang.exceptions`. Ô TKB email của ngày nghỉ là `NGHỈ LỄ` (toàn trường) hoặc `NGHỈ PHÉP` (cá nhân), kèm lý do. Tiêu đề thứ có ngày và huy hiệu `(Nghỉ)` khi nghỉ toàn trường.
-  - Email LBG tuần hiện khối `NGHỈ TOÀN TRƯỜNG` / `NGHỈ CÁ NHÂN` cho ngày nghỉ cả sáng và chiều.
+- `tests/daythay-suggest-smoke.js`
+- `tests/timetable-render-smoke.js`
 
-## Kiểm tra
+## Kiểm thử
 
-- `node tests/timetable-render-smoke.js` → PASS
-- `node tests/baogiang-mail-smoke.js` → PASS
+- `node tests/daythay-suggest-smoke.js` — PASS
+- `node tests/timetable-render-smoke.js` — PASS
+- Trích xuất và `node --check` toàn bộ 7 khối script trong `phancongtochuyenmon.html` — PASS
+- `git diff --check` — PASS
 
-## Ngoài phạm vi
+## Vấn đề còn lại
 
-Không sửa file ngoài PLAN. Không commit, không push. `/verify` chạy ở chat Antigravity mới.
+Không có vấn đề đã biết trong phạm vi kế hoạch.

@@ -261,4 +261,27 @@ assert.match(html, /Trống cả buổi[\s\S]*Trống tiết[\s\S]*⚠️ Trùng
 assert.match(html, /Sắp xếp theo ngày/, 'journal has a chronological sort toolbar button');
 assert.match(html, /draggable="true"/, 'journal rows support HTML5 drag and drop');
 
+// Regression: a dated substitute record must use the timetable effective on that
+// date, not the currently displayed timetable after a later-week change.
+{
+    const historic = { morning: { '2': { '1': 'Toán - 7/9' } }, afternoon: {} };
+    const current = { morning: { '2': { '3': 'Toán - 7/10' } }, afternoon: {} };
+    const datedTeachers = [
+        { id: 'a', name: 'A', timetable: current },
+        { id: 'b', name: 'B', timetable: { morning: { '2': { '1': 'Tin - 8A1' } }, afternoon: {} } }
+    ];
+    const source = ['weekdayNumberFromDate', 'getTimetableDaySlots', 'computeDayThayTeacherAvailability'].map(declaration).join('\n');
+    const context = vm.createContext({
+        state: { teachers: datedTeachers },
+        getTeacherTimetableForDate: (teacher, date) => date < '2026-11-23' ? (teacher.id === 'a' ? historic : { morning: { '2': {} }, afternoon: {} }) : teacher.timetable,
+        parseTimetableCell: value => typeof value === 'string' ? { subject: value.split(' - ')[0], class_name: value.split(' - ')[1] } : value,
+        Date, String, Object, Set, Map, Number, parseInt
+    });
+    vm.runInContext(source, context);
+    assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext("getTimetableDaySlots(state.teachers[0], 'morning', 2, '2026-11-16').map(x => x.period_num)", context))), [1], 'week 11 reads the historic period 1 timetable');
+    assert.deepEqual(JSON.parse(JSON.stringify(vm.runInContext("getTimetableDaySlots(state.teachers[0], 'morning', 2, '2026-11-23').map(x => x.period_num)", context))), [3], 'week 12 reads the replacement period 3 timetable');
+    const availability = vm.runInContext("computeDayThayTeacherAvailability('2026-11-16', 'morning', 'a', [1])", context);
+    assert.deepEqual(JSON.parse(JSON.stringify(availability.freeSessionTeachers.map(x => x.teacher.id))), ['b'], 'availability also resolves each teacher by the selected date');
+}
+
 console.log('PASS: daythay suggestions classify availability, select a substitute teacher, and hide for makeup.');

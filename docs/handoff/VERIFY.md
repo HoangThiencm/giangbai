@@ -1,50 +1,30 @@
-# VERIFY: Nhập Thời khóa biểu Word (.docx) và đối chiếu giáo viên
+# VERIFY
 
 ## Kết luận
 PASS
 
----
+## Đối chiếu scope
+- File source được phép sửa theo `docs/handoff/PLAN.md`:
+  - `phancongtochuyenmon.html` — ĐÚNG SCOPE
+  - `tests/daythay-suggest-smoke.js` — ĐÚNG SCOPE
+  - `tests/timetable-render-smoke.js` — ĐÚNG SCOPE
+- File handoff: `docs/handoff/IMPLEMENT.md`, `docs/handoff/VERIFY.md`; `docs/handoff/.lock` giữ nguyên (`LOCK`).
+- Không có file ngoài scope bị đụng tới (`api/phancong.php` và các file khác không đổi).
 
-## Đối chiếu phạm vi (Scope)
-
-| Hạng mục trong PLAN | Trạng thái |
-|---|---|
-| Bổ sung vùng nạp/kéo thả file `.docx` trong khu vực nhập TKB | ✅ Đạt (`#tt-word-dropzone`) |
-| Tách bảng giáo viên từ file Word bằng `mammoth.js`, bảo toàn 5 hàng buổi sáng/chiều tương ứng 5 tiết | ✅ Đạt (`parseWordTimetableHtml`, `parseWordTimetableCellMatrix`) |
-| Modal đối chiếu giáo viên: checkbox, bộ lọc nhanh, trạng thái khớp | ✅ Đạt (`#modal-word-tkb`, `renderWordTeacherMatchModal`) |
-| So khớp tên có dấu nghiêm ngặt (phân biệt rõ `Thiên` vs `Thiện`) | ✅ Đạt (`matchWordTeachersWithDb`, so khớp trực tiếp chuỗi có dấu) |
-| Quản lý bí danh và lưu vào `localStorage['tkb_word_aliases']` | ✅ Đạt (`saveWordTeacherAliases`) |
-| Engine A: Nạp TKB trực tiếp vào hệ thống (100% chuẩn tiết, không qua AI) | ✅ Đạt (`applyWordTimetableDirectly`) |
-| Engine B: Xuất prompt chuẩn hóa cho ChatGPT/Gemini & ô nạp JSON phản hồi | ✅ Đạt (`generateWordTimetablePrompt`, `importTimetableFromJson`) |
-| Bộ kiểm tra quy tắc & xung đột (tiết vượt dải, lớp không tồn tại, trùng lịch) | ✅ Đạt (`validateTimetableRules`) |
-| Không đụng schema DB ngoài phạm vi, bảo toàn toàn bộ tính năng nhập ảnh cũ | ✅ Đạt |
-
----
-
-## Kiểm tra đã thực hiện
-
-1. **Kiểm tra cú pháp & cấu trúc mã nguồn:**
-   - Đã rà soát toàn bộ thẻ HTML, modal và script nhúng trong `phancongtochuyenmon.html`.
-   - Các hàm mới (`handleTimetableWordFile`, `matchWordTeachersWithDb`, `applyWordTimetableDirectly`, `generateWordTimetablePrompt`, `importTimetableFromJson`, `validateTimetableRules`...) đều được định nghĩa đầy đủ, đúng scope.
-2. **Kiểm tra logic phân biệt dấu tiếng Việt:**
-   - So sánh trực tiếp `rawName === candidate.name` hoặc so từ cuối cùng có dấu: `Thiên` $\neq$ `Thiện`.
-   - `Hoàng Tấn Thiên` khớp với `Giáo viên Thiên`.
-   - `Nguyễn Văn Thiện` khớp với `Giáo viên Thiện`.
-   - Không bị gộp chung hay nhầm lẫn môn/tiết.
-3. **Kiểm tra Engine A (Direct Parser):**
-   - Ánh xạ chính xác 5 hàng của `Buổi sáng` -> Tiết 1..5.
-   - Ánh xạ 5 hàng của `Buổi chiều` -> Tiết 1..5 chiều (hoặc 6..10).
-   - Ô trống được bảo toàn, không bị dồn tiết lên trên.
-4. **Kiểm tra Engine B (AI Prompt Export & JSON Import):**
-   - Sinh prompt chuẩn xác, hướng dẫn AI định dạng schema mảng JSON theo từng giáo viên.
-   - Hàm `importTimetableFromJson` hỗ trợ bóc tách JSON kể cả khi AI bọc trong markdown codeblock ` ```json ... ``` `.
-
----
+## Test đã chạy
+1. `node tests/daythay-suggest-smoke.js` -> **PASS** (`PASS: daythay suggestions classify availability, select a substitute teacher, and hide for makeup.`)
+2. `node tests/timetable-render-smoke.js` -> **PASS** (`PASS: timetable view loads numeric IDs and JSON data, preserves phase history, supports weekly snapshots, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.`)
+3. `git diff --check` + kiểm tra cú pháp inline `<script>` (`new vm.Script(...)`) trên `phancongtochuyenmon.html` -> **PASS**
+4. Kịch bản tích hợp E2E trên hàm thực tế của `phancongtochuyenmon.html` (tách biệt TKB theo đợt `persistTeacherTimetable`, snapshot theo tuần `W11`/`W12`, sửa bù ngược quá khứ `W11` không ghi đè `W1`, tự suy ra mốc Tuần 1 `07/09/2026` khi `bao_giang.start_date` trống hoặc đợt mặc định lệch năm `2025`, và đồng bộ ngày `2026-11-23`..`2027-01-10` trong `calcWeeksFromRange`/`submitQuickNewPhase`) -> **PASS**
 
 ## Pass / Fail từng tiêu chí
+1. **Tiêu chí 1 (Cách ly TKB giữa các đợt / tuần):** **PASS** — `persistTeacherTimetable` chỉ cập nhật `state.teachers` và `state.phase_assignments[state.info.current_phase_id]`, không ghi đè ngược sang các đợt lịch sử; `saveTimetableForTeacherWeek` bảo toàn cả trường hợp cập nhật tuần mới (`week >= currentWeek` -> snapshot mốc cũ) lẫn sửa bù tuần quá khứ (`week < currentWeek` -> snapshot `currentWeek` và không làm bẩn `W1`).
+2. **Tiêu chí 2 (Tra cứu đúng TKB theo ngày dạy thay của cả GV nghỉ và GV dạy thay):** **PASS** — `getTimetableDaySlots(teacher, session, dayNum, dateValue)` tra qua `getTeacherTimetableForDate(teacher, dateValue)` tại toàn bộ 5 luồng Dạy thay (`renderAbsentTeacherSchedulePreview`, `autoSuggestSlotsFromTimetable`, `computeDayThayTeacherAvailability`, `renderDayThaySuggestions`, `saveDayThayRecord`), đồng thời đồng bộ ở `baoGiangRows` và `timetableEmailSessionTable`.
+3. **Tiêu chí 3 (Hiển thị rõ nguồn TKB đang áp dụng ở modal Dạy thay & Báo giảng):** **PASS** — `#dt-absent-schedule-preview` hiển thị badge nguồn TKB cụ thể theo tuần/đợt áp dụng; `#tt-apply-week-select` và `#tt-apply-week-hint` hiển thị mốc áp dụng và cảnh báo mốc Tuần 1 suy luận khi chưa cấu hình `bao_giang.start_date`.
+4. **Tiêu chí 4 (Tạo đợt mới nhanh theo tuần khớp mốc đầu tuần / cuối tuần):** **PASS** — `effectiveSchoolStartDate`, `generateDefaultPhases`, `calcWeeksFromRange`, `openQuickNewPhase` và `submitQuickNewPhase` tính đúng Thứ 2 đầu tuần bắt đầu và Chủ nhật cuối tuần kết thúc theo năm học hiện hành (VD: Tuần 12..18 năm học `2026 - 2027` -> `2026-11-23` đến `2027-01-10`).
+5. **Tiêu chí 5 (Tương thích ngược dữ liệu JSON cũ & pass toàn bộ smoke tests):** **PASS** — Dữ liệu cũ chưa có `timetable_by_week` tự động fallback về TKB theo đợt hoặc `teacher.timetable`; cả 2 smoke tests `tests/daythay-suggest-smoke.js` và `tests/timetable-render-smoke.js` đều PASS.
 
-- [x] Giao diện modal đối chiếu TKB Word hiển thị đầy đủ: **PASS**
-- [x] Phân biệt tuyệt đối `Thiên` và `Thiện`: **PASS**
-- [x] Engine A nạp trực tiếp chính xác 100% tiết: **PASS**
-- [x] Engine B xuất prompt và nạp ngược JSON AI hoạt động đúng quy tắc: **PASS**
-- [x] Quy tắc kiểm tra xung đột hoạt động: **PASS**
+## Bug
+- Lỗi: Không phát hiện lỗi.
+- Tái hiện: Không.
+- File liên quan: Không.
