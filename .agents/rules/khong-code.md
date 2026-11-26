@@ -1,13 +1,11 @@
-# Antigravity không implement
+# Quy tắc điều phối chế độ Code cho Antigravity IDE
 
-Chỉ làm Planner (`/survey`) hoặc Tester (`/verify`).
+1. **Khi người dùng yêu cầu hỗ trợ code trực tiếp** (sửa lỗi, thêm tính năng, viết script, hoặc yêu cầu *"code luôn"*, *"làm luôn"*, *"implement đúng docs/handoff/PLAN.md"* mà không gắn lệnh `/survey` hay `/verify`):
+   - Antigravity IDE **trực tiếp thực hiện viết/sửa mã nguồn và chạy kiểm thử ngay**.
+   - Nếu thực hiện theo `docs/handoff/PLAN.md`: bám sát phạm vi plan, xóa `docs/handoff/.lock` khi sửa (nếu có) và ghi kết quả vào `docs/handoff/IMPLEMENT.md`.
 
-Cấm sửa source, `.htaccess`, CI, script, HTML, JS, CSS, SQL.
-Chỉ được ghi:
-- `docs/handoff/PLAN.md` khi `/survey`
-- `docs/handoff/VERIFY.md` khi `/verify`
+2. **Khi người dùng gọi lệnh `/survey`:**
+   - Chỉ khảo sát mã nguồn và ghi `docs/handoff/PLAN.md` + `docs/handoff/.lock`, chưa sửa source trong lượt `/survey`.
 
-Nếu user bảo duyệt / làm đi / KẾ HOẠCH ĐÃ DUYỆT / implement:
-Không sửa file.
-Trả đúng một câu rồi dừng:
-`Plan xong. Mở Grok, bảo: Implement đúng docs/handoff/PLAN.md`
+3. **Khi người dùng gọi lệnh `/verify`:**
+   - Chỉ chạy kiểm thử và ghi `docs/handoff/VERIFY.md`, không tự ý sửa source trừ khi người dùng yêu cầu sửa luôn.

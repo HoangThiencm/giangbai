@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-const PHANCONG_SCHEMA_VERSION = '20260825-v3';
+const PHANCONG_SCHEMA_VERSION = '20261126-v4';
 
 function phancong_current_user(PDO $pdo, bool $required = true): ?array
 {
@@ -160,6 +160,87 @@ function phancong_ensure_schema(PDO $pdo): void
             $pdo->exec('ALTER TABLE phancong_chuyenmon ADD UNIQUE INDEX uq_phancong_owner_plan (owner_id, plan_key)');
         }
     }
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS phancong_weekly_timetables (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        owner_id INT NOT NULL,
+        plan_key VARCHAR(80) NOT NULL DEFAULT 'default',
+        school_year VARCHAR(40) NOT NULL DEFAULT '',
+        week_key VARCHAR(16) NOT NULL,
+        week_num INT NOT NULL DEFAULT 0,
+        start_date VARCHAR(10) NOT NULL DEFAULT '',
+        end_date VARCHAR(10) NOT NULL DEFAULT '',
+        timetables_json LONGTEXT NOT NULL,
+        updated_by INT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_phancong_owner_plan_week (owner_id, plan_key, week_key),
+        INDEX idx_phancong_weekly_owner_plan_num (owner_id, plan_key, week_num)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
+function phancong_infer_week_key(array $stateData, string $isoDate): string
+{
+    $start = (string)($stateData['bao_giang']['start_date'] ?? '');
+    if (!preg_match('/^\\d{4}-\\d{2}-\\d{2}$/', $start)) {
+        $year = 0;
+        if (preg_match('/(20\\d{2})\\s*[-–]/', (string)($stateData['info']['school_year'] ?? ''), $m)) $year = (int)$m[1];
+        if (!$year) $year = (int)substr($isoDate, 0, 4);
+        $start = sprintf('%04d-09-05', $year);
+    }
+    try {
+        $first = new DateTimeImmutable($start);
+        $first = $first->modify('monday this week');
+        $date = new DateTimeImmutable($isoDate ?: date('Y-m-d'));
+        $weeks = (int)floor(($date->getTimestamp() - $first->getTimestamp()) / 604800) + 1;
+        return $weeks >= 1 && $weeks <= 45 ? 'W' . $weeks : '';
+    } catch (Throwable $e) { return ''; }
+}
+
+function phancong_extract_teacher_timetables(array $stateData): array
+{
+    $result = [];
+    foreach (($stateData['teachers'] ?? []) as $teacher) {
+        if (!is_array($teacher) || !isset($teacher['id']) || !is_array($teacher['timetable'] ?? null)) continue;
+        $hasLesson = false;
+        foreach (['morning', 'afternoon'] as $session) foreach (($teacher['timetable'][$session] ?? []) as $day) {
+            if (is_array($day) && count($day)) { $hasLesson = true; break 2; }
+        }
+        if ($hasLesson) $result[(string)$teacher['id']] = $teacher['timetable'];
+    }
+    return $result;
+}
+
+function phancong_load_weekly_timetables(PDO $pdo, int $ownerId, string $planKey): array
+{
+    $stmt = $pdo->prepare('SELECT week_key, week_num, start_date, end_date, timetables_json, updated_at FROM phancong_weekly_timetables WHERE owner_id = ? AND plan_key = ? ORDER BY week_num');
+    $stmt->execute([$ownerId, $planKey]); $map = []; $meta = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $data = json_decode((string)$row['timetables_json'], true);
+        if (!is_array($data)) continue;
+        $key = (string)$row['week_key']; $map[$key] = $data;
+        $meta[$key] = ['updated_at' => $row['updated_at'], 'start_date' => $row['start_date'], 'end_date' => $row['end_date'], 'teacher_count' => count($data)];
+    }
+    return ['map' => $map, 'meta' => $meta];
+}
+
+function phancong_sync_weekly_timetables(PDO $pdo, int $ownerId, string $planKey, string $schoolYear, array $weeklyMap, int $userId, array $stateData = []): void
+{
+    $upsert = $pdo->prepare('INSERT INTO phancong_weekly_timetables (owner_id, plan_key, school_year, week_key, week_num, start_date, end_date, timetables_json, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE school_year = VALUES(school_year), week_num = VALUES(week_num), start_date = VALUES(start_date), end_date = VALUES(end_date), timetables_json = VALUES(timetables_json), updated_by = VALUES(updated_by)');
+    foreach ($weeklyMap as $key => $timetables) {
+        if (!preg_match('/^W([1-9]\\d?)$/', (string)$key, $m) || !is_array($timetables) || !$timetables) continue;
+        $week = (int)$m[1]; $monday = phancong_week_dates($schoolYear, $week, $stateData);
+        $upsert->execute([$ownerId, $planKey, $schoolYear, $key, $week, $monday['start'], $monday['end'], json_encode($timetables, JSON_UNESCAPED_UNICODE), $userId]);
+    }
+}
+
+function phancong_week_dates(string $schoolYear, int $week, array $stateData = []): array
+{
+    preg_match('/(20\\d{2})/', $schoolYear, $m); $year = (int)($m[1] ?? date('Y'));
+    $configured = (string)($stateData['bao_giang']['start_date'] ?? '');
+    $start = new DateTimeImmutable(preg_match('/^\d{4}-\d{2}-\d{2}$/', $configured) ? $configured : sprintf('%04d-09-05', $year));
+    $start = $start->modify('monday this week')->modify('+' . max(0, $week - 1) . ' weeks');
+    return ['start' => $start->format('Y-m-d'), 'end' => $start->modify('+6 days')->format('Y-m-d')];
 }
 
 try {
@@ -198,9 +279,17 @@ try {
             $parsedData = null;
         }
 
+        $loadedWeeks = phancong_load_weekly_timetables($pdo, $ownerId, $planKey);
+        if (is_array($parsedData)) {
+            if (!is_array($parsedData['weekly_timetables'] ?? null)) $parsedData['weekly_timetables'] = [];
+            foreach ($loadedWeeks['map'] as $weekKey => $teachers) {
+                foreach ($teachers as $tid => $tt) $parsedData['weekly_timetables'][$weekKey][(string)$tid] = $tt;
+            }
+        }
         respond([
             'ok' => true,
             'data' => $parsedData,
+            'weekly_meta' => $loadedWeeks['meta'],
             'current_user' => phancong_public_user($currentUser),
             'plan' => [
                 'id' => (int)$row['id'],
@@ -258,6 +347,18 @@ try {
             'plans' => $plans,
             'current_user' => phancong_public_user($currentUser)
         ]);
+    }
+
+    if ($action === 'get_week_timetable') {
+        $currentUser = phancong_current_user($pdo, true);
+        $ownerId = phancong_owner_id($currentUser);
+        $planKey = trim((string)($_GET['source_plan_key'] ?? $_GET['plan_key'] ?? 'default')) ?: 'default';
+        $weekKey = strtoupper(trim((string)($_GET['week_key'] ?? '')));
+        if (!preg_match('/^W([1-9]\\d?)$/', $weekKey)) respond(['error' => 'Tuần TKB không hợp lệ.'], 422);
+        $stmt = $pdo->prepare('SELECT timetables_json, school_year, start_date, end_date, updated_at FROM phancong_weekly_timetables WHERE owner_id = ? AND plan_key = ? AND week_key = ? LIMIT 1');
+        $stmt->execute([$ownerId, $planKey, $weekKey]); $row = $stmt->fetch();
+        if (!$row) respond(['ok' => true, 'data' => null, 'message' => 'Chưa có TKB tuần này trên CSDL.']);
+        respond(['ok' => true, 'week_key' => $weekKey, 'plan_key' => $planKey, 'data' => json_decode((string)$row['timetables_json'], true), 'meta' => ['school_year' => $row['school_year'], 'start_date' => $row['start_date'], 'end_date' => $row['end_date'], 'updated_at' => $row['updated_at']]]);
     }
 
     if ($action === 'legacy_candidates') {
@@ -359,17 +460,34 @@ try {
             respond(['error' => 'Dữ liệu phân công (data) không được để trống.'], 400);
         }
 
-        $dataJson = is_string($data) ? $data : json_encode($data, JSON_UNESCAPED_UNICODE);
-        if (!$dataJson || $dataJson === 'null') {
+        $incomingState = is_string($data) ? json_decode($data, true) : $data;
+        if (!is_array($incomingState)) {
             respond(['error' => 'Dữ liệu phân công không hợp lệ.'], 400);
         }
 
         $userId = (int)($currentUser['id'] ?? 0);
 
-        // Check if plan_key exists
-        $checkStmt = $pdo->prepare("SELECT id FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ? LIMIT 1");
+        // Lock the previous state so a concurrent save cannot discard a weekly snapshot.
+        $checkStmt = $pdo->prepare("SELECT id, data_json, updated_at FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ? LIMIT 1");
         $checkStmt->execute([$ownerId, $planKey]);
         $existing = $checkStmt->fetch();
+
+        $loadedWeeks = phancong_load_weekly_timetables($pdo, $ownerId, $planKey);
+        $incomingState['weekly_timetables'] = is_array($incomingState['weekly_timetables'] ?? null) ? $incomingState['weekly_timetables'] : [];
+        foreach ($loadedWeeks['map'] as $key => $teachers) {
+            foreach ($teachers as $tid => $tt) if (!array_key_exists((string)$tid, $incomingState['weekly_timetables'][$key] ?? [])) $incomingState['weekly_timetables'][$key][(string)$tid] = $tt;
+        }
+        if ($existing) {
+            $oldState = json_decode((string)$existing['data_json'], true) ?: [];
+            $oldTimetables = phancong_extract_teacher_timetables($oldState);
+            $oldWeekKey = (string)($oldState['info']['active_timetable_week'] ?? '');
+            if ($oldWeekKey === '') $oldWeekKey = phancong_infer_week_key($oldState, substr((string)$existing['updated_at'], 0, 10));
+            if ($oldTimetables && preg_match('/^W[1-9]\\d?$/', $oldWeekKey) && empty($loadedWeeks['map'][$oldWeekKey]) && empty($incomingState['weekly_timetables'][$oldWeekKey])) {
+                $incomingState['weekly_timetables'][$oldWeekKey] = $oldTimetables;
+            }
+        }
+        $dataJson = json_encode($incomingState, JSON_UNESCAPED_UNICODE);
+        if (!$dataJson || $dataJson === 'null') respond(['error' => 'Dữ liệu phân công không hợp lệ.'], 400);
 
         if ($existing) {
             $updateStmt = $pdo->prepare("UPDATE phancong_chuyenmon SET title = ?, school_year = ?, semester = ?, data_json = ?, updated_by = ?, updated_at = NOW() WHERE id = ? AND owner_id = ?");
@@ -378,6 +496,7 @@ try {
             $insertStmt = $pdo->prepare("INSERT INTO phancong_chuyenmon (owner_id, plan_key, title, school_year, semester, data_json, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             $insertStmt->execute([$ownerId, $planKey, $title, $schoolYear, $semester, $dataJson, $userId, $userId]);
         }
+        phancong_sync_weekly_timetables($pdo, $ownerId, $planKey, $schoolYear, $incomingState['weekly_timetables'], $userId, $incomingState);
 
         // Fetch updated record info
         $fetchStmt = $pdo->prepare("SELECT updated_at FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ? LIMIT 1");
@@ -402,6 +521,7 @@ try {
             $planKey = 'default';
         }
 
+        $pdo->prepare("DELETE FROM phancong_weekly_timetables WHERE owner_id = ? AND plan_key = ?")->execute([$ownerId, $planKey]);
         $stmt = $pdo->prepare("DELETE FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ?");
         $stmt->execute([$ownerId, $planKey]);
 

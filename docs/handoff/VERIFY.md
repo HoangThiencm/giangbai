@@ -4,27 +4,28 @@
 PASS
 
 ## Đối chiếu scope
-- File source được phép sửa theo `docs/handoff/PLAN.md`:
-  - `phancongtochuyenmon.html` — ĐÚNG SCOPE
-  - `tests/daythay-suggest-smoke.js` — ĐÚNG SCOPE
-  - `tests/timetable-render-smoke.js` — ĐÚNG SCOPE
-- File handoff: `docs/handoff/IMPLEMENT.md`, `docs/handoff/VERIFY.md`; `docs/handoff/.lock` giữ nguyên (`LOCK`).
-- Không có file ngoài scope bị đụng tới (`api/phancong.php` và các file khác không đổi).
+- `api/phancong.php` — ĐÚNG SCOPE (`PHANCONG_SCHEMA_VERSION = '20261126-v4'`, bảng `phancong_weekly_timetables`, `action=get_week_timetable`, bảo toàn khóa chuỗi `(string)$tid` cho ID giáo viên dạng số, kiểm tra `$dataJson` đúng sau `json_encode`, tính khoảng ngày tuần ưu tiên `bao_giang.start_date`, tự động lưu trữ TKB tuần trước khi ghi đè).
+- `phancongtochuyenmon.html` — ĐÚNG SCOPE (bộ chọn tuần nổi bật trên `#tt-workspace-header` mặc định tuần hiện tại, tự động đồng bộ CSDL `autoSave: true`, chụp snapshot `W(week - 1)` chính xác kể cả khi đã có `W1`/`W5`, nhập bù tuần cũ `W11` không ghi đè `W12`, Sổ Dạy Thay lấy đúng TKB theo ngày/nguồn CSDL, xóa sạch tiết cũ khi đổi sang ngày không có tiết hoặc cùng buổi khác tuần, đồng bộ đầy đủ danh sách GV, Lịch báo giảng và Email TKB theo tuần).
+- `tests/daythay-suggest-smoke.js` — ĐÚNG SCOPE (bổ sung đầy đủ kiểm thử E2E chuyển đổi Tuần 12 ↔ Tuần 11, nạp lại/xóa tiết `#period-slots-builder`, badge nguồn CSDL, cảnh báo fallback và chọn nguồn `phase:...`).
+- `tests/timetable-render-smoke.js` — ĐÚNG SCOPE (bổ sung đầy đủ kiểm thử snapshot `W11` khi đã có `W1`/`W5`, nhập bù `W11` bảo toàn `W12` và phân công lớp `W12`, đếm tiết theo tuần trên danh sách GV và kiểm tra tĩnh `api/phancong.php`).
+- `docs/handoff/IMPLEMENT.md` — ĐÚNG SCOPE.
 
 ## Test đã chạy
-1. `node tests/daythay-suggest-smoke.js` -> **PASS** (`PASS: daythay suggestions classify availability, select a substitute teacher, and hide for makeup.`)
-2. `node tests/timetable-render-smoke.js` -> **PASS** (`PASS: timetable view loads numeric IDs and JSON data, preserves phase history, supports weekly snapshots, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.`)
-3. `git diff --check` + kiểm tra cú pháp inline `<script>` (`new vm.Script(...)`) trên `phancongtochuyenmon.html` -> **PASS**
-4. Kịch bản tích hợp E2E trên hàm thực tế của `phancongtochuyenmon.html` (tách biệt TKB theo đợt `persistTeacherTimetable`, snapshot theo tuần `W11`/`W12`, sửa bù ngược quá khứ `W11` không ghi đè `W1`, tự suy ra mốc Tuần 1 `07/09/2026` khi `bao_giang.start_date` trống hoặc đợt mặc định lệch năm `2025`, và đồng bộ ngày `2026-11-23`..`2027-01-10` trong `calcWeeksFromRange`/`submitQuickNewPhase`) -> **PASS**
+1. `node tests/daythay-suggest-smoke.js` -> PASS (`EXIT=0`)
+2. `node tests/timetable-render-smoke.js` -> PASS (`EXIT=0`)
+3. `node tests/baogiang-teacher-month-smoke.js` -> PASS (`EXIT=0`)
+4. `node tests/baogiang-weekday-segment-smoke.js` -> PASS (`EXIT=0`)
+5. `node tests/baogiang-mail-smoke.js` -> PASS (`EXIT=0`)
+6. `node tests/attendance-autosync-smoke.js` -> PASS (`EXIT=0`)
+7. Kiểm tra cú pháp toàn bộ `<script>` trong `phancongtochuyenmon.html` (`vm.Script`) & cấu trúc `api/phancong.php` -> PASS
+8. `git diff --check` -> PASS
 
 ## Pass / Fail từng tiêu chí
-1. **Tiêu chí 1 (Cách ly TKB giữa các đợt / tuần):** **PASS** — `persistTeacherTimetable` chỉ cập nhật `state.teachers` và `state.phase_assignments[state.info.current_phase_id]`, không ghi đè ngược sang các đợt lịch sử; `saveTimetableForTeacherWeek` bảo toàn cả trường hợp cập nhật tuần mới (`week >= currentWeek` -> snapshot mốc cũ) lẫn sửa bù tuần quá khứ (`week < currentWeek` -> snapshot `currentWeek` và không làm bẩn `W1`).
-2. **Tiêu chí 2 (Tra cứu đúng TKB theo ngày dạy thay của cả GV nghỉ và GV dạy thay):** **PASS** — `getTimetableDaySlots(teacher, session, dayNum, dateValue)` tra qua `getTeacherTimetableForDate(teacher, dateValue)` tại toàn bộ 5 luồng Dạy thay (`renderAbsentTeacherSchedulePreview`, `autoSuggestSlotsFromTimetable`, `computeDayThayTeacherAvailability`, `renderDayThaySuggestions`, `saveDayThayRecord`), đồng thời đồng bộ ở `baoGiangRows` và `timetableEmailSessionTable`.
-3. **Tiêu chí 3 (Hiển thị rõ nguồn TKB đang áp dụng ở modal Dạy thay & Báo giảng):** **PASS** — `#dt-absent-schedule-preview` hiển thị badge nguồn TKB cụ thể theo tuần/đợt áp dụng; `#tt-apply-week-select` và `#tt-apply-week-hint` hiển thị mốc áp dụng và cảnh báo mốc Tuần 1 suy luận khi chưa cấu hình `bao_giang.start_date`.
-4. **Tiêu chí 4 (Tạo đợt mới nhanh theo tuần khớp mốc đầu tuần / cuối tuần):** **PASS** — `effectiveSchoolStartDate`, `generateDefaultPhases`, `calcWeeksFromRange`, `openQuickNewPhase` và `submitQuickNewPhase` tính đúng Thứ 2 đầu tuần bắt đầu và Chủ nhật cuối tuần kết thúc theo năm học hiện hành (VD: Tuần 12..18 năm học `2026 - 2027` -> `2026-11-23` đến `2027-01-10`).
-5. **Tiêu chí 5 (Tương thích ngược dữ liệu JSON cũ & pass toàn bộ smoke tests):** **PASS** — Dữ liệu cũ chưa có `timetable_by_week` tự động fallback về TKB theo đợt hoặc `teacher.timetable`; cả 2 smoke tests `tests/daythay-suggest-smoke.js` và `tests/timetable-render-smoke.js` đều PASS.
+1. **Tiêu chí 1 (CSDL lưu trữ độc lập TKB theo tuần & autoSave):** **PASS**
+2. **Tiêu chí 2 (Không mất TKB tuần trước khi sang tuần mới):** **PASS**
+3. **Tiêu chí 3 (Quay lại nhập Dạy thay ở Tuần 11 lấy đúng CSDL Tuần 11):** **PASS**
+4. **Tiêu chí 4 (Đồng bộ đầy đủ danh sách GV, Lịch báo giảng & Email TKB theo tuần):** **PASS**
+5. **Tiêu chí 5 (Bổ sung và chạy PASS toàn bộ kiểm thử tự động Bước 5):** **PASS**
 
 ## Bug
-- Lỗi: Không phát hiện lỗi.
-- Tái hiện: Không.
-- File liên quan: Không.
+Không có.

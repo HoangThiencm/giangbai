@@ -284,4 +284,120 @@ assert.match(html, /draggable="true"/, 'journal rows support HTML5 drag and drop
     assert.deepEqual(JSON.parse(JSON.stringify(availability.freeSessionTeachers.map(x => x.teacher.id))), ['b'], 'availability also resolves each teacher by the selected date');
 }
 
+// End-to-end Week 12 -> Week 11 switch in DayThay:
+// 1. Same morning session across Week 12 and Week 11 must reload #period-slots-builder with Week 11 lessons (never keep Week 12 slots).
+// 2. Switching to a Week 11 date with zero lessons clears stale Week 12 ticked slots.
+// 3. Preview shows exact CSDL week badge when saved, or fallback warning + phase source override when missing.
+{
+    const ttWeek11A = { morning: { '2': { '1': { subject: 'Toán', class_name: '7/9' } }, '3': {} }, afternoon: {} };
+    const ttWeek12A = { morning: { '2': { '1': { subject: 'Toán', class_name: '7/10' }, '3': { subject: 'Toán', class_name: '8/1' } }, '3': {} }, afternoon: {} };
+    const ttWeek11B = { morning: { '2': {}, '3': {} }, afternoon: {} };
+    const ttWeek12B = { morning: { '2': { '1': { subject: 'Tin', class_name: '9/1' } }, '3': {} }, afternoon: {} };
+
+    const preview = { hidden: true, innerHTML: '' };
+    const panel = { hidden: true, innerHTML: '' };
+    const weekdayHint = { textContent: '' };
+    const teacherSelect = { value: 'b', options: [] };
+    Object.defineProperty(teacherSelect, 'innerHTML', {
+        set(value) {
+            this._html = value;
+            this.options = [...String(value).matchAll(/<option value="([^"]+)"/g)].map(match => ({ value: match[1] }));
+        },
+        get() { return this._html || ''; }
+    });
+
+    let activeSlots = [];
+    const fields = {
+        'daythay-absent-schedule-preview': preview,
+        'daythay-suggestion-panel': panel,
+        'new-sub-weekday': weekdayHint,
+        'new-sub-teacher': teacherSelect,
+        'new-sub-type': { value: 'replacement' },
+        'new-sub-date': { value: '2026-11-23' }, // Monday of Week 12
+        'new-sub-for-teacher': { value: 'a' },
+        'new-sub-session': { value: 'morning' }
+    };
+
+    const fnNames = [
+        'emptyDayMap', 'emptyTimetable', 'splitSubjectAndClass', 'parseTimetableCell', 'normalizeTeacherTimetable',
+        'timetableHasLessons', 'effectiveSchoolStartDate', 'baoGiangDate', 'baoGiangIso', 'baoGiangTeachingWeek',
+        'baoGiangSchoolWeekRange', 'timetableWeekKeyForDate', 'weeklyTimetableSaved', 'resolvePhaseDateRanges',
+        'resolvePhaseTimetableInfoForDate', 'phaseTimetableForDate', 'resolveTeacherTimetableForDate', 'getTeacherTimetableForDate',
+        'weekdayLabel', 'updateDateWeekday', 'getSessionLabel', 'weekdayNumberFromDate', 'getTimetableDaySlots',
+        'getDayThayAbsentContextKey', 'onDayThayAbsentContextChange', 'onDayThaySessionChange', 'onDayThaySourceOverrideChange',
+        'renderAbsentTeacherSchedulePreview', 'autoSuggestSlotsFromTimetable', 'maybeAutoSuggestSlotsFromTimetable',
+        'computeDayThayTeacherAvailability', 'renderDayThaySuggestions'
+    ];
+
+    const context = vm.createContext({
+        state: {
+            info: { school_year: '2026 - 2027', morning_periods: '1-5', afternoon_periods: '1-4' },
+            bao_giang: { start_date: '2026-09-07' },
+            phases: [{ id: 'phase_hk1_d1', name: 'Đợt 1', date_start: '2026-09-07', date_end: '2026-11-22' }],
+            phase_assignments: {
+                phase_hk1_d1: { teachers: [{ id: 'a', timetable: { morning: { '2': { '2': 'Toán - 6/1' } }, afternoon: {} } }] }
+            },
+            teachers: [
+                { id: 'a', name: 'Cô Lan', role: 'GV', timetable: JSON.parse(JSON.stringify(ttWeek12A)) },
+                { id: 'b', name: 'Thầy Minh', role: 'GV', timetable: JSON.parse(JSON.stringify(ttWeek12B)) }
+            ],
+            weekly_timetables: {
+                W11: { a: JSON.parse(JSON.stringify(ttWeek11A)), b: JSON.parse(JSON.stringify(ttWeek11B)) },
+                W12: { a: JSON.parse(JSON.stringify(ttWeek12A)), b: JSON.parse(JSON.stringify(ttWeek12B)) }
+            }
+        },
+        TT_DAYS: ['2', '3', '4', '5', '6', '7'],
+        TT_DAY_LABELS: { 2: 'Thứ 2', 3: 'Thứ 3', 4: 'Thứ 4', 5: 'Thứ 5', 6: 'Thứ 6', 7: 'Thứ 7' },
+        daythaySessionAuto: { scope: '', manual: false, applied: false },
+        daythayTimetableSourceOverride: '',
+        editingSubId: null,
+        extraPeriodSlots: [],
+        hiddenPeriodSlots: new Set(),
+        document: { getElementById: id => fields[id] || null },
+        initPeriodSlotsBuilder(slots = []) {
+            activeSlots = (slots || []).map(s => ({ ...s, enabled: true }));
+            context.renderDayThaySuggestions();
+        },
+        snapshotPeriodSlots: () => activeSlots,
+        formatVnDate: iso => iso.split('-').reverse().join('/'),
+        escapeHtml: v => String(v ?? ''),
+        showToast() {},
+        Date, String, Object, Array, Set, Map, Number, Math, JSON, Boolean, parseInt, encodeURIComponent
+    });
+    vm.runInContext(fnNames.map(declaration).join('\n'), context);
+
+    // Step 1: Select Week 12 Monday (2026-11-23) -> loads Week 12 slots [1 (7/10), 3 (8/1)], teacher B conflicts on period 1
+    vm.runInContext('onDayThayAbsentContextChange()', context);
+    assert.deepEqual(JSON.parse(JSON.stringify(activeSlots.map(s => `${s.period_num}:${s.class_name}`))), ['1:7/10', '3:8/1'], 'Week 12 loads periods 1 and 3 from W12');
+    assert.match(preview.innerHTML, /CSDL TKB Tuần 12/, 'Week 12 preview badge confirms W12 CSDL source');
+    assert.match(teacherSelect.innerHTML, /Thầy Minh[\s\S]*Trùng lịch/, 'Teacher B conflicts in Week 12 period 1');
+
+    // Step 2: Switch back to Week 11 Monday (2026-11-16, ALSO morning!) -> must reload W11 slot [1 (7/9)] and free Teacher B
+    fields['new-sub-date'].value = '2026-11-16';
+    vm.runInContext('onDayThayAbsentContextChange()', context);
+    assert.match(weekdayHint.textContent, /Tuần 11/, 'date weekday hint displays Week 11 range');
+    assert.deepEqual(JSON.parse(JSON.stringify(activeSlots.map(s => `${s.period_num}:${s.class_name}`))), ['1:7/9'], 'switching to Week 11 replaces Week 12 slots even when session stays morning');
+    assert.match(preview.innerHTML, /✓ Đang lấy CSDL: CSDL TKB Tuần 11/, 'Week 11 preview shows exact W11 CSDL badge');
+    assert.doesNotMatch(preview.innerHTML, /7\/10|8\/1/, 'Week 11 preview does not leak Week 12 classes');
+    assert.match(teacherSelect.innerHTML, /Thầy Minh[\s\S]*Trống cả buổi/, 'Teacher B is free in Week 11 according to W11 CSDL');
+
+    // Step 3: Switch to Week 11 Tuesday (2026-11-17, zero lessons) -> must wipe activeSlots clean
+    fields['new-sub-date'].value = '2026-11-17';
+    vm.runInContext('onDayThayAbsentContextChange()', context);
+    assert.deepEqual(JSON.parse(JSON.stringify(activeSlots)), [], 'switching to a lesson-free day in Week 11 clears stale Week 12/Monday slots');
+
+    // Step 4: Fallback warning when W11 & Phase have no timetable while W12 exists, plus manual source override
+    delete context.state.weekly_timetables.W11;
+    const savedPhase = context.state.phase_assignments.phase_hk1_d1;
+    context.state.phase_assignments = {};
+    fields['new-sub-date'].value = '2026-11-16';
+    vm.runInContext('onDayThayAbsentContextChange()', context);
+    assert.match(preview.innerHTML, /CSDL chưa có bản TKB lưu riêng cho Tuần 11/, 'warns clearly when W11 has no saved CSDL snapshot and falls back to W12');
+    assert.match(preview.innerHTML, /Nhập \/ Sửa TKB Tuần 11/, 'provides 1-click button to enter/restore Week 11 TKB');
+
+    context.state.phase_assignments = { phase_hk1_d1: savedPhase };
+    vm.runInContext("onDayThaySourceOverrideChange('phase:phase_hk1_d1')", context);
+    assert.deepEqual(JSON.parse(JSON.stringify(activeSlots.map(s => `${s.period_num}:${s.class_name}`))), ['2:6/1'], 'selecting phase override reloads slots from Đợt 1');
+}
+
 console.log('PASS: daythay suggestions classify availability, select a substitute teacher, and hide for makeup.');

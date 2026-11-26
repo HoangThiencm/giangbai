@@ -1,32 +1,37 @@
-# Planner → Coder → Tester
+# Planner → Coder → Tester (Linh hoạt: Code trực tiếp hoặc theo Handoff)
 
 Planner + Tester: Antigravity IDE (`/survey`, `/verify`).
-Coder: một trong ba — Grok, ChatGPT/Codex, hoặc `agy` CLI.
-Cùng lúc chỉ một Coder. Không để IDE survey và Coder cùng sửa source.
+Coder: **chính Antigravity IDE (khi người dùng yêu cầu hỗ trợ code trực tiếp)**, hoặc một trong ba — Grok, ChatGPT/Codex, `agy` CLI.
+Cùng lúc chỉ một Coder sửa source.
 
-User chỉ cần:
-1. Antigravity IDE, chat mới: `/survey` + việc cần làm
-2. Coder: implement đúng `docs/handoff/PLAN.md`
-3. Antigravity IDE, chat mới: `/verify`
-4. Fail → Coder sửa đúng bug trong `docs/handoff/VERIFY.md`
-5. User bảo commit/push → Coder commit, push, xóa `docs/handoff/.lock`
+Hai cách làm việc tùy chọn của User:
+- **Cách A — Antigravity IDE hỗ trợ code trực tiếp (nhanh, trọn gói):**
+  + Người dùng mô tả việc cần sửa/viết code (hoặc sau khi `/survey` bảo *"bạn code luôn đi"* / *"implement PLAN.md"*): **Antigravity IDE trực tiếp sửa mã nguồn, kiểm thử và hoàn tất ngay.**
+- **Cách B — Quy trình Handoff nhiều bước (`/survey` → Coder → `/verify`):**
+  1. Antigravity IDE: `/survey` + việc cần làm → ghi `docs/handoff/PLAN.md`
+  2. Coder (Antigravity IDE / Grok / ChatGPT / `agy`): implement đúng `docs/handoff/PLAN.md`
+  3. Antigravity IDE: `/verify` → kiểm thử và ghi `docs/handoff/VERIFY.md`
+  4. Fail → Coder sửa đúng bug trong `docs/handoff/VERIFY.md`
+  5. User bảo commit/push → Coder commit, push, xóa `docs/handoff/.lock`
 
-Nguồn sự thật (file, không phải chat):
+Nguồn sự thật khi dùng Handoff:
 - `docs/handoff/PLAN.md`
 - `docs/handoff/IMPLEMENT.md`
 - `docs/handoff/VERIFY.md`
 
-Lệnh Coder (chọn 1):
+Lệnh Coder khi dùng `PLAN.md` (chọn 1):
+- Antigravity IDE: `Bạn implement luôn theo docs/handoff/PLAN.md`
 - Grok / ChatGPT: `Implement đúng docs/handoff/PLAN.md`
 - CLI: `agy -p "Implement đúng docs/handoff/PLAN.md"`
 
 ## Antigravity IDE
 
 1. **Khi phát triển / sửa mã nguồn (Coding/Dev):**
-   - Chỉ `/survey` hoặc `/verify`. Cấm implement. Cấm sửa source.
-   - Kế hoạch / test phải ghi file. Chat không được chứa plan hay báo cáo dài.
-   - Nếu user gõ duyệt / làm đi / ok trong chat survey: không sửa source. Trả:
-     `Plan xong. Mo Coder (Grok / ChatGPT / agy): Implement dung docs/handoff/PLAN.md`
+   - **Khi người dùng yêu cầu hỗ trợ code trực tiếp** (yêu cầu viết code, sửa bug, thêm tính năng, hoặc yêu cầu *"code luôn"*, *"làm đi"*, *"implement PLAN.md"* mà không gọi `/survey` hay `/verify`):
+     + **ĐƯỢC PHÉP và BẮT BUỘC trực tiếp đóng vai trò Coder**: đọc mã nguồn, chỉnh sửa/tạo file, chạy test xác minh ngay lập tức, không đùn đẩy sang công cụ khác.
+     + Nếu thực thi từ `docs/handoff/PLAN.md`, tuân thủ đúng phạm vi plan và cập nhật `docs/handoff/IMPLEMENT.md` (xóa `docs/handoff/.lock` nếu bị vướng khóa).
+   - **Chỉ khi người dùng gõ rõ lệnh `/survey`:** Đóng vai trò Planner — khảo sát code thật, ghi `docs/handoff/PLAN.md` và `docs/handoff/.lock`, không sửa source trong lượt `/survey` và không đưa kế hoạch dài ra chat.
+   - **Chỉ khi người dùng gõ rõ lệnh `/verify`:** Đóng vai trò Tester — chạy kiểm thử, ghi `docs/handoff/VERIFY.md`, không tự sửa source trừ khi người dùng yêu cầu sửa luôn.
 
 2. **Khi người dùng gọi Trợ lý Sư phạm Hoàng Thiên (`/thien`, "Thiên ơi" hoặc tác vụ sư phạm):**
    - Đây là tác vụ nghiệp vụ giảng dạy (soạn KHBD, tạo bài tập, duyệt đề, tạo bài giảng HTML, vẽ hình học trong thư mục `TROLYTHIEN/`).

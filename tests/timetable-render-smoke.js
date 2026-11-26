@@ -522,4 +522,114 @@ assert.match(html, /id="email-tt-week"/, 'tab TKB của tôi chọn tuần áp d
     assert.equal(vm.runInContext('baoGiangSchoolWeekRange(12).start', context), '2026-11-23');
     assert.match(declaration('saveTimetableForTeacherWeek'), /if \(!currentWeek \|\| week >= currentWeek\) snapshotPreviousWeekBeforeOverride/);
 }
+
+// Step 5 verification:
+// 1. snapshotPreviousWeekBeforeOverride preserves W11 even when W1 and W5 already exist.
+// 2. Backfilling past week W11 while current week is W12 preserves W12 timetable & assignments, and teacher list counts reflect selected week.
+// 3. api/phancong.php stores phancong_weekly_timetables safely without array_merge numeric key loss or premature $dataJson check.
+{
+    const ttW1 = { morning: { '2': { '1': { subject: 'Toán', class_name: '6/1' } } }, afternoon: {} };
+    const ttW5 = { morning: { '2': { '1': { subject: 'Toán', class_name: '6/2' }, '2': { subject: 'Toán', class_name: '6/3' } } }, afternoon: {} };
+    const ttW12 = { morning: { '2': { '4': { subject: 'Toán', class_name: '9/1' }, '5': { subject: 'Toán', class_name: '9/2' }, '3': { subject: 'Tin', class_name: '8/1' } } }, afternoon: {} };
+    const ttBackfillW11 = { morning: { '2': { '1': { subject: 'Toán', class_name: '7/9' } } }, afternoon: {} };
+
+    const listEl = { innerHTML: '' };
+    const progressEl = { textContent: '' };
+    const fns = [
+        'emptyDayMap', 'emptyTimetable', 'splitSubjectAndClass', 'parseTimetableCell', 'normalizeTeacherTimetable',
+        'timetableHasLessons', 'countTimetableLessons', 'effectiveSchoolStartDate', 'baoGiangDate', 'baoGiangIso',
+        'baoGiangTeachingWeek', 'baoGiangSchoolWeekRange', 'timetableWeekKeyForDate', 'weeklyTimetableSaved',
+        'resolvePhaseDateRanges', 'resolvePhaseTimetableInfoForDate', 'phaseTimetableForDate', 'resolveTeacherTimetableForDate',
+        'getTeacherTimetableForDate', 'getTeacherTimetableForWeekKey', 'persistTeacherTimetable',
+        'snapshotPreviousWeekBeforeOverride', 'saveTimetableForTeacherWeek', 'filteredTimetableTeachers', 'renderTimetableTeacherList'
+    ];
+
+    class FixedWeek12Date extends Date {
+        constructor(...args) {
+            if (args.length === 0) super('2026-11-26T08:00:00');
+            else super(...args);
+        }
+    }
+
+    const context = vm.createContext({
+        state: {
+            info: { school_year: '2026 - 2027', current_phase_id: 'p1' },
+            bao_giang: { start_date: '2026-09-07' },
+            phases: [{ id: 'p1', name: 'Đợt 1', date_start: '2026-09-07', date_end: '2027-01-10' }],
+            phase_assignments: { p1: { teachers: [{ id: '123', name: 'Thầy Thiên', role: 'GV', timetable: JSON.parse(JSON.stringify(ttW5)) }] } },
+            teachers: [{ id: '123', name: 'Thầy Thiên', role: 'GV', assignments: { math: ['9/1', '9/2'] }, timetable: JSON.parse(JSON.stringify(ttW5)) }],
+            weekly_timetables: {
+                W1: { '123': JSON.parse(JSON.stringify(ttW1)) },
+                W5: { '123': JSON.parse(JSON.stringify(ttW5)) }
+            }
+        },
+        TT_DAYS: ['2', '3', '4', '5', '6', '7'],
+        selectedTimetableWeekKey: 'W12',
+        selectedTimetableTeacherId: '123',
+        selectedTimetableTeacherIds: new Set(),
+        ttTeacherFilter: 'all',
+        hasUnsavedChanges: false,
+        foldText: s => String(s || '').toLowerCase(),
+        escapeHtml: s => String(s ?? ''),
+        document: { getElementById: id => id === 'tt-teacher-list' ? listEl : (id === 'tt-progress' ? progressEl : null) },
+        Date: FixedWeek12Date,
+        JSON, String, Number, Object, Array, Set, Map, Math, Boolean, parseInt
+    });
+    vm.runInContext(fns.map(declaration).join('\n'), context);
+
+    // Saving W12 when W1 and W5 exist must snapshot W5's 2-lesson schedule into W11 before overriding with W12's 3-lesson schedule
+    vm.runInContext(`saveTimetableForTeacherWeek('123', ${JSON.stringify(ttW12)}, 'W12')`, context);
+    assert.equal(vm.runInContext("countTimetableLessons(state.weekly_timetables.W11['123'])", context), 2, 'W11 snapshot captures W5 schedule even when W1 and W5 already existed');
+    assert.equal(vm.runInContext("countTimetableLessons(state.weekly_timetables.W12['123'])", context), 3, 'W12 stores the new 3-lesson schedule');
+    assert.equal(vm.runInContext("getTeacherTimetableForDate(state.teachers[0], '2026-11-16').morning['2']['1'].class_name", context), '6/2', 'Week 11 date resolves to W11 snapshot');
+    assert.equal(vm.runInContext("getTeacherTimetableForDate(state.teachers[0], '2026-11-23').morning['2']['4'].class_name", context), '9/1', 'Week 12 date resolves to W12 schedule');
+
+    // Backfilling W11 in Week 12 updates W11 to 1 lesson without touching W12 (3 lessons) or live teacher.timetable
+    context.selectedTimetableWeekKey = 'W11';
+    vm.runInContext(`saveTimetableForTeacherWeek('123', ${JSON.stringify(ttBackfillW11)}, 'W11')`, context);
+    assert.equal(vm.runInContext("state.weekly_timetables.W11['123'].morning['2']['1'].class_name", context), '7/9', 'backfilling W11 updates W11 CSDL map');
+    assert.equal(vm.runInContext("countTimetableLessons(state.weekly_timetables.W12['123'])", context), 3, 'backfilling W11 keeps W12 untouched');
+    assert.equal(vm.runInContext("countTimetableLessons(state.teachers[0].timetable)", context), 3, 'backfilling W11 keeps live teacher.timetable on W12');
+
+    // Teacher list badge reflects selected week (1 lesson on W11 vs 3 lessons on W12)
+    vm.runInContext('renderTimetableTeacherList()', context);
+    assert.match(listEl.innerHTML, /1 tiết/, 'teacher list displays 1 lesson when viewing W11');
+    context.selectedTimetableWeekKey = 'W12';
+    vm.runInContext('renderTimetableTeacherList()', context);
+    assert.match(listEl.innerHTML, /3 tiết/, 'teacher list displays 3 lessons when viewing W12');
+
+    // Past-week AI import skips applyTimetableToAssignments so W12 assignments stay intact
+    let assignSyncCalls = 0;
+    const aiCtx = vm.createContext({
+        state: context.state,
+        selectedTimetableTeacherId: '123',
+        selectedTimetableWeekKey: 'W11',
+        TT_DAYS: ['2', '3', '4', '5', '6', '7'],
+        emptyTimetable: () => ({ morning: { 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} }, afternoon: { 2: {}, 3: {}, 4: {}, 5: {}, 6: {}, 7: {} } }),
+        getSessionPeriods: () => [1, 2, 3, 4, 5],
+        parseTimetableCell: v => ({ subject: 'Toán', class_name: String(v).split(' - ')[1] || '7/9' }),
+        foldText: v => String(v || '').toLowerCase(),
+        timetableWeekKeyForDate: () => 'W12',
+        baoGiangIso: () => '2026-11-26',
+        document: { getElementById: id => id === 'tt-auto-apply-assign' ? { checked: true } : null },
+        persistAndSaveTimetableLocal() {},
+        applyTimetableToAssignments() { assignSyncCalls++; },
+        renderTimetableWorkspace() {},
+        renderTimetableTeacherList() {},
+        showToast() {},
+        Date: FixedWeek12Date, Object, Set, Map, String, Number, Boolean, parseInt
+    });
+    vm.runInContext(['alignSessionPeriods', 'matchTeacherByName', 'applyAiTimetableResult'].map(declaration).join('\n'), aiCtx);
+    vm.runInContext("applyAiTimetableResult({ morning: { '2': { '1': 'Toán - 7/9' } } })", aiCtx);
+    assert.equal(assignSyncCalls, 0, 'importing past-week W11 timetable does not overwrite current W12 class assignments');
+
+    const phpApi = fs.readFileSync(path.join(__dirname, '../api/phancong.php'), 'utf8');
+    assert.match(phpApi, /CREATE TABLE IF NOT EXISTS phancong_weekly_timetables/, 'API defines phancong_weekly_timetables table');
+    assert.match(phpApi, /\$action === 'get_week_timetable'/, 'API exposes get_week_timetable endpoint');
+    assert.doesNotMatch(phpApi, /array_merge\([^)]*weekly_timetables/, 'API avoids array_merge that reindexes numeric teacher IDs');
+    const encodePos = phpApi.indexOf('$dataJson = json_encode($incomingState');
+    const checkPos = phpApi.indexOf("if (!\$dataJson || \$dataJson === 'null')");
+    assert.ok(encodePos > 0 && checkPos > encodePos, 'API validates $dataJson strictly after json_encode');
+}
+
 console.log('PASS: timetable view loads numeric IDs and JSON data, preserves phase history, supports weekly snapshots, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');
