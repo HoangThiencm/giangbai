@@ -649,8 +649,54 @@ assert.match(html, /id="email-tt-week"/, 'tab TKB của tôi chọn tuần áp d
     assert.equal(resolvedRanges[1].from, '2026-11-16', 'Đợt 11 starts on 2026-11-16');
     assert.equal(resolvedRanges[1].to, '2026-11-22', 'Đợt 11 ends on 2026-11-22 instead of stale cursor week 2');
     assert.match(declaration('openQuickNewPhaseModal'), /now\.getDay\(\) === 0 \|\| now\.getDay\(\) === 6/, 'creating a new phase on weekend defaults to next week Monday');
-    assert.match(declaration('submitQuickNewPhase'), /selectedTimetableWeekKey = newPhaseWeekKey/, 'creating a new phase locks timetable week selector to that phase week');
-    assert.match(declaration('switchPhase'), /selectedTimetableWeekKey = `W\$\{matched\.fromWeek\}`/, 'switching Đợt syncs timetable week selector to that Đợt');
+    assert.match(declaration('submitQuickNewPhase'), /selectedTimetableWeekKey = ''/, 'creating a new phase keeps timetable editor strictly locked to that new Đợt');
+    assert.match(declaration('switchPhase'), /selectedTimetableWeekKey = ''/, 'switching Đợt keeps timetable editor strictly locked to the selected Đợt');
+
+    // Strict Đợt 11 vs Đợt 12 isolation:
+    // Re-importing TKB while on Đợt 11 must update Đợt 11 + W11 ONLY, never touch Đợt 12 or W12,
+    // and Đợt 12 created on Sunday 2026-11-22 must resolve cleanly for Week 12 without W11 leaking into Week 12.
+    const isoCtx = vm.createContext({
+        state: {
+            info: { school_year: '2026 - 2027', current_phase_id: 'p11' },
+            bao_giang: { start_date: '2026-09-07' },
+            phases: [
+                { id: 'p11', name: 'Đợt 11_2026 - 2027', weeks_count: 1, date_start: '2026-11-16', date_end: '' },
+                { id: 'p12', name: 'Đợt 12_2026 - 2027', weeks_count: 1, date_start: '2026-11-22', date_end: '' }
+            ],
+            phase_assignments: {
+                p11: { teachers: [{ id: 'u_1', name: 'Hoàng Tấn Thiên', timetable: { morning: { '3': { '3': 'Toán - 92' } }, afternoon: {} } }] },
+                p12: { teachers: [{ id: 'u_1', name: 'Hoàng Tấn Thiên', timetable: { morning: { '3': { '3': { subject: 'Toán', class_name: '92' }, '4': { subject: 'Toán', class_name: '92' } } }, afternoon: {} } }] }
+            },
+            teachers: [{ id: 'u_1', name: 'Hoàng Tấn Thiên', timetable: { morning: { '3': { '3': 'Toán - 92' } }, afternoon: {} } }],
+            weekly_timetables: {}
+        },
+        TT_DAYS: ['2', '3', '4', '5', '6', '7'],
+        selectedTimetableWeekKey: '',
+        Date: FixedWeek12Date,
+        JSON, String, Number, Object, Array, Set, Map, Math, Boolean, parseInt
+    });
+    vm.runInContext([
+        'emptyDayMap', 'emptyTimetable', 'splitSubjectAndClass', 'parseTimetableCell', 'normalizeTeacherTimetable',
+        'timetableHasLessons', 'countTimetableLessons', 'effectiveSchoolStartDate', 'baoGiangDate', 'baoGiangIso',
+        'baoGiangTeachingWeek', 'baoGiangSchoolWeekRange', 'timetableWeekKeyForDate', 'weeklyTimetableSaved',
+        'timetableFingerprint', 'resolvePhaseDateRanges', 'resolvePhaseTimetableInfoForDate', 'resolveTeacherTimetableForDate',
+        'getTeacherTimetableForDate', 'persistTeacherTimetable', 'snapshotPreviousWeekBeforeOverride', 'saveTimetableForTeacherWeek'
+    ].map(declaration).join('\n'), isoCtx);
+
+    const tt11Afternoon = { morning: {}, afternoon: { '3': { '7': { subject: 'Toán', class_name: '92' }, '8': { subject: 'Toán', class_name: '61' }, '9': { subject: 'Toán', class_name: '91' } } } };
+    vm.runInContext(`saveTimetableForTeacherWeek('u_1', ${JSON.stringify(tt11Afternoon)}, '')`, isoCtx);
+
+    assert.equal(vm.runInContext("state.phase_assignments.p11.teachers[0].timetable.afternoon['3']['8'].class_name", isoCtx), '61', 'Đợt 11 updated with Tuesday afternoon');
+    assert.equal(vm.runInContext("state.weekly_timetables.W11['u_1'].afternoon['3']['8'].class_name", isoCtx), '61', 'W11 updated with Đợt 11 Tuesday afternoon');
+    assert.equal(vm.runInContext("state.weekly_timetables.W12", isoCtx), undefined, 're-importing Đợt 11 NEVER creates or pollutes W12');
+    assert.equal(vm.runInContext("state.phase_assignments.p12.teachers[0].timetable.morning['3']['3'].class_name", isoCtx), '92', 'Đợt 12 remains completely intact');
+    assert.equal(vm.runInContext("Object.keys(state.phase_assignments.p12.teachers[0].timetable.afternoon['3'] || {}).length", isoCtx), 0, 'Đợt 12 does not receive Đợt 11 afternoon slots');
+
+    const resW11 = vm.runInContext("resolveTeacherTimetableForDate(state.teachers[0], '2026-11-17')", isoCtx);
+    const resW12 = vm.runInContext("resolveTeacherTimetableForDate(state.teachers[0], '2026-11-24')", isoCtx);
+    assert.equal(resW11.timetable.afternoon['3']['8'].class_name, '61', '2026-11-17 (Week 11) resolves to Đợt 11 / W11 afternoon');
+    assert.equal(resW12.timetable.morning['3']['3'].class_name, '92', '2026-11-24 (Week 12) resolves strictly to Đợt 12 morning, NOT inherited from W11');
+    assert.equal(Object.keys(resW12.timetable.afternoon['3'] || {}).length, 0, '2026-11-24 (Week 12) does not inherit W11 afternoon');
 }
 
 console.log('PASS: timetable view loads numeric IDs and JSON data, preserves phase history, supports weekly snapshots, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');

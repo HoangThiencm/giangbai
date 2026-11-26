@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <script src="js/security-guard.js"></script>
@@ -3531,17 +3531,33 @@
         function resolvePhaseDateRanges(phases) {
             let cursor = 1;
             return (Array.isArray(phases) ? phases : []).map((phase, index, list) => {
-                const startWeekFromDate = (phase?.date_start && typeof timetableWeekKeyForDate === 'function')
-                    ? Number((timetableWeekKeyForDate(phase.date_start) || 'W0').slice(1))
+                let effectiveStart = phase?.date_start || '';
+                if (effectiveStart) {
+                    const startDt = baoGiangDate(effectiveStart);
+                    if (startDt && startDt.getDay() === 0) {
+                        startDt.setDate(startDt.getDate() + 1);
+                        effectiveStart = baoGiangIso(startDt);
+                    }
+                }
+                const startWeekFromDate = (effectiveStart && typeof timetableWeekKeyForDate === 'function')
+                    ? Number((timetableWeekKeyForDate(effectiveStart) || 'W0').slice(1))
                     : 0;
                 const fromWeek = Number(phase?.from_week) || startWeekFromDate || cursor;
                 const weeks = Number(phase?.weeks_count) || 0;
-                const toWeek = Number(phase?.to_week) || (weeks ? fromWeek + weeks - 1 : fromWeek);
-                const from = phase?.date_start || baoGiangSchoolWeekRange(fromWeek)?.start || '';
+                const endWeekFromDate = (phase?.date_end && typeof timetableWeekKeyForDate === 'function')
+                    ? Number((timetableWeekKeyForDate(phase.date_end) || 'W0').slice(1))
+                    : 0;
+                const toWeek = Number(phase?.to_week) || endWeekFromDate || (weeks ? fromWeek + weeks - 1 : fromWeek);
+                const from = effectiveStart || baoGiangSchoolWeekRange(fromWeek)?.start || '';
                 let to = phase?.date_end || baoGiangSchoolWeekRange(toWeek)?.end || '';
                 if (from && !phase?.date_end) {
-                    const next = list.slice(index + 1).map(item => item?.date_start).filter(Boolean).sort()[0];
-                    if (next) { const before = baoGiangDate(next); before.setDate(before.getDate() - 1); to = baoGiangIso(before); }
+                    const nextRaw = list.slice(index + 1).map(item => {
+                        if (!item?.date_start) return '';
+                        const d = baoGiangDate(item.date_start);
+                        if (d && d.getDay() === 0) { d.setDate(d.getDate() + 1); return baoGiangIso(d); }
+                        return item.date_start;
+                    }).filter(Boolean).sort()[0];
+                    if (nextRaw) { const before = baoGiangDate(nextRaw); before.setDate(before.getDate() - 1); to = baoGiangIso(before); }
                 }
                 if (from && to && to < from) to = baoGiangSchoolWeekRange(Math.max(fromWeek, toWeek))?.end || '9999-12-31';
                 cursor = Math.max(cursor, toWeek + 1);
@@ -3572,7 +3588,6 @@
             }
             const own = exact(weekKey); if (own) return { timetable: own, sourceType: 'week_exact', weekKey, label: `CSDL TKB Tuần ${weekNum}` };
             const phaseInfo = resolvePhaseTimetableInfoForDate(teacher, iso);
-            for (let w = weekNum - 1; w >= Math.max(1, phaseInfo?.fromWeek || 1); w--) { const timetable = exact(`W${w}`); if (timetable) return { timetable, sourceType: 'week_inherited', weekKey: `W${w}`, targetWeekKey: weekKey, label: `Kế thừa TKB Tuần ${w}` }; }
             if (phaseInfo) {
                 const updatedAt = String(phaseInfo.rawUpdatedAt || phaseInfo.timetable?.updated_at || '').slice(0, 10);
                 const updatedWeekNum = updatedAt ? Number((timetableWeekKeyForDate(updatedAt) || 'W0').slice(1)) : 0;
@@ -5045,13 +5060,8 @@
             state.teachers.forEach(t => {
                 if (!Array.isArray(t.school_duties)) t.school_duties = [];
             });
-            if (typeof resolvePhaseDateRanges === 'function') {
-                const matched = resolvePhaseDateRanges(state.phases).find(item => item.phase.id === phaseId);
-                if (matched?.fromWeek) {
-                    selectedTimetableWeekKey = `W${matched.fromWeek}`;
-                    timetableWeekInitialized = true;
-                }
-            }
+            selectedTimetableWeekKey = '';
+            timetableWeekInitialized = true;
             saveToLocal();
             render();
             const curP = getCurrentPhase();
@@ -5213,11 +5223,8 @@
             state.info.current_phase_id = newPhaseId;
             state.teachers = JSON.parse(JSON.stringify(state.phase_assignments[newPhaseId].teachers));
             state.unassigned = JSON.parse(JSON.stringify(state.phase_assignments[newPhaseId].unassigned));
-            const newPhaseWeekKey = from_week ? `W${from_week}` : (date_start && typeof timetableWeekKeyForDate === 'function' ? timetableWeekKeyForDate(date_start) : '');
-            if (newPhaseWeekKey) {
-                selectedTimetableWeekKey = newPhaseWeekKey;
-                timetableWeekInitialized = true;
-            }
+            selectedTimetableWeekKey = '';
+            timetableWeekInitialized = true;
             if (!inherit) {
                 editingTimetable = emptyTimetable();
                 clearTimetablePreview();
@@ -7427,19 +7434,21 @@
 
         function saveTimetableForTeacherWeek(teacherId, timetable, weekKey = selectedTimetableWeekKey) {
             const todayKey = (typeof timetableWeekKeyForDate === 'function' && typeof baoGiangIso === 'function') ? timetableWeekKeyForDate(baoGiangIso(new Date())) : '';
-            if (state.info) state.info.active_timetable_week = weekKey || todayKey || '';
+            const activePhaseRange = (typeof resolvePhaseDateRanges === 'function' && state.info?.current_phase_id)
+                ? resolvePhaseDateRanges(state.phases).find(item => item.phase.id === state.info.current_phase_id)
+                : null;
+            const activePhaseWeekKey = activePhaseRange?.fromWeek ? `W${activePhaseRange.fromWeek}` : '';
+            if (state.info) state.info.active_timetable_week = weekKey || activePhaseWeekKey || todayKey || '';
             if (!weekKey) {
-                const teacher = (state.teachers || []).find(t => String(t.id) === String(teacherId));
-                const oldKey = (teacher?.timetable?.updated_at && typeof timetableWeekKeyForDate === 'function') ? timetableWeekKeyForDate(teacher.timetable.updated_at.slice(0, 10)) : '';
                 state.weekly_timetables = state.weekly_timetables || {};
-                if (oldKey && todayKey && Number(oldKey.slice(1)) < Number(todayKey.slice(1)) && !weeklyTimetableSaved(oldKey, teacherId) && timetableHasLessons(teacher.timetable)) {
-                    state.weekly_timetables[oldKey] = state.weekly_timetables[oldKey] || {};
-                    state.weekly_timetables[oldKey][String(teacherId)] = JSON.parse(JSON.stringify(normalizeTeacherTimetable(teacher.timetable)));
+                const normalized = JSON.parse(JSON.stringify(normalizeTeacherTimetable(timetable)));
+                if (activePhaseWeekKey) {
+                    state.weekly_timetables[activePhaseWeekKey] = state.weekly_timetables[activePhaseWeekKey] || {};
+                    state.weekly_timetables[activePhaseWeekKey][String(teacherId)] = JSON.parse(JSON.stringify(normalized));
+                } else if (todayKey && weeklyTimetableSaved(todayKey, teacherId)) {
+                    state.weekly_timetables[todayKey][String(teacherId)] = JSON.parse(JSON.stringify(normalized));
                 }
-                if (todayKey && weeklyTimetableSaved(todayKey, teacherId)) {
-                    state.weekly_timetables[todayKey][String(teacherId)] = JSON.parse(JSON.stringify(normalizeTeacherTimetable(timetable)));
-                }
-                persistTeacherTimetable(teacherId, timetable);
+                persistTeacherTimetable(teacherId, normalized);
                 return;
             }
             const week = Number(String(weekKey).replace(/^W/, ''));
@@ -7447,22 +7456,29 @@
             state.weekly_timetables = state.weekly_timetables || {};
             const currentWeek = Number(String(todayKey).replace(/^W/, '')) || 0;
             const teacher = (state.teachers || []).find(item => String(item.id) === String(teacherId));
-            if (currentWeek && week < currentWeek && teacher && !weeklyTimetableSaved(`W${currentWeek}`, teacherId)) {
+            const todayIso = typeof baoGiangIso === 'function' ? baoGiangIso(new Date()) : '';
+            const activeCoversCurrentWeek = !activePhaseRange || (todayIso ? (todayIso >= activePhaseRange.from && todayIso <= activePhaseRange.to) : (currentWeek >= activePhaseRange.fromWeek && currentWeek <= activePhaseRange.toWeek));
+            if (currentWeek && week < currentWeek && teacher && activeCoversCurrentWeek && !weeklyTimetableSaved(`W${currentWeek}`, teacherId)) {
                 state.weekly_timetables[`W${currentWeek}`] = state.weekly_timetables[`W${currentWeek}`] || {};
                 state.weekly_timetables[`W${currentWeek}`][String(teacherId)] = JSON.parse(JSON.stringify(normalizeTeacherTimetable(teacher.timetable)));
             }
             if (!currentWeek || week >= currentWeek) snapshotPreviousWeekBeforeOverride(teacherId, week);
+            const normalized = JSON.parse(JSON.stringify(normalizeTeacherTimetable(timetable)));
             state.weekly_timetables[weekKey] = state.weekly_timetables[weekKey] || {};
-            state.weekly_timetables[weekKey][String(teacherId)] = JSON.parse(JSON.stringify(normalizeTeacherTimetable(timetable)));
+            state.weekly_timetables[weekKey][String(teacherId)] = JSON.parse(JSON.stringify(normalized));
+            const matchedPhase = (typeof baoGiangSchoolWeekRange === 'function' && typeof resolvePhaseDateRanges === 'function')
+                ? (() => {
+                    const wr = baoGiangSchoolWeekRange(week);
+                    return wr ? resolvePhaseDateRanges(state.phases).find(item => item.from && wr.start >= item.from && wr.start <= item.to) : null;
+                })()
+                : null;
             if (!currentWeek || week >= currentWeek) {
-                persistTeacherTimetable(teacherId, timetable);
-            } else if (typeof baoGiangSchoolWeekRange === 'function' && typeof resolvePhaseDateRanges === 'function') {
-                const weekRange = baoGiangSchoolWeekRange(week);
-                if (weekRange) {
-                    const matchedPhase = resolvePhaseDateRanges(state.phases).find(item => item.phase.id !== state.info?.current_phase_id && item.from && weekRange.start >= item.from && weekRange.start <= item.to);
-                    const snapTeacher = matchedPhase ? (((state.phase_assignments || {})[matchedPhase.phase.id] || {}).teachers || []).find(t => String(t.id) === String(teacherId)) : null;
-                    if (snapTeacher) snapTeacher.timetable = JSON.parse(JSON.stringify(normalizeTeacherTimetable(timetable)));
-                }
+                persistTeacherTimetable(teacherId, normalized);
+            } else if (matchedPhase && matchedPhase.phase.id === state.info?.current_phase_id && !activeCoversCurrentWeek) {
+                persistTeacherTimetable(teacherId, normalized);
+            } else if (matchedPhase && matchedPhase.phase.id !== state.info?.current_phase_id) {
+                const snapTeacher = (((state.phase_assignments || {})[matchedPhase.phase.id] || {}).teachers || []).find(t => String(t.id) === String(teacherId));
+                if (snapTeacher) snapTeacher.timetable = JSON.parse(JSON.stringify(normalized));
             }
         }
 
@@ -7551,7 +7567,12 @@
         function renderTimetableView() {
             refreshTimetableGeminiModelLabel();
             bindTimetableInputEvents();
-            if ((typeof timetableWeekInitialized === 'undefined' || !timetableWeekInitialized) && typeof timetableWeekKeyForDate === 'function' && typeof baoGiangIso === 'function') { selectedTimetableWeekKey = timetableWeekKeyForDate(baoGiangIso(new Date())) || ''; timetableWeekInitialized = true; }
+            if (typeof timetableWeekInitialized === 'undefined' || !timetableWeekInitialized) {
+                selectedTimetableWeekKey = (state.phases && state.phases.length && state.info?.current_phase_id)
+                    ? ''
+                    : ((typeof timetableWeekKeyForDate === 'function' && typeof baoGiangIso === 'function') ? (timetableWeekKeyForDate(baoGiangIso(new Date())) || '') : '');
+                timetableWeekInitialized = true;
+            }
             if (typeof populateTimetableApplyWeekSelect === 'function') populateTimetableApplyWeekSelect();
             const targetId = selectedTimetableTeacherId || (state.teachers[0] ? state.teachers[0].id : null);
             if (targetId) {
@@ -7926,7 +7947,8 @@
                     header.innerHTML = '<div style="padding:24px; color:#94a3b8; font-weight:700;">Chưa có giáo viên. Hãy khai báo tổ trước.</div>';
                 } else {
                     const n = countTimetableLessons(editingTimetable || teacher.timetable);
-                    const source = selectedTimetableWeekKey ? (weeklyTimetableSaved(selectedTimetableWeekKey, teacher.id) ? `✓ Đã lưu CSDL riêng cho ${timetableWeekLabel(selectedTimetableWeekKey)}` : `↪ ${timetableWeekLabel(selectedTimetableWeekKey)} đang kế thừa dữ liệu trước đó`) : 'Đang sửa TKB theo Đợt hiện tại';
+                    const activePhaseName = typeof getCurrentPhase === 'function' ? (getCurrentPhase()?.name || 'Đợt hiện tại') : 'Đợt hiện tại';
+                    const source = selectedTimetableWeekKey ? (weeklyTimetableSaved(selectedTimetableWeekKey, teacher.id) ? `✓ Đã lưu CSDL riêng cho ${timetableWeekLabel(selectedTimetableWeekKey)}` : `↪ ${timetableWeekLabel(selectedTimetableWeekKey)} đang kế thừa dữ liệu trước đó`) : `📌 Đang sửa đúng Đợt: ${activePhaseName} (chỉ ghi vào Đợt này, không ảnh hưởng Đợt khác)`;
                     header.innerHTML = `
                         <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
                             <div>

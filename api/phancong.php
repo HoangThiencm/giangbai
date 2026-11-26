@@ -656,7 +656,25 @@ try {
                 phancong_create_backup($pdo, $ownerId, $planKey, 'Tự động sao lưu trước khi cập nhật TKB / Đợt phân công', $userId, true);
             }
             $oldWeekKey = (string)($oldState['info']['active_timetable_week'] ?? '');
-            if ($oldWeekKey === '') $oldWeekKey = phancong_infer_week_key($oldState, substr((string)$existing['updated_at'], 0, 10));
+            if ($oldWeekKey === '') {
+                $oldPhaseId = (string)($oldState['info']['current_phase_id'] ?? '');
+                foreach (($oldState['phases'] ?? []) as $p) {
+                    if (is_array($p) && (string)($p['id'] ?? '') === $oldPhaseId) {
+                        if (!empty($p['from_week'])) {
+                            $oldWeekKey = 'W' . (int)$p['from_week'];
+                        } elseif (!empty($p['date_start'])) {
+                            $startDate = (string)$p['date_start'];
+                            try {
+                                $dt = new DateTimeImmutable($startDate);
+                                if ((int)$dt->format('N') === 7) $startDate = $dt->modify('+1 day')->format('Y-m-d');
+                            } catch (Throwable $e) {}
+                            $oldWeekKey = phancong_infer_week_key($oldState, $startDate);
+                        }
+                        break;
+                    }
+                }
+            }
+            if ($oldWeekKey === '' && empty($oldState['phases'])) $oldWeekKey = phancong_infer_week_key($oldState, substr((string)$existing['updated_at'], 0, 10));
             if ($oldTimetables && preg_match('/^W[1-9]\\d?$/', $oldWeekKey) && empty($loadedWeeks['map'][$oldWeekKey]) && empty($incomingState['weekly_timetables'][$oldWeekKey])) {
                 $incomingState['weekly_timetables'][$oldWeekKey] = $oldTimetables;
             }
