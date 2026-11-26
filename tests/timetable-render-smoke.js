@@ -697,6 +697,25 @@ assert.match(html, /id="email-tt-week"/, 'tab TKB của tôi chọn tuần áp d
     assert.equal(resW11.timetable.afternoon['3']['8'].class_name, '61', '2026-11-17 (Week 11) resolves to Đợt 11 / W11 afternoon');
     assert.equal(resW12.timetable.morning['3']['3'].class_name, '92', '2026-11-24 (Week 12) resolves strictly to Đợt 12 morning, NOT inherited from W11');
     assert.equal(Object.keys(resW12.timetable.afternoon['3'] || {}).length, 0, '2026-11-24 (Week 12) does not inherit W11 afternoon');
+
+    // Clicking "Lưu TKB tuần này" while on Đợt 11 (in Week 12) must save to Đợt 11 / W11, NEVER W12
+    const toasts = [];
+    isoCtx.selectedTimetableTeacherId = 'u_1';
+    isoCtx.selectedTimetableWeekKey = '';
+    isoCtx.editingTimetable = tt11Afternoon;
+    isoCtx.document = { getElementById: () => ({ value: '' }) };
+    isoCtx.getCurrentPhase = () => isoCtx.state.phases[0];
+    isoCtx.formatVnDate = iso => iso.split('-').reverse().join('/');
+    isoCtx.saveCurrentPhaseSnapshot = () => {};
+    isoCtx.saveToLocal = () => {};
+    isoCtx.populateTimetableApplyWeekSelect = () => {};
+    isoCtx.renderTimetableTeacherList = () => {};
+    isoCtx.renderTimetableWorkspace = () => {};
+    isoCtx.showToast = msg => toasts.push(msg);
+    vm.runInContext(['timetableWeekLabel', 'getActivePhaseWeekKey', 'saveTimetableForSelectedWeek'].map(declaration).join('\n'), isoCtx);
+    vm.runInContext('saveTimetableForSelectedWeek()', isoCtx);
+    assert.match(toasts[0] || '', /Đợt 11_2026 - 2027[\s\S]*Tuần 11/, 'toast confirms saving for Đợt 11 / Tuần 11, not Tuần 12');
+    assert.equal(isoCtx.state.weekly_timetables.W12, undefined, 'clicking Lưu TKB tuần này on Đợt 11 never creates W12');
 }
 
 console.log('PASS: timetable view loads numeric IDs and JSON data, preserves phase history, supports weekly snapshots, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');

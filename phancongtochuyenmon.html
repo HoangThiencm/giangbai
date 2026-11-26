@@ -7482,18 +7482,26 @@
             }
         }
 
+        function getActivePhaseWeekKey() {
+            if (typeof resolvePhaseDateRanges !== 'function' || !state.info?.current_phase_id) return '';
+            const matched = resolvePhaseDateRanges(state.phases).find(item => item.phase.id === state.info.current_phase_id);
+            return matched?.fromWeek ? `W${matched.fromWeek}` : '';
+        }
+
         function saveTimetableForSelectedWeek() {
             const select = document.getElementById('tt-apply-week');
-            let weekKey = String(select?.value || selectedTimetableWeekKey || '');
-            if (!weekKey) weekKey = timetableWeekKeyForDate(baoGiangIso(new Date()));
+            const explicitWeekKey = String(select?.value || selectedTimetableWeekKey || '');
+            const activePhaseWeekKey = typeof getActivePhaseWeekKey === 'function' ? getActivePhaseWeekKey() : '';
+            const weekKey = explicitWeekKey || activePhaseWeekKey || timetableWeekKeyForDate(baoGiangIso(new Date()));
             if (!weekKey) return showToast('Chưa xác định được tuần. Hãy đặt ngày bắt đầu Tuần 1 hoặc chọn một tuần.', 'error');
-            selectedTimetableWeekKey = weekKey;
+            if (explicitWeekKey) selectedTimetableWeekKey = weekKey;
             if (!selectedTimetableTeacherId) return showToast('Hãy chọn giáo viên.', 'error');
-            saveTimetableForTeacherWeek(selectedTimetableTeacherId, editingTimetable, weekKey);
+            saveTimetableForTeacherWeek(selectedTimetableTeacherId, editingTimetable, explicitWeekKey ? weekKey : '');
             saveCurrentPhaseSnapshot(); saveToLocal(); hasUnsavedChanges = true;
             populateTimetableApplyWeekSelect(); renderTimetableTeacherList(); renderTimetableWorkspace();
             const teacher = (state.teachers || []).find(item => String(item.id) === String(selectedTimetableTeacherId));
-            showToast(`Đã lưu TKB riêng cho ${timetableWeekLabel(weekKey)} của GV ${teacher?.name || ''}.`, 'success');
+            const phaseLabel = (!explicitWeekKey && typeof getCurrentPhase === 'function' && getCurrentPhase()?.name) ? `${getCurrentPhase().name} — ` : '';
+            showToast(`Đã lưu TKB riêng cho ${phaseLabel}${timetableWeekLabel(weekKey)} của GV ${teacher?.name || ''}.`, 'success');
         }
 
         function populateTimetableTeacherSelect(selectedId) {
@@ -7976,7 +7984,8 @@
         }
 
         function copyTimetableFromOtherSource() {
-            const targetKey = selectedTimetableWeekKey || timetableWeekKeyForDate(baoGiangIso(new Date())) || '';
+            const activePhaseWeekKey = typeof getActivePhaseWeekKey === 'function' ? getActivePhaseWeekKey() : '';
+            const targetKey = selectedTimetableWeekKey || activePhaseWeekKey || timetableWeekKeyForDate(baoGiangIso(new Date())) || '';
             if (!targetKey) return showToast('Hãy chọn tuần đích cần nhận TKB.', 'error');
             const savedWeeks = Object.keys(state.weekly_timetables || {}).filter(k => k !== targetKey).sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
             const phaseChoices = (state.phases || []).map(p => `phase:${p.id} — ${p.name}`);
