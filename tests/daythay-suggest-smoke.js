@@ -398,6 +398,27 @@ assert.match(html, /draggable="true"/, 'journal rows support HTML5 drag and drop
     context.state.phase_assignments = { phase_hk1_d1: savedPhase };
     vm.runInContext("onDayThaySourceOverrideChange('phase:phase_hk1_d1')", context);
     assert.deepEqual(JSON.parse(JSON.stringify(activeSlots.map(s => `${s.period_num}:${s.class_name}`))), ['2:6/1'], 'selecting phase override reloads slots from Đợt 1');
+
+    // Step 5: Overwritten/duplicate phase detection & all-sources weekday comparison panel
+    context.daythayTimetableSourceOverride = '';
+    context.state.weekly_timetables = {};
+    context.state.phases = [
+        { id: 'p10', name: 'Đợt 10_2026 - 2027', weeks_count: 1, date_start: '2026-11-09', date_end: '2026-11-15' },
+        { id: 'p11', name: 'Đợt 11_2026 - 2027', weeks_count: 1, date_start: '2026-11-16', date_end: '2026-11-22' },
+        { id: 'p12', name: 'Đợt 12_2026 - 2027', weeks_count: 1, date_start: '2026-11-23', date_end: '' }
+    ];
+    context.state.phase_assignments = {
+        p10: { teachers: [{ id: 'a', timetable: { morning: {}, afternoon: { '3': { '1': 'Toán - 92', '2': 'Toán - 92' } } } }] },
+        p11: { teachers: [{ id: 'a', timetable: { updated_at: '2026-11-24', morning: { '3': { '3': 'Toán - 92', '4': 'Toán - 92' } }, afternoon: {} } }] },
+        p12: { teachers: [{ id: 'a', timetable: { updated_at: '2026-11-24', morning: { '3': { '3': 'Toán - 92', '4': 'Toán - 92' } }, afternoon: {} } }] }
+    };
+    vm.runInContext(['timetableFingerprint', 'summarizeTeacherDayTimetable'].map(declaration).join('\n'), context);
+    fields['new-sub-date'].value = '2026-11-17'; // Tuesday of Week 11
+    vm.runInContext('onDayThayAbsentContextChange()', context);
+    assert.match(preview.innerHTML, /Cảnh báo CSDL/, 'flags suspected overwritten phase when Đợt 11 duplicates Đợt 12 / updated in W12');
+    assert.match(preview.innerHTML, /Backup CSDL ngay/, 'offers 1-click CSDL backup button in preview');
+    assert.match(preview.innerHTML, /Đợt 10_2026 - 2027[\s\S]*Chiều T1\(92\),T2\(92\)/, 'comparison inspector reveals Đợt 10 Tuesday afternoon schedule');
+    assert.match(preview.innerHTML, /Gắn làm CSDL Tuần 11/, 'provides 1-click button to pin any matching Đợt as W11 CSDL');
 }
 
 console.log('PASS: daythay suggestions classify availability, select a substitute teacher, and hide for makeup.');

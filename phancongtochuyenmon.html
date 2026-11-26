@@ -1865,6 +1865,7 @@
                         <i class="fas fa-caret-down"></i>
                     </button>
                     <div class="tools-dropdown" id="tools-dropdown">
+                        <button type="button" onclick="closeToolsMenu(); createManualDatabaseBackup({ downloadJson: true })"><i class="fas fa-shield-halved text-emerald-600"></i> Sao lưu CSDL ngay (Server + JSON)</button>
                         <button type="button" onclick="closeToolsMenu(); loadFromDB(true)"><i class="fas fa-rotate"></i> Nạp CSDL</button>
                         <button type="button" onclick="closeToolsMenu(); document.getElementById('file-input').click()"><i class="fas fa-folder-open"></i> Mở JSON</button>
                         <button type="button" onclick="closeToolsMenu(); saveToFile()"><i class="fas fa-floppy-disk"></i> Xuất JSON</button>
@@ -2774,6 +2775,20 @@
                     </div>
 
                     <div style="margin-top: 20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                            <h4 style="margin: 0; font-size: 0.88rem; font-weight: 800; color: #065f46;">
+                                <i class="fas fa-shield-halved text-emerald-600"></i> Bản sao lưu CSDL (Backup &amp; Khôi phục):
+                            </h4>
+                            <button type="button" class="btn-small btn-small-primary" onclick="createManualDatabaseBackup({ downloadJson: true })">
+                                <i class="fas fa-shield-halved"></i> Tạo Backup CSDL ngay
+                            </button>
+                        </div>
+                        <div id="db-backups-list" style="max-height: 180px; overflow-y: auto; border: 1px solid #a7f3d0; border-radius: 8px; padding: 6px; background:#f0fdf4;">
+                            <div style="color: #64748b; font-size: 0.8rem; padding: 10px; text-align: center;">Đang tải danh sách bản sao lưu...</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
                         <h4 style="margin: 0 0 8px 0; font-size: 0.88rem; font-weight: 800; color: #334155;">
                             <i class="fas fa-database text-indigo-500"></i> Các kế hoạch phân công đã lưu trên CSDL:
                         </h4>
@@ -3479,10 +3494,47 @@
         function phaseTimetableForDate(teacher, iso) {
             return resolvePhaseTimetableInfoForDate(teacher, iso)?.timetable || null;
         }
+        function timetableFingerprint(tt) {
+            const norm = typeof normalizeTeacherTimetable === 'function' ? normalizeTeacherTimetable(tt) : tt;
+            if (!norm || typeof norm !== 'object') return '';
+            const clean = { morning: {}, afternoon: {} };
+            ['morning', 'afternoon'].forEach(session => {
+                (typeof TT_DAYS !== 'undefined' ? TT_DAYS : ['2', '3', '4', '5', '6', '7']).forEach(day => {
+                    const cells = norm[session]?.[day] || {};
+                    const keys = Object.keys(cells).sort((a, b) => Number(a) - Number(b));
+                    if (keys.length) {
+                        clean[session][day] = keys.map(p => {
+                            const c = typeof parseTimetableCell === 'function' ? parseTimetableCell(cells[p]) : cells[p];
+                            return `${p}:${c?.subject || ''}|${c?.class_name || ''}`;
+                        }).join(',');
+                    }
+                });
+            });
+            return JSON.stringify(clean);
+        }
+        function summarizeTeacherDayTimetable(tt, dayNum) {
+            if (!tt || !dayNum) return 'Trống';
+            const norm = typeof normalizeTeacherTimetable === 'function' ? normalizeTeacherTimetable(tt) : tt;
+            const fmt = session => {
+                const cells = norm?.[session]?.[String(dayNum)] || {};
+                const keys = Object.keys(cells).map(Number).filter(Boolean).sort((a, b) => a - b);
+                if (!keys.length) return '';
+                const items = keys.map(p => {
+                    const c = typeof parseTimetableCell === 'function' ? parseTimetableCell(cells[String(p)]) : cells[String(p)];
+                    return `T${p}${c?.class_name ? `(${c.class_name})` : ''}`;
+                });
+                return `${session === 'morning' ? 'Sáng' : 'Chiều'} ${items.join(',')}`;
+            };
+            const parts = [fmt('morning'), fmt('afternoon')].filter(Boolean);
+            return parts.length ? parts.join(' · ') : 'Trống ngày này';
+        }
         function resolvePhaseDateRanges(phases) {
             let cursor = 1;
             return (Array.isArray(phases) ? phases : []).map((phase, index, list) => {
-                const fromWeek = Number(phase?.from_week) || cursor;
+                const startWeekFromDate = (phase?.date_start && typeof timetableWeekKeyForDate === 'function')
+                    ? Number((timetableWeekKeyForDate(phase.date_start) || 'W0').slice(1))
+                    : 0;
+                const fromWeek = Number(phase?.from_week) || startWeekFromDate || cursor;
                 const weeks = Number(phase?.weeks_count) || 0;
                 const toWeek = Number(phase?.to_week) || (weeks ? fromWeek + weeks - 1 : fromWeek);
                 const from = phase?.date_start || baoGiangSchoolWeekRange(fromWeek)?.start || '';
@@ -3491,6 +3543,7 @@
                     const next = list.slice(index + 1).map(item => item?.date_start).filter(Boolean).sort()[0];
                     if (next) { const before = baoGiangDate(next); before.setDate(before.getDate() - 1); to = baoGiangIso(before); }
                 }
+                if (from && to && to < from) to = baoGiangSchoolWeekRange(Math.max(fromWeek, toWeek))?.end || '9999-12-31';
                 cursor = Math.max(cursor, toWeek + 1);
                 return { phase, from, to: to || '9999-12-31', fromWeek, toWeek, index };
             });
@@ -3499,6 +3552,7 @@
             return resolvePhaseDateRanges(state.phases).filter(item => {
                 if (!item.from || iso < item.from || iso > item.to) return false;
                 const found = (((state.phase_assignments || {})[item.phase.id] || {}).teachers || []).find(t => String(t.id) === String(teacher?.id));
+                item.rawUpdatedAt = String(found?.timetable?.updated_at || '');
                 item.timetable = found ? normalizeTeacherTimetable(found.timetable) : null;
                 return timetableHasLessons(item.timetable);
             }).sort((a, b) => a.from === b.from ? b.index - a.index : b.from.localeCompare(a.from))[0] || null;
@@ -3519,7 +3573,27 @@
             const own = exact(weekKey); if (own) return { timetable: own, sourceType: 'week_exact', weekKey, label: `CSDL TKB Tuần ${weekNum}` };
             const phaseInfo = resolvePhaseTimetableInfoForDate(teacher, iso);
             for (let w = weekNum - 1; w >= Math.max(1, phaseInfo?.fromWeek || 1); w--) { const timetable = exact(`W${w}`); if (timetable) return { timetable, sourceType: 'week_inherited', weekKey: `W${w}`, targetWeekKey: weekKey, label: `Kế thừa TKB Tuần ${w}` }; }
-            if (phaseInfo) return { timetable: phaseInfo.timetable, sourceType: 'phase', phaseId: phaseInfo.phase.id, label: `TKB ${phaseInfo.phase.name || 'Đợt phân công'}` };
+            if (phaseInfo) {
+                const updatedAt = String(phaseInfo.rawUpdatedAt || phaseInfo.timetable?.updated_at || '').slice(0, 10);
+                const updatedWeekNum = updatedAt ? Number((timetableWeekKeyForDate(updatedAt) || 'W0').slice(1)) : 0;
+                const fp = typeof timetableFingerprint === 'function' ? timetableFingerprint(phaseInfo.timetable) : '';
+                const laterDuplicate = fp ? (state.phases || []).slice(phaseInfo.index + 1).find(p => {
+                    const other = (((state.phase_assignments || {})[p.id] || {}).teachers || []).find(t => String(t.id) === String(teacher?.id));
+                    return other && timetableHasLessons(normalizeTeacherTimetable(other.timetable)) && timetableFingerprint(other.timetable) === fp;
+                }) : null;
+                const isSuspectedOverwrite = Boolean(weekNum && ((updatedWeekNum && updatedWeekNum > weekNum) || laterDuplicate));
+                return {
+                    timetable: phaseInfo.timetable,
+                    sourceType: 'phase',
+                    phaseId: phaseInfo.phase.id,
+                    phaseName: phaseInfo.phase.name || 'Đợt phân công',
+                    updatedAt,
+                    overwrittenByWeek: updatedWeekNum || 0,
+                    duplicateLaterPhaseName: laterDuplicate?.name || '',
+                    isSuspectedOverwrite,
+                    label: `TKB ${phaseInfo.phase.name || 'Đợt phân công'}`
+                };
+            }
             for (let w = weekNum - 1; w >= 1; w--) { const timetable = exact(`W${w}`); if (timetable) return { timetable, sourceType: 'week_inherited', weekKey: `W${w}`, targetWeekKey: weekKey, label: `Kế thừa TKB Tuần ${w}` }; }
             const newer = Object.keys(state.weekly_timetables || {}).some(key => Number(key.slice(1)) > weekNum);
             return { timetable: normalizeTeacherTimetable(teacher?.timetable), sourceType: 'fallback_current', isFallbackFromNewer: newer, label: `TKB hiện hành (chưa có bản lưu riêng cho Tuần ${weekNum})` };
@@ -7366,7 +7440,16 @@
             if (!currentWeek || week >= currentWeek) snapshotPreviousWeekBeforeOverride(teacherId, week);
             state.weekly_timetables[weekKey] = state.weekly_timetables[weekKey] || {};
             state.weekly_timetables[weekKey][String(teacherId)] = JSON.parse(JSON.stringify(normalizeTeacherTimetable(timetable)));
-            if (!currentWeek || week >= currentWeek) persistTeacherTimetable(teacherId, timetable);
+            if (!currentWeek || week >= currentWeek) {
+                persistTeacherTimetable(teacherId, timetable);
+            } else if (typeof baoGiangSchoolWeekRange === 'function' && typeof resolvePhaseDateRanges === 'function') {
+                const weekRange = baoGiangSchoolWeekRange(week);
+                if (weekRange) {
+                    const matchedPhase = resolvePhaseDateRanges(state.phases).find(item => item.phase.id !== state.info?.current_phase_id && item.from && weekRange.start >= item.from && weekRange.start <= item.to);
+                    const snapTeacher = matchedPhase ? (((state.phase_assignments || {})[matchedPhase.phase.id] || {}).teachers || []).find(t => String(t.id) === String(teacherId)) : null;
+                    if (snapTeacher) snapTeacher.timetable = JSON.parse(JSON.stringify(normalizeTeacherTimetable(timetable)));
+                }
+            }
         }
 
         function saveTimetableForSelectedWeek() {
@@ -9615,14 +9698,41 @@ ${listText}`;
                 ? `<div role="alert" style="margin:0 0 10px;padding:9px;border-radius:8px;background:#fef3c7;color:#92400e;font-weight:700;">⚠️ Thầy/cô ${escapeHtml(teacher.name)} không có lịch dạy vào ${escapeHtml(TT_DAY_LABELS[dayNum] || '')}, ngày ${escapeHtml(date)}. Không có tiết cần phân công dạy thay.</div>` : '';
             const weekLabel = typeof timetableWeekKeyForDate === 'function' ? timetableWeekKeyForDate(date) : '';
             const dateCaption = typeof formatVnDate === 'function' ? formatVnDate(date) : date;
-            const fallback = sourceInfo?.sourceType === 'fallback_current' && sourceInfo?.isFallbackFromNewer;
+            const fallback = (sourceInfo?.sourceType === 'fallback_current' && sourceInfo?.isFallbackFromNewer) || Boolean(sourceInfo?.isSuspectedOverwrite);
             const sourceStyle = fallback ? 'background:#ffedd5;color:#9a3412;' : (sourceInfo?.sourceType === 'week_exact' ? 'background:#dcfce7;color:#166534;' : 'background:#dbeafe;color:#1e40af;');
             const sourceLabel = sourceInfo?.label || 'TKB hiện hành';
+            const daySummary = tt => typeof summarizeTeacherDayTimetable === 'function' ? summarizeTeacherDayTimetable(tt, dayNum) : '';
+            const phaseRanges = typeof resolvePhaseDateRanges === 'function' ? resolvePhaseDateRanges(state.phases) : (state.phases || []).map(phase => ({ phase, from: phase.date_start || '', to: phase.date_end || '' }));
             const sources = [`<option value="">Tự động theo ngày${weekLabel ? ` (Tuần ${weekLabel.slice(1)})` : ''}</option>`]
-                .concat(Object.keys(state.weekly_timetables || {}).sort((a, b) => Number(a.slice(1)) - Number(b.slice(1))).map(key => `<option value="${key}" ${srcOverride === key ? 'selected' : ''}>TKB ${key}</option>`))
-                .concat((state.phases || []).map(p => `<option value="phase:${escapeHtml(p.id)}" ${srcOverride === `phase:${p.id}` ? 'selected' : ''}>Đợt ${escapeHtml(p.name || p.id)}</option>`)).join('');
-            const warning = fallback ? `<div role="alert" style="margin:8px 0;padding:9px;border-radius:8px;background:#ffedd5;color:#9a3412;font-weight:700;">⚠️ CSDL chưa có bản TKB lưu riêng cho Tuần ${weekLabel.slice(1)}; đang hiển thị tạm theo TKB hiện hành. Hãy bấm "Nhập / Sửa TKB Tuần ${weekLabel.slice(1)}" bên dưới để nạp đúng TKB tuần này lên CSDL.</div>` : '';
-            preview.innerHTML = `${noLessons}<div style="font-weight:800;color:#92400e;margin-bottom:8px;">📅 Lịch dạy ${escapeHtml(TT_DAY_LABELS[dayNum] || '')} (${escapeHtml(dateCaption)}${weekLabel ? ` · Tuần ${escapeHtml(weekLabel.slice(1))}` : ''}) của thầy/cô ${escapeHtml(teacher.name)}</div><div style="display:inline-block;padding:5px 8px;border-radius:7px;font-size:.82rem;font-weight:700;${sourceStyle}">${sourceInfo?.sourceType === 'week_exact' ? '✓ Đang lấy CSDL: ' : 'ℹ️ Đang lấy CSDL: '}${escapeHtml(sourceLabel)}</div>${warning}<div style="margin:8px 0;display:flex;gap:7px;flex-wrap:wrap;align-items:center;"><label>Nguồn TKB: <select onchange="onDayThaySourceOverrideChange(this.value)">${sources}</select></label><button type="button" class="btn-small" onclick="openTeacherTimetableForDate('${escapeHtml(teacher.id)}','${escapeHtml(date)}')">Nhập / Sửa TKB Tuần ${escapeHtml(weekLabel ? weekLabel.slice(1) : '')}</button></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;"><div style="padding:9px;border-radius:9px;background:#fff7d6;"><b style="color:#a16207;">☀️ Buổi sáng</b><div>${slotList(morningSlots, 'Không có tiết buổi sáng.')}</div></div><div style="padding:9px;border-radius:9px;background:#eff6ff;"><b style="color:#1d4ed8;">🌙 Buổi chiều</b><div>${slotList(afternoonSlots, 'Không có tiết buổi chiều.')}</div></div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${buttons}</div>`;
+                .concat(Object.keys(state.weekly_timetables || {}).sort((a, b) => Number(a.slice(1)) - Number(b.slice(1))).map(key => {
+                    const tt = state.weekly_timetables?.[key]?.[String(teacher.id)];
+                    const sum = tt ? daySummary(tt) : '';
+                    return `<option value="${key}" ${srcOverride === key ? 'selected' : ''}>TKB Tuần ${key.slice(1)}${sum ? ` — ${escapeHtml(TT_DAY_LABELS[dayNum] || '')}: ${escapeHtml(sum)}` : ''}</option>`;
+                }))
+                .concat(phaseRanges.map(item => {
+                    const p = item.phase;
+                    const found = (((state.phase_assignments || {})[p.id] || {}).teachers || []).find(t => String(t.id) === String(teacher.id));
+                    const sum = found ? daySummary(found.timetable) : 'Chưa có TKB';
+                    return `<option value="phase:${escapeHtml(p.id)}" ${srcOverride === `phase:${p.id}` ? 'selected' : ''}>${escapeHtml(p.name || p.id)} — ${escapeHtml(TT_DAY_LABELS[dayNum] || '')}: ${escapeHtml(sum)}</option>`;
+                })).join('');
+            const compareRows = [
+                ...Object.keys(state.weekly_timetables || {}).sort((a, b) => Number(a.slice(1)) - Number(b.slice(1))).map(key => {
+                    const tt = state.weekly_timetables?.[key]?.[String(teacher.id)];
+                    return { id: key, label: `CSDL Tuần ${key.slice(1)}`, range: '', summary: tt ? daySummary(tt) : 'Chưa lưu', has: Boolean(tt && typeof timetableHasLessons === 'function' && timetableHasLessons(normalizeTeacherTimetable(tt))) };
+                }),
+                ...phaseRanges.map(item => {
+                    const p = item.phase;
+                    const found = (((state.phase_assignments || {})[p.id] || {}).teachers || []).find(t => String(t.id) === String(teacher.id));
+                    const rangeText = item.from ? `${item.from} → ${item.to === '9999-12-31' ? 'hiện tại' : item.to}` : '';
+                    return { id: `phase:${p.id}`, label: p.name || p.id, range: rangeText, summary: found ? daySummary(found.timetable) : 'Chưa có TKB', has: Boolean(found && typeof timetableHasLessons === 'function' && timetableHasLessons(normalizeTeacherTimetable(found.timetable))) };
+                })
+            ];
+            const comparePanel = compareRows.length ? `<details style="margin:8px 0;padding:8px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font-size:.8rem;"><summary style="cursor:pointer;font-weight:700;color:#1e3a8a;">🔍 Kiểm tra lịch ${escapeHtml(TT_DAY_LABELS[dayNum] || '')} của thầy/cô ${escapeHtml(teacher.name)} ở tất cả Đợt / Tuần trong CSDL (${compareRows.length} nguồn)</summary><div style="margin-top:8px;display:flex;flex-direction:column;gap:5px;">${compareRows.map(row => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:5px 7px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;"><div><b>${escapeHtml(row.label)}</b>${row.range ? ` <span style="color:#64748b;">(${escapeHtml(row.range)})</span>` : ''}: <span style="color:#0f172a;font-weight:700;">${escapeHtml(row.summary)}</span></div>${row.has ? `<div style="display:flex;gap:5px;"><button type="button" class="btn-small" onclick="onDayThaySourceOverrideChange('${escapeHtml(row.id)}')">Xem lịch này</button>${weekLabel ? `<button type="button" class="btn-small btn-small-primary" onclick="pinSelectedSourceToWeek('${escapeHtml(weekLabel)}','${escapeHtml(row.id)}')">Gắn làm CSDL Tuần ${escapeHtml(weekLabel.slice(1))}</button>` : ''}</div>` : ''}</div>`).join('')}</div></details>` : '';
+            const pinBtn = (srcOverride && weekLabel) ? `<button type="button" class="btn-small btn-small-primary" onclick="pinSelectedSourceToWeek('${escapeHtml(weekLabel)}','${escapeHtml(srcOverride)}')">📌 Gắn nguồn này làm CSDL Tuần ${escapeHtml(weekLabel.slice(1))} (toàn tổ)</button>` : '';
+            const warning = sourceInfo?.isSuspectedOverwrite
+                ? `<div role="alert" style="margin:8px 0;padding:10px;border-radius:8px;background:#ffedd5;border:1px solid #fdba74;color:#9a3412;font-weight:700;font-size:.84rem;">⚠️ Phát hiện "${escapeHtml(sourceInfo.phaseName || sourceLabel)}" trong CSDL hiện đang chứa TKB trùng với ${sourceInfo.duplicateLaterPhaseName ? `"${escapeHtml(sourceInfo.duplicateLaterPhaseName)}"` : `Tuần ${escapeHtml(String(sourceInfo.overwrittenByWeek || ''))}`}${sourceInfo.updatedAt ? ` (cập nhật ${escapeHtml(typeof formatVnDate === 'function' ? formatVnDate(sourceInfo.updatedAt) : sourceInfo.updatedAt)})` : ''}. Hãy bấm "Backup CSDL ngay", kiểm tra mục "🔍 Kiểm tra lịch ở tất cả Đợt / Tuần" bên dưới xem lịch đúng nằm ở Đợt nào, hoặc bấm "Nhập / Sửa TKB Tuần ${escapeHtml(weekLabel ? weekLabel.slice(1) : '')}" để nạp lại riêng Tuần ${escapeHtml(weekLabel ? weekLabel.slice(1) : '')} (không ảnh hưởng Tuần hiện tại).</div>`
+                : (fallback ? `<div role="alert" style="margin:8px 0;padding:9px;border-radius:8px;background:#ffedd5;color:#9a3412;font-weight:700;">⚠️ CSDL chưa có bản TKB lưu riêng cho Tuần ${weekLabel.slice(1)}; đang hiển thị tạm theo TKB hiện hành. Hãy bấm "Nhập / Sửa TKB Tuần ${weekLabel.slice(1)}" bên dưới để nạp đúng TKB tuần này lên CSDL.</div>` : '');
+            preview.innerHTML = `${noLessons}<div style="font-weight:800;color:#92400e;margin-bottom:8px;">📅 Lịch dạy ${escapeHtml(TT_DAY_LABELS[dayNum] || '')} (${escapeHtml(dateCaption)}${weekLabel ? ` · Tuần ${escapeHtml(weekLabel.slice(1))}` : ''}) của thầy/cô ${escapeHtml(teacher.name)}</div><div style="display:inline-block;padding:5px 8px;border-radius:7px;font-size:.82rem;font-weight:700;${sourceStyle}">${sourceInfo?.sourceType === 'week_exact' ? '✓ Đang lấy CSDL: ' : (fallback ? '⚠️ Cảnh báo CSDL: ' : 'ℹ️ Đang lấy CSDL: ')}${escapeHtml(sourceLabel)}</div>${warning}<div style="margin:8px 0;display:flex;gap:7px;flex-wrap:wrap;align-items:center;"><label>Nguồn TKB: <select onchange="onDayThaySourceOverrideChange(this.value)">${sources}</select></label>${pinBtn}<button type="button" class="btn-small" onclick="openTeacherTimetableForDate('${escapeHtml(teacher.id)}','${escapeHtml(date)}')">Nhập / Sửa TKB Tuần ${escapeHtml(weekLabel ? weekLabel.slice(1) : '')}</button><button type="button" class="btn-small" onclick="createManualDatabaseBackup({ downloadJson: true })">🛡️ Backup CSDL ngay</button></div>${comparePanel}<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;"><div style="padding:9px;border-radius:9px;background:#fff7d6;"><b style="color:#a16207;">☀️ Buổi sáng</b><div>${slotList(morningSlots, 'Không có tiết buổi sáng.')}</div></div><div style="padding:9px;border-radius:9px;background:#eff6ff;"><b style="color:#1d4ed8;">🌙 Buổi chiều</b><div>${slotList(afternoonSlots, 'Không có tiết buổi chiều.')}</div></div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">${buttons}</div>`;
 
             const autoSession = morningSlots.length && afternoonSlots.length ? 'all_day' : (morningSlots.length ? 'morning' : (afternoonSlots.length ? 'afternoon' : ''));
             const sessionEl = document.getElementById('new-sub-session');
@@ -10657,6 +10767,7 @@ ${listText}`;
             renderConfigPhasesTable();
             renderConfigTeachersTable();
             renderConfigSubjectsTable();
+            if (typeof loadDatabaseBackupsList === 'function') loadDatabaseBackupsList();
             switchModalTab(tabId);
 
             document.getElementById('config-modal').classList.add('active');
@@ -11079,6 +11190,123 @@ ${listText}`;
             state.info.plan_key = key;
             closeConfigModal();
             loadFromDB(true);
+        }
+
+        function downloadBackupJsonSnapshot(snapshotObj, planKey = 'default') {
+            const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
+            const blob = new Blob([JSON.stringify(snapshotObj || state, null, 2)], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Backup_PhanCong_${String(planKey || 'default').replace(/[^a-zA-Z0-9_-]+/g, '_')}_${stamp}.json`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1500);
+        }
+
+        async function createManualDatabaseBackup(options = { downloadJson: true, reason: '' }) {
+            const planKey = state.info?.plan_key || 'default';
+            const reason = String(options?.reason || 'Sao lưu CSDL thủ công trước khi xử lý').trim();
+            try {
+                const res = await fetch('api/phancong.php?action=backup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    credentials: 'include',
+                    body: JSON.stringify({ plan_key: planKey, reason })
+                });
+                const result = await res.json().catch(() => ({}));
+                if (res.ok && result.ok) {
+                    if (options?.downloadJson !== false) downloadBackupJsonSnapshot(result.snapshot || state, planKey);
+                    showToast(result.message || 'Đã sao lưu CSDL an toàn trên máy chủ và tải file JSON!', 'success');
+                    if (typeof loadDatabaseBackupsList === 'function') loadDatabaseBackupsList();
+                    return result.backup || true;
+                }
+                if (options?.downloadJson !== false) downloadBackupJsonSnapshot(state, planKey);
+                showToast(result.error || 'Chưa lưu được backup trên máy chủ; đã tải file JSON dự phòng về máy.', 'warning');
+                return false;
+            } catch (err) {
+                console.warn('Backup CSDL lỗi:', err);
+                if (options?.downloadJson !== false) downloadBackupJsonSnapshot(state, planKey);
+                showToast('Không kết nối được máy chủ; đã tải file JSON dự phòng về máy.', 'warning');
+                return false;
+            }
+        }
+
+        async function loadDatabaseBackupsList() {
+            const container = document.getElementById('db-backups-list');
+            if (!container) return;
+            const planKey = state.info?.plan_key || 'default';
+            try {
+                const res = await fetch(`api/phancong.php?action=list_backups&plan_key=${encodeURIComponent(planKey)}`, { credentials: 'include', cache: 'no-store' });
+                const result = await res.json().catch(() => ({}));
+                const list = Array.isArray(result.backups) ? result.backups : [];
+                if (!list.length) {
+                    container.innerHTML = '<div style="color:#64748b;font-size:.8rem;padding:8px;text-align:center;">Chưa có bản sao lưu nào. Bấm "Tạo Backup CSDL ngay" trước khi điều chỉnh dữ liệu.</div>';
+                    return;
+                }
+                container.innerHTML = list.map(b => `
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid #d1fae5;font-size:.8rem;">
+                        <div>
+                            <b>#${escapeHtml(String(b.id))}</b> · <span>${escapeHtml(b.reason || 'Sao lưu CSDL')}</span>
+                            <div style="color:#64748b;font-size:.74rem;">${escapeHtml(b.created_at || '')} · ${escapeHtml(b.school_year || '')} ${escapeHtml(b.semester || '')}</div>
+                        </div>
+                        <button type="button" class="btn-small" onclick="restoreDatabaseBackup(${Number(b.id)})">
+                            <i class="fas fa-rotate-left text-emerald-600"></i> Khôi phục
+                        </button>
+                    </div>
+                `).join('');
+            } catch (_) {
+                container.innerHTML = '<div style="color:#94a3b8;font-size:.8rem;padding:8px;text-align:center;">Không tải được danh sách bản sao lưu.</div>';
+            }
+        }
+
+        async function restoreDatabaseBackup(backupId) {
+            if (!backupId) return;
+            if (!confirm(`Khôi phục CSDL về bản sao lưu #${backupId}?\n(Hệ thống sẽ tự động sao lưu trạng thái hiện tại trước khi khôi phục.)`)) return;
+            try {
+                const res = await fetch('api/phancong.php?action=restore_backup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                    credentials: 'include',
+                    body: JSON.stringify({ backup_id: Number(backupId) })
+                });
+                const result = await res.json().catch(() => ({}));
+                if (!res.ok || !result.ok) throw new Error(result.error || 'Không thể khôi phục bản sao lưu.');
+                showToast(result.message || 'Đã khôi phục CSDL thành công!', 'success');
+                closeConfigModal();
+                await loadFromDB(false);
+            } catch (err) {
+                showToast(err.message || 'Lỗi khôi phục bản sao lưu.', 'error');
+            }
+        }
+
+        async function pinSelectedSourceToWeek(weekKey, sourceOverride) {
+            if (!weekKey || !sourceOverride) return;
+            await createManualDatabaseBackup({ downloadJson: false, reason: `Tự động sao lưu trước khi gắn ${sourceOverride} làm CSDL ${weekKey}` });
+            let copied = 0;
+            (state.teachers || []).forEach(t => {
+                let tt = null;
+                if (/^W\d+$/i.test(sourceOverride)) {
+                    const wk = sourceOverride.toUpperCase();
+                    if (weeklyTimetableSaved(wk, t.id)) tt = state.weekly_timetables[wk][String(t.id)];
+                } else if (sourceOverride.startsWith('phase:')) {
+                    const pid = sourceOverride.slice(6);
+                    const found = (((state.phase_assignments || {})[pid] || {}).teachers || []).find(x => String(x.id) === String(t.id));
+                    if (found) tt = found.timetable;
+                }
+                if (tt && timetableHasLessons(normalizeTeacherTimetable(tt))) {
+                    saveTimetableForTeacherWeek(t.id, tt, weekKey);
+                    copied++;
+                }
+            });
+            if (!copied) return showToast('Nguồn đã chọn chưa có dữ liệu TKB hợp lệ để gắn cho tuần này.', 'error');
+            daythayTimetableSourceOverride = '';
+            saveToLocal();
+            hasUnsavedChanges = true;
+            await performSaveToDB({ isAuto: true });
+            onDayThayAbsentContextChange();
+            showToast(`Đã sao lưu CSDL và gắn cố định TKB của ${copied} giáo viên làm CSDL chuẩn cho Tuần ${weekKey.slice(1)}!`, 'success');
         }
 
         function escapeHtml(str) {

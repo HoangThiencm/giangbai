@@ -625,11 +625,29 @@ assert.match(html, /id="email-tt-week"/, 'tab TKB của tôi chọn tuần áp d
 
     const phpApi = fs.readFileSync(path.join(__dirname, '../api/phancong.php'), 'utf8');
     assert.match(phpApi, /CREATE TABLE IF NOT EXISTS phancong_weekly_timetables/, 'API defines phancong_weekly_timetables table');
+    assert.match(phpApi, /CREATE TABLE IF NOT EXISTS phancong_backups/, 'API defines phancong_backups table');
     assert.match(phpApi, /\$action === 'get_week_timetable'/, 'API exposes get_week_timetable endpoint');
+    assert.match(phpApi, /\$action === 'backup'/, 'API exposes manual backup endpoint');
+    assert.match(phpApi, /\$action === 'list_backups'/, 'API exposes list_backups endpoint');
+    assert.match(phpApi, /\$action === 'restore_backup'/, 'API exposes restore_backup endpoint');
+    assert.match(phpApi, /phancong_create_backup\(\$pdo, \$ownerId, \$planKey, 'Tự động sao lưu trước khi cập nhật TKB/, 'API auto-backs up before overwriting TKB/phases');
     assert.doesNotMatch(phpApi, /array_merge\([^)]*weekly_timetables/, 'API avoids array_merge that reindexes numeric teacher IDs');
     const encodePos = phpApi.indexOf('$dataJson = json_encode($incomingState');
     const checkPos = phpApi.indexOf("if (!\$dataJson || \$dataJson === 'null')");
     assert.ok(encodePos > 0 && checkPos > encodePos, 'API validates $dataJson strictly after json_encode');
+
+    // resolvePhaseDateRanges derives fromWeek from phase.date_start when earlier phases had fewer weeks_count
+    const rangeCtx = vm.createContext({
+        state: { info: { school_year: '2026 - 2027' }, bao_giang: { start_date: '2026-09-07' }, phases: [] },
+        Date, Number, String, Array, Math
+    });
+    vm.runInContext(['effectiveSchoolStartDate', 'baoGiangDate', 'baoGiangIso', 'baoGiangTeachingWeek', 'baoGiangSchoolWeekRange', 'timetableWeekKeyForDate', 'resolvePhaseDateRanges'].map(declaration).join('\n'), rangeCtx);
+    const resolvedRanges = vm.runInContext(`resolvePhaseDateRanges([
+        { id: 'p1', name: 'Đợt 1', weeks_count: 1, date_start: '2026-09-07', date_end: '' },
+        { id: 'p11', name: 'Đợt 11', weeks_count: 1, date_start: '2026-11-16', date_end: '' }
+    ])`, rangeCtx);
+    assert.equal(resolvedRanges[1].from, '2026-11-16', 'Đợt 11 starts on 2026-11-16');
+    assert.equal(resolvedRanges[1].to, '2026-11-22', 'Đợt 11 ends on 2026-11-22 instead of stale cursor week 2');
 }
 
 console.log('PASS: timetable view loads numeric IDs and JSON data, preserves phase history, supports weekly snapshots, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');

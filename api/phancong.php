@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-const PHANCONG_SCHEMA_VERSION = '20261126-v4';
+const PHANCONG_SCHEMA_VERSION = '20261126-v5';
 
 function phancong_current_user(PDO $pdo, bool $required = true): ?array
 {
@@ -177,6 +177,80 @@ function phancong_ensure_schema(PDO $pdo): void
         UNIQUE KEY uq_phancong_owner_plan_week (owner_id, plan_key, week_key),
         INDEX idx_phancong_weekly_owner_plan_num (owner_id, plan_key, week_num)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS phancong_backups (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        owner_id INT NOT NULL,
+        plan_key VARCHAR(80) NOT NULL DEFAULT 'default',
+        reason VARCHAR(255) NOT NULL DEFAULT '',
+        school_year VARCHAR(40) NOT NULL DEFAULT '',
+        semester VARCHAR(20) NOT NULL DEFAULT 'HK1',
+        data_json LONGTEXT NOT NULL,
+        weekly_json LONGTEXT DEFAULT NULL,
+        created_by INT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_phancong_backups_owner_plan (owner_id, plan_key, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
+function phancong_create_backup(PDO $pdo, int $ownerId, string $planKey, string $reason, int $userId, bool $skipIfIdentical = false): ?array
+{
+    $stmt = $pdo->prepare("SELECT title, school_year, semester, data_json, updated_at FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ? LIMIT 1");
+    $stmt->execute([$ownerId, $planKey]);
+    $current = $stmt->fetch();
+    if (!$current || empty($current['data_json'])) {
+        return null;
+    }
+
+    if ($skipIfIdentical) {
+        $lastStmt = $pdo->prepare("SELECT id, data_json, created_at, reason FROM phancong_backups WHERE owner_id = ? AND plan_key = ? ORDER BY id DESC LIMIT 1");
+        $lastStmt->execute([$ownerId, $planKey]);
+        $lastRow = $lastStmt->fetch();
+        if ($lastRow && md5((string)$lastRow['data_json']) === md5((string)$current['data_json'])) {
+            return [
+                'id' => (int)$lastRow['id'],
+                'plan_key' => $planKey,
+                'reason' => (string)$lastRow['reason'],
+                'created_at' => (string)$lastRow['created_at'],
+                'reused' => true,
+            ];
+        }
+    }
+
+    $loadedWeeks = phancong_load_weekly_timetables($pdo, $ownerId, $planKey);
+    $weeklyJson = json_encode($loadedWeeks['map'], JSON_UNESCAPED_UNICODE) ?: '{}';
+    $cleanReason = trim($reason) !== '' ? substr(trim($reason), 0, 250) : 'Sao lưu CSDL';
+
+    $ins = $pdo->prepare("INSERT INTO phancong_backups (owner_id, plan_key, reason, school_year, semester, data_json, weekly_json, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    $ins->execute([
+        $ownerId,
+        $planKey,
+        $cleanReason,
+        (string)($current['school_year'] ?? ''),
+        (string)($current['semester'] ?? 'HK1'),
+        (string)$current['data_json'],
+        $weeklyJson,
+        $userId,
+    ]);
+    $backupId = (int)$pdo->lastInsertId();
+
+    // Giữ tối đa 40 bản sao lưu gần nhất cho mỗi kế hoạch để tránh phình CSDL.
+    $keepStmt = $pdo->prepare("SELECT id FROM phancong_backups WHERE owner_id = ? AND plan_key = ? ORDER BY id DESC LIMIT 1 OFFSET 40");
+    $keepStmt->execute([$ownerId, $planKey]);
+    $cutoff = $keepStmt->fetchColumn();
+    if ($cutoff) {
+        $del = $pdo->prepare("DELETE FROM phancong_backups WHERE owner_id = ? AND plan_key = ? AND id <= ?");
+        $del->execute([$ownerId, $planKey, (int)$cutoff]);
+    }
+
+    return [
+        'id' => $backupId,
+        'plan_key' => $planKey,
+        'reason' => $cleanReason,
+        'school_year' => (string)($current['school_year'] ?? ''),
+        'semester' => (string)($current['semester'] ?? 'HK1'),
+        'created_at' => date('Y-m-d H:i:s'),
+    ];
 }
 
 function phancong_infer_week_key(array $stateData, string $isoDate): string
@@ -361,6 +435,100 @@ try {
         respond(['ok' => true, 'week_key' => $weekKey, 'plan_key' => $planKey, 'data' => json_decode((string)$row['timetables_json'], true), 'meta' => ['school_year' => $row['school_year'], 'start_date' => $row['start_date'], 'end_date' => $row['end_date'], 'updated_at' => $row['updated_at']]]);
     }
 
+    if ($action === 'backup') {
+        $currentUser = phancong_current_user($pdo, true);
+        $ownerId = phancong_owner_id($currentUser);
+        $userId = (int)($currentUser['id'] ?? 0);
+        $body = json_body();
+        $planKey = trim((string)($body['plan_key'] ?? $_GET['plan_key'] ?? 'default')) ?: 'default';
+        $reason = trim((string)($body['reason'] ?? 'Sao lưu CSDL thủ công trước khi xử lý'));
+        $backup = phancong_create_backup($pdo, $ownerId, $planKey, $reason, $userId, false);
+        $stmt = $pdo->prepare("SELECT plan_key, title, school_year, semester, data_json, updated_at FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ? LIMIT 1");
+        $stmt->execute([$ownerId, $planKey]);
+        $row = $stmt->fetch();
+        $parsed = ($row && !empty($row['data_json'])) ? json_decode((string)$row['data_json'], true) : null;
+        $loadedWeeks = phancong_load_weekly_timetables($pdo, $ownerId, $planKey);
+        if (is_array($parsed)) {
+            if (!is_array($parsed['weekly_timetables'] ?? null)) $parsed['weekly_timetables'] = [];
+            foreach ($loadedWeeks['map'] as $wk => $teachers) {
+                foreach ($teachers as $tid => $tt) $parsed['weekly_timetables'][$wk][(string)$tid] = $tt;
+            }
+        }
+        if (!$backup) {
+            respond(['error' => 'Chưa có dữ liệu trên CSDL để tạo bản sao lưu.'], 404);
+        }
+        respond([
+            'ok' => true,
+            'message' => 'Đã sao lưu CSDL an toàn trên máy chủ (Mã #' . $backup['id'] . ')!',
+            'backup' => $backup,
+            'snapshot' => $parsed,
+        ]);
+    }
+
+    if ($action === 'list_backups') {
+        $currentUser = phancong_current_user($pdo, true);
+        $ownerId = phancong_owner_id($currentUser);
+        $planKey = trim((string)($_GET['plan_key'] ?? 'default')) ?: 'default';
+        $stmt = $pdo->prepare("SELECT id, plan_key, reason, school_year, semester, created_at FROM phancong_backups WHERE owner_id = ? AND plan_key = ? ORDER BY id DESC LIMIT 30");
+        $stmt->execute([$ownerId, $planKey]);
+        respond([
+            'ok' => true,
+            'backups' => $stmt->fetchAll() ?: [],
+        ]);
+    }
+
+    if ($action === 'restore_backup') {
+        $currentUser = phancong_current_user($pdo, true);
+        $ownerId = phancong_owner_id($currentUser);
+        $userId = (int)($currentUser['id'] ?? 0);
+        $body = json_body();
+        $backupId = (int)($body['backup_id'] ?? $_POST['backup_id'] ?? 0);
+        if ($backupId <= 0) respond(['error' => 'Thiếu mã bản sao lưu cần khôi phục.'], 422);
+
+        $stmt = $pdo->prepare("SELECT id, plan_key, reason, school_year, semester, data_json, weekly_json, created_at FROM phancong_backups WHERE id = ? AND owner_id = ? LIMIT 1");
+        $stmt->execute([$backupId, $ownerId]);
+        $backupRow = $stmt->fetch();
+        if (!$backupRow) respond(['error' => 'Không tìm thấy bản sao lưu hợp lệ.'], 404);
+
+        $planKey = (string)$backupRow['plan_key'];
+        phancong_create_backup($pdo, $ownerId, $planKey, 'Tự động sao lưu trước khi khôi phục bản #' . $backupId, $userId, true);
+
+        $restoredData = json_decode((string)$backupRow['data_json'], true);
+        if (!is_array($restoredData)) respond(['error' => 'Dữ liệu trong bản sao lưu không hợp lệ.'], 500);
+        $restoredWeekly = json_decode((string)($backupRow['weekly_json'] ?? '{}'), true);
+        if (is_array($restoredWeekly) && $restoredWeekly) {
+            if (!is_array($restoredData['weekly_timetables'] ?? null)) $restoredData['weekly_timetables'] = [];
+            foreach ($restoredWeekly as $wk => $teachers) {
+                if (!is_array($teachers)) continue;
+                foreach ($teachers as $tid => $tt) $restoredData['weekly_timetables'][$wk][(string)$tid] = $tt;
+            }
+        }
+        $cleanJson = json_encode($restoredData, JSON_UNESCAPED_UNICODE);
+        $title = (string)($restoredData['info']['title'] ?? 'Phân công chuyên môn');
+        $schoolYear = (string)($backupRow['school_year'] ?: ($restoredData['info']['school_year'] ?? ''));
+        $semester = (string)($backupRow['semester'] ?: ($restoredData['info']['semester'] ?? 'HK1'));
+
+        $check = $pdo->prepare("SELECT id FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ? LIMIT 1");
+        $check->execute([$ownerId, $planKey]);
+        $existing = $check->fetch();
+        if ($existing) {
+            $upd = $pdo->prepare("UPDATE phancong_chuyenmon SET title = ?, school_year = ?, semester = ?, data_json = ?, updated_by = ?, updated_at = NOW() WHERE id = ? AND owner_id = ?");
+            $upd->execute([$title, $schoolYear, $semester, $cleanJson, $userId, (int)$existing['id'], $ownerId]);
+        } else {
+            $ins = $pdo->prepare("INSERT INTO phancong_chuyenmon (owner_id, plan_key, title, school_year, semester, data_json, created_by, updated_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $ins->execute([$ownerId, $planKey, $title, $schoolYear, $semester, $cleanJson, $userId, $userId]);
+        }
+        $pdo->prepare("DELETE FROM phancong_weekly_timetables WHERE owner_id = ? AND plan_key = ?")->execute([$ownerId, $planKey]);
+        if (is_array($restoredData['weekly_timetables'] ?? null)) {
+            phancong_sync_weekly_timetables($pdo, $ownerId, $planKey, $schoolYear, $restoredData['weekly_timetables'], $userId, $restoredData);
+        }
+        respond([
+            'ok' => true,
+            'message' => 'Đã khôi phục CSDL từ bản sao lưu #' . $backupId . ' (' . $backupRow['created_at'] . ')!',
+            'plan_key' => $planKey,
+        ]);
+    }
+
     if ($action === 'legacy_candidates') {
         $currentUser = phancong_current_user($pdo, true);
         $ownerId = phancong_owner_id($currentUser);
@@ -480,6 +648,13 @@ try {
         if ($existing) {
             $oldState = json_decode((string)$existing['data_json'], true) ?: [];
             $oldTimetables = phancong_extract_teacher_timetables($oldState);
+            $newTimetables = phancong_extract_teacher_timetables($incomingState);
+            $tkbOrPhaseChanged = (json_encode($oldTimetables) !== json_encode($newTimetables))
+                || (json_encode($oldState['phases'] ?? []) !== json_encode($incomingState['phases'] ?? []))
+                || (json_encode($oldState['phase_assignments'] ?? []) !== json_encode($incomingState['phase_assignments'] ?? []));
+            if ($tkbOrPhaseChanged) {
+                phancong_create_backup($pdo, $ownerId, $planKey, 'Tự động sao lưu trước khi cập nhật TKB / Đợt phân công', $userId, true);
+            }
             $oldWeekKey = (string)($oldState['info']['active_timetable_week'] ?? '');
             if ($oldWeekKey === '') $oldWeekKey = phancong_infer_week_key($oldState, substr((string)$existing['updated_at'], 0, 10));
             if ($oldTimetables && preg_match('/^W[1-9]\\d?$/', $oldWeekKey) && empty($loadedWeeks['map'][$oldWeekKey]) && empty($incomingState['weekly_timetables'][$oldWeekKey])) {
@@ -521,6 +696,8 @@ try {
             $planKey = 'default';
         }
 
+        $userId = (int)($currentUser['id'] ?? 0);
+        phancong_create_backup($pdo, $ownerId, $planKey, 'Tự động sao lưu trước khi đặt lại CSDL', $userId, false);
         $pdo->prepare("DELETE FROM phancong_weekly_timetables WHERE owner_id = ? AND plan_key = ?")->execute([$ownerId, $planKey]);
         $stmt = $pdo->prepare("DELETE FROM phancong_chuyenmon WHERE owner_id = ? AND plan_key = ?");
         $stmt->execute([$ownerId, $planKey]);
