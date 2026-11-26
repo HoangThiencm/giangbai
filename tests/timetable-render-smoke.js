@@ -648,6 +648,9 @@ assert.match(html, /id="email-tt-week"/, 'tab TKB của tôi chọn tuần áp d
     ])`, rangeCtx);
     assert.equal(resolvedRanges[1].from, '2026-11-16', 'Đợt 11 starts on 2026-11-16');
     assert.equal(resolvedRanges[1].to, '2026-11-22', 'Đợt 11 ends on 2026-11-22 instead of stale cursor week 2');
+    assert.match(declaration('openQuickNewPhaseModal'), /now\.getDay\(\) === 0 \|\| now\.getDay\(\) === 6/, 'creating a new phase on weekend defaults to next week Monday');
+    assert.match(declaration('submitQuickNewPhase'), /selectedTimetableWeekKey = newPhaseWeekKey/, 'creating a new phase locks timetable week selector to that phase week');
+    assert.match(declaration('switchPhase'), /selectedTimetableWeekKey = `W\$\{matched\.fromWeek\}`/, 'switching Đợt syncs timetable week selector to that Đợt');
 }
 
 console.log('PASS: timetable view loads numeric IDs and JSON data, preserves phase history, supports weekly snapshots, aligns AI periods, renders after AI sync errors, and builds selected-teacher timetable email.');

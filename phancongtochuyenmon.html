@@ -5045,6 +5045,13 @@
             state.teachers.forEach(t => {
                 if (!Array.isArray(t.school_duties)) t.school_duties = [];
             });
+            if (typeof resolvePhaseDateRanges === 'function') {
+                const matched = resolvePhaseDateRanges(state.phases).find(item => item.phase.id === phaseId);
+                if (matched?.fromWeek) {
+                    selectedTimetableWeekKey = `W${matched.fromWeek}`;
+                    timetableWeekInitialized = true;
+                }
+            }
             saveToLocal();
             render();
             const curP = getCurrentPhase();
@@ -5104,11 +5111,13 @@
             document.getElementById('qp-name').value = `Đợt ${nextIdx}_${state.info.school_year || '2025-2026'}`;
             document.getElementById('qp-semester').value = curPhase.semester || 'HK1';
             document.getElementById('qp-weeks').value = 4;
-            const currentWeek = Number((timetableWeekKeyForDate(baoGiangIso(new Date())) || 'W0').slice(1));
-            document.getElementById('qp-from-week').value = currentWeek || '';
+            const now = new Date();
+            const currentWeek = Number((timetableWeekKeyForDate(baoGiangIso(now)) || 'W0').slice(1));
+            const targetWeek = (now.getDay() === 0 || now.getDay() === 6) && currentWeek ? currentWeek + 1 : currentWeek;
+            document.getElementById('qp-from-week').value = targetWeek || '';
             document.getElementById('qp-to-week').value = '';
             document.getElementById('qp-range-calc-result').textContent = '';
-            document.getElementById('qp-date-start').value = baoGiangSchoolWeekRange(currentWeek)?.start || baoGiangIso(new Date());
+            document.getElementById('qp-date-start').value = baoGiangSchoolWeekRange(targetWeek)?.start || baoGiangIso(now);
             document.getElementById('qp-date-end').value = '';
             document.getElementById('qp-note').value = 'Điều chỉnh phân công khi có thay đổi GV/Lớp';
             document.getElementById('qp-inherit-assignments').checked = false;
@@ -5204,6 +5213,11 @@
             state.info.current_phase_id = newPhaseId;
             state.teachers = JSON.parse(JSON.stringify(state.phase_assignments[newPhaseId].teachers));
             state.unassigned = JSON.parse(JSON.stringify(state.phase_assignments[newPhaseId].unassigned));
+            const newPhaseWeekKey = from_week ? `W${from_week}` : (date_start && typeof timetableWeekKeyForDate === 'function' ? timetableWeekKeyForDate(date_start) : '');
+            if (newPhaseWeekKey) {
+                selectedTimetableWeekKey = newPhaseWeekKey;
+                timetableWeekInitialized = true;
+            }
             if (!inherit) {
                 editingTimetable = emptyTimetable();
                 clearTimetablePreview();
