@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bàn Vẽ Gương Đối Xứng STEM - Toán 6</title>
+<style>
+  * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { margin: 0; background: #0f172a; color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; }
+  header {
+    background: #1e293b; padding: 12px 22px; border-bottom: 1px solid #334155;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+  }
+  header h1 { margin: 0; font-size: 1.2rem; color: #38bdf8; }
+  header p { margin: 2px 0 0; font-size: 0.83rem; color: #cbd5e1; }
+  main { flex: 1; display: grid; grid-template-columns: 300px 1fr; gap: 16px; padding: 16px; max-width: 1240px; width: 100%; margin: 0 auto; }
+  @media (max-width: 840px) { main { grid-template-columns: 1fr; } }
+
+  .sidebar { background: #1e293b; border-radius: 14px; padding: 16px; border: 1px solid #334155; display: flex; flex-direction: column; gap: 14px; }
+  .label { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8; font-weight: 700; margin-bottom: 6px; }
+  .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .m-btn {
+    background: #0f172a; color: #e2e8f0; border: 1.5px solid #334155; border-radius: 9px; padding: 9px 8px;
+    font-size: 0.84rem; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  }
+  .m-btn.active { border-color: #38bdf8; background: #0c4a6e; color: white; }
+
+  .palette { display: flex; flex-wrap: wrap; gap: 8px; }
+  .swatch { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2.5px solid transparent; }
+  .swatch.active { border-color: white; transform: scale(1.15); }
+
+  .btn {
+    border: none; border-radius: 9px; padding: 10px 14px; font-weight: 700; cursor: pointer; font-size: 0.88rem; width: 100%;
+  }
+  .btn-save { background: #10b981; color: #022c22; }
+  .btn-clear { background: #ef4444; color: white; }
+  .btn-sub { background: #334155; color: #f8fafc; }
+
+  .stage {
+    background: #1e293b; border-radius: 14px; padding: 14px; border: 1px solid #334155;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  canvas { background: #020617; border-radius: 12px; border: 2px solid #334155; cursor: crosshair; touch-action: none; max-width: 100%; }
+  .hint { font-size: 0.82rem; color: #94a3b8; margin-top: 8px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🎨 Bàn Vẽ Gương Đối Xứng STEM — Nhà Thiết Kế Họa Tiết Nhí</h1>
+    <p>Học sinh tự vẽ một nét → Ứng dụng tự động phản chiếu chuẩn Toán học → Tải ảnh PNG chuyển hóa thành gạch bông / logo bằng AI</p>
+  </div>
+</header>
+
+<main>
+  <aside class="sidebar">
+    <div>
+      <div class="label">1. Chế độ đối xứng</div>
+      <div class="mode-grid" id="modeGrid">
+        <button class="m-btn active" onclick="setSym('axis1', this)">1 Trục dọc</button>
+        <button class="m-btn" onclick="setSym('axis2', this)">2 Trục (Dọc+Ngang)</button>
+        <button class="m-btn" onclick="setSym('axis4', this)">4 Trục (Hình vuông)</button>
+        <button class="m-btn" onclick="setSym('axis6', this)">6 Trục (Bông tuyết)</button>
+        <button class="m-btn" onclick="setSym('axis8', this)">8 Trục (Mandala)</button>
+        <button class="m-btn" onclick="setSym('center', this)">Tâm ĐX (Quay 180°)</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="label">2. Màu nét vẽ</div>
+      <div class="palette" id="palette"></div>
+    </div>
+
+    <div>
+      <div class="label">3. Độ dày nét: <span id="sizeVal">4</span>px</div>
+      <input type="range" id="sizeSlider" min="2" max="14" value="4" style="width:100%; accent-color:#38bdf8;">
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:8px; margin-top:auto;">
+      <button class="btn btn-sub" onclick="toggleGuides()">👁 Ẩn / Hiện đường trục & tâm</button>
+      <button class="btn btn-clear" onclick="clearCanvas()">🗑 Xóa vẽ lại</button>
+      <button class="btn btn-save" onclick="downloadArt()">💾 Tải ảnh PNG sản phẩm</button>
+    </div>
+  </aside>
+
+  <section class="stage">
+    <canvas id="artCanvas" width="560" height="560"></canvas>
+    <div class="hint">Giữ chuột trái (hoặc chạm tay trên bảng tương tác / điện thoại) và vẽ vào một góc bất kỳ để sáng tạo họa tiết đối xứng!</div>
+  </section>
+</main>
+
+<script>
+const canvas = document.getElementById('artCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height, CX = W/2, CY = H/2;
+
+const COLORS = ['#38bdf8', '#f472b6', '#fbbf24', '#34d399', '#a78bfa', '#fb7185', '#ffffff', '#fb923c'];
+let color = COLORS[0], lineWidth = 4, symMode = 'axis1', showGuides = true;
+let drawing = false, lastPt = null;
+let strokes = []; // lưu nét để vẽ lại khi bật/tắt đường trục
+
+// Tạo bảng màu
+const pal = document.getElementById('palette');
+COLORS.forEach((c, i) => {
+  const d = document.createElement('div');
+  d.className = 'swatch' + (i===0 ? ' active' : '');
+  d.style.background = c;
+  d.onclick = () => {
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    d.classList.add('active');
+    color = c;
+  };
+  pal.appendChild(d);
+});
+
+document.getElementById('sizeSlider').oninput = e => {
+  lineWidth = parseInt(e.target.value, 10);
+  document.getElementById('sizeVal').textContent = lineWidth;
+};
+
+function setSym(m, btn) {
+  symMode = m;
+  document.querySelectorAll('.m-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  redrawAll();
+}
+
+function toggleGuides() { showGuides = !showGuides; redrawAll(); }
+function clearCanvas() { strokes = []; redrawAll(); }
+
+function drawGuides() {
+  if (!showGuides) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 6]);
+  if (symMode === 'center') {
+    ctx.beginPath(); ctx.arc(CX, CY, 6, 0, Math.PI*2); ctx.fillStyle = '#fbbf24'; ctx.fill();
+    ctx.setLineDash([]); ctx.fillStyle = '#fbbf24'; ctx.font = 'bold 14px Segoe UI'; ctx.fillText('Tâm O', CX+10, CY-8);
+  } else {
+    const n = symMode === 'axis1' ? 1 : symMode === 'axis2' ? 2 : symMode === 'axis4' ? 4 : symMode === 'axis6' ? 6 : 8;
+    for (let i = 0; i < n; i++) {
+      const ang = (Math.PI / n) * i + Math.PI / 2;
+      ctx.beginPath();
+      ctx.moveTo(CX - Math.cos(ang)*W, CY - Math.sin(ang)*H);
+      ctx.lineTo(CX + Math.cos(ang)*W, CY + Math.sin(ang)*H);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+function drawSegTransformed(p1, p2, col, lw, mode) {
+  ctx.save();
+  ctx.strokeStyle = col;
+  ctx.lineWidth = lw;
+  ctx.lineCap = 'round';
+
+  const drawLine = (a, b) => {
+    ctx.beginPath(); ctx.moveTo(CX + a[0], CY + a[1]); ctx.lineTo(CX + b[0], CY + b[1]); ctx.stroke();
+  };
+
+  if (mode === 'axis1') {
+    drawLine(p1, p2);
+    drawLine([-p1[0], p1[1]], [-p2[0], p2[1]]);
+  } else if (mode === 'axis2') {
+    [[1,1],[-1,1],[1,-1],[-1,-1]].forEach(([sx, sy]) => drawLine([p1[0]*sx, p1[1]*sy], [p2[0]*sx, p2[1]*sy]));
+  } else if (mode === 'center') {
+    drawLine(p1, p2);
+    drawLine([-p1[0], -p1[1]], [-p2[0], -p2[1]]);
+  } else {
+    const k = mode === 'axis4' ? 4 : mode === 'axis6' ? 6 : 8;
+    for (let i = 0; i < k; i++) {
+      const a = (2 * Math.PI / k) * i;
+      const cos = Math.cos(a), sin = Math.sin(a);
+      const r1 = [p1[0]*cos - p1[1]*sin, p1[0]*sin + p1[1]*cos];
+      const r2 = [p2[0]*cos - p2[1]*sin, p2[0]*sin + p2[1]*cos];
+      drawLine(r1, r2);
+      // phản xạ qua trục đứng rồi quay
+      const m1 = [-p1[0]*cos - p1[1]*sin, -p1[0]*sin + p1[1]*cos];
+      const m2 = [-p2[0]*cos - p2[1]*sin, -p2[0]*sin + p2[1]*cos];
+      drawLine(m1, m2);
+    }
+  }
+  ctx.restore();
+}
+
+function redrawAll() {
+  ctx.fillStyle = '#020617';
+  ctx.fillRect(0, 0, W, H);
+  drawGuides();
+  strokes.forEach(s => drawSegTransformed(s.p1, s.p2, s.c, s.w, s.m));
+}
+
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return [(clientX - r.left) * (W / r.width) - CX, (clientY - r.top) * (H / r.height) - CY];
+}
+
+canvas.addEventListener('pointerdown', e => { drawing = true; lastPt = getPos(e); });
+canvas.addEventListener('pointermove', e => {
+  if (!drawing) return;
+  const pt = getPos(e);
+  strokes.push({ p1: lastPt, p2: pt, c: color, w: lineWidth, m: symMode });
+  drawSegTransformed(lastPt, pt, color, lineWidth, symMode);
+  lastPt = pt;
+});
+window.addEventListener('pointerup', () => { drawing = false; lastPt = null; });
+
+function downloadArt() {
+  const prev = showGuides;
+  showGuides = false;
+  redrawAll();
+  const a = document.createElement('a');
+  a.download = 'hoa_tiet_doi_xung_STEM_Toan6.png';
+  a.href = canvas.toDataURL('image/png');
+  a.click();
+  showGuides = prev;
+  redrawAll();
+}
+
+redrawAll();
+</script>
+</body>
+</html>

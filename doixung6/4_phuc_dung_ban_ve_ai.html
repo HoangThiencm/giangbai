@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phục Dựng Bản Vẽ Đối Xứng</title>
+<style>
+  * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { margin: 0; background: #f8fafc; color: #0f172a; min-height: 100vh; display: flex; flex-direction: column; }
+  header {
+    background: linear-gradient(135deg, #0f766e, #0284c7); color: white; padding: 11px 20px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+  }
+  header h1 { margin: 0; font-size: 1.12rem; }
+  .canvas-badge {
+    border: 1.5px solid rgba(255,255,255,0.45); background: rgba(255,255,255,0.16); color: white;
+    border-radius: 9px; padding: 6px 13px; font-weight: 700; font-size: 0.82rem;
+  }
+
+  main { flex: 1; max-width: 1180px; width: 100%; margin: 14px auto; padding: 0 14px; display: grid; grid-template-columns: 288px 1fr; gap: 14px; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+
+  .panel, .stage-card {
+    background: white; border-radius: 14px; padding: 15px; border: 1px solid #cbd5e1;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.05); display: flex; flex-direction: column; gap: 11px;
+  }
+  .label { font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 5px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .chip {
+    border: 1.5px solid #cbd5e1; background: white; border-radius: 9px; padding: 7px 8px;
+    font-size: 0.81rem; font-weight: 600; cursor: pointer; text-align: left; color: #0f172a;
+  }
+  .chip.active { border-color: #0284c7; background: #e0f2fe; color: #0369a1; }
+
+  .palette { display: flex; gap: 7px; flex-wrap: wrap; }
+  .sw { width: 25px; height: 25px; border-radius: 50%; cursor: pointer; border: 2.5px solid transparent; }
+  .sw.active { border-color: #0f172a; transform: scale(1.15); }
+
+  .btn { border: none; border-radius: 9px; padding: 9px 13px; font-weight: 700; cursor: pointer; font-size: 0.86rem; }
+  .btn-ai { background: linear-gradient(135deg, #7c3aed, #2563eb); color: white; width: 100%; font-size: 0.92rem; padding: 11px; }
+  .btn-primary { background: #0284c7; color: white; }
+  .btn-muted { background: #e2e8f0; color: #1e293b; }
+  .btn-warn { background: #f59e0b; color: white; }
+
+  .canvas-wrap {
+    background: #ffffff; border: 2px solid #94a3b8; border-radius: 12px; overflow: hidden;
+    display: flex; justify-content: center; align-items: center;
+  }
+  canvas { max-width: 100%; height: auto; display: block; cursor: crosshair; touch-action: none; }
+
+  .controls {
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 11px 14px;
+    display: flex; flex-direction: column; gap: 9px;
+  }
+  .slider-row { display: flex; align-items: center; gap: 12px; }
+  .slider-row label { font-weight: 700; min-width: 160px; font-size: 0.88rem; }
+  input[type="range"] { flex: 1; accent-color: #0284c7; height: 8px; cursor: pointer; }
+  .deg { font-weight: 800; color: #0284c7; min-width: 48px; text-align: right; font-size: 1rem; }
+
+  .result {
+    border-radius: 10px; padding: 11px 14px; font-size: 0.9rem; line-height: 1.48;
+    border-left: 5px solid #0284c7; background: #f0f9ff; color: #0c4a6e;
+  }
+  .result.ok { background: #dcfce7; border-left-color: #16a34a; color: #14532d; }
+  .result.warn { background: #fef3c7; border-left-color: #d97706; color: #92400e; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🖌️ Phục Dựng Bản Vẽ Đối Xứng</h1>
+  <span class="canvas-badge">✨ Gemini Canvas · 2.5 Flash (Tự phục dựng 100% khi đúng ≥ 70%)</span>
+</header>
+
+<main>
+  <aside class="panel">
+    <div>
+      <div class="label">1. Chọn nhóm bài tập</div>
+      <div style="display:flex; gap:6px; margin-bottom:7px;">
+        <button class="btn btn-primary" id="btnGrpAxis" style="flex:1; padding:7px 6px; font-size:0.82rem;" onclick="switchGroup('axis')">📐 Trục đối xứng</button>
+        <button class="btn btn-muted" id="btnGrpCenter" style="flex:1; padding:7px 6px; font-size:0.82rem;" onclick="switchGroup('center')">🎯 Tâm đối xứng</button>
+      </div>
+      <div class="grid2" id="taskListGrid"></div>
+    </div>
+
+    <div>
+      <div class="label">2. Dụng cụ HS vẽ phác thảo</div>
+      <div class="palette" id="palette"></div>
+      <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+        <span style="font-size:0.82rem; font-weight:600;">Cỡ nét:</span>
+        <input type="range" id="penSize" min="3" max="12" value="5" style="flex:1;">
+      </div>
+      <div style="display:flex; gap:6px; margin-top:8px;">
+        <button class="btn btn-muted" style="flex:1;" onclick="undoStroke()">↶ Hoàn tác</button>
+        <button class="btn btn-muted" style="flex:1;" onclick="clearDrawings()">🗑 Xóa vẽ lại</button>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:7px;">
+      <div class="label">3. Chấm &amp; Phục dựng tự động</div>
+      <button class="btn btn-ai" id="btnRestore" onclick="runRestore()">✨ Phục dựng &amp; Chấm độ đối xứng</button>
+      <button class="btn" id="btnRealAi" style="background:linear-gradient(135deg,#059669,#0d9488); color:white; width:100%; display:none;" onclick="generateRealPhotoAI()">🪄 Biến thành Ảnh Thật (Gemini Canvas)</button>
+      <button class="btn btn-muted" id="btnResetAi" style="display:none;" onclick="clearAiResult()">↺ Xem lại nét vẽ tay của HS</button>
+    </div>
+
+    <div style="font-size:0.8rem; color:#475569; line-height:1.45; background:#f8fafc; padding:9px; border-radius:9px; border:1px solid #e2e8f0; margin-top:auto;">
+      <b>📏 Quy tắc chấm thông minh:</b><br>
+      • Mọi đỉnh hình mẫu đều nằm <b>đúng giao điểm ô vuông</b> (chẵn ô).<br>
+      • Khi đang kéo chuột hiện <b>nét đứt mờ</b>; dứt tay mới chốt nét.<br>
+      • Nếu HS vẽ đúng <b>≥ 70%</b> → hệ thống <b>phục dựng 100% ảnh gốc đối xứng chuẩn!</b>
+    </div>
+  </aside>
+
+  <section class="stage-card">
+    <div class="canvas-wrap">
+      <canvas id="mainCanvas" width="728" height="448"></canvas>
+    </div>
+
+    <div class="controls">
+      <div class="slider-row">
+        <label id="lblCheck">Gấp 3D kiểm chứng:</label>
+        <input type="range" id="foldSlider" min="0" max="180" value="0" step="1">
+        <span class="deg" id="foldDeg">0°</span>
+      </div>
+      <div style="display:flex; flex-wrap:wrap; gap:8px;">
+        <button class="btn btn-primary" id="btnFoldAuto" onclick="toggleFoldAuto()">▶ Gấp 3D kiểm chứng (0° → 180°)</button>
+        <button class="btn btn-muted" onclick="setFold(0)">↺ Mở về 0°</button>
+        <button class="btn btn-warn" onclick="setFold(180)">⚡ Kiểm tra ngay tại 180°</button>
+      </div>
+    </div>
+
+    <div class="result" id="statusBox"></div>
+    <div id="realPhotoBox" style="display:none; background:#f0fdf4; border:2px solid #86efac; border-radius:12px; padding:12px; text-align:center;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <b style="color:#14532d; font-size:0.95rem;">🌟 Ảnh thật do Gemini Canvas (gemini-2.5-flash-image) phục dựng từ bản vẽ của học sinh:</b>
+        <div style="display:flex; gap:6px;">
+          <a id="btnDlReal" download="anh_that_doi_xung_AI.png" class="btn btn-primary" style="padding:5px 11px; font-size:0.82rem; text-decoration:none;">💾 Tải ảnh</a>
+          <button class="btn btn-muted" style="padding:5px 10px; font-size:0.82rem;" onclick="document.getElementById('realPhotoBox').style.display='none'">✕ Đóng</button>
+        </div>
+      </div>
+      <img id="realPhotoImg" alt="Ảnh thật AI phục dựng" style="max-width:100%; max-height:360px; border-radius:10px; box-shadow:0 4px 14px rgba(0,0,0,0.12);">
+    </div>
+  </section>
+</main>
+
+<script>
+// Kích thước canvas chia hết hoàn toàn cho ô lưới G = 28px (26 cột × 16 hàng → tâm CX = 13*28 = 364, CY = 8*28 = 224)
+const canvas = document.getElementById('mainCanvas');
+const ctx = canvas.getContext('2d');
+const G = 28;
+const W = canvas.width, H = canvas.height, CX = 13 * G, CY = 8 * G;
+
+const GEMINI_DIRECT_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/";
+const IS_LOCAL_FILE = (window.location.protocol === "file:");
+
+// ============== 20 BÀI TẬP CHUẨN LƯỚI Ô NGUYÊN 100% (10 TRỤC ĐX + 10 TÂM ĐX) ==============
+const TASKS = {
+  // --- 10 BÀI TRỤC ĐỐI XỨNG (DỄ → KHÓ) ---
+  a1: { group: 'axis', short: '★ 1. Mũi tên', name: '★ Bài 1 (Trục dọc) — Mũi tên', sym: 'axisV', fill: '#38bdf8', stroke: '#0369a1',
+        poly: [[0,-4], [-3,-1], [-1,-1], [-1,4], [0,4]], guide: 'Mức dễ: Đếm ô từ trục d sang trái rồi vẽ nửa mũi tên bên PHẢI!' },
+  a2: { group: 'axis', short: '★ 2. Chiếc khiên', name: '★ Bài 2 (Trục dọc) — Chiếc khiên', sym: 'axisV', fill: '#60a5fa', stroke: '#1d4ed8',
+        poly: [[0,-4], [-4,-4], [-4,0], [-2,3], [0,5]], guide: 'Đếm ô các đỉnh của chiếc khiên bên trái rồi vẽ nửa bên PHẢI!' },
+  a3: { group: 'axis', short: '★ 3. Ngôi nhà', name: '★ Bài 3 (Trục dọc) — Ngôi nhà / Cổng trường', sym: 'axisV', fill: '#fbbf24', stroke: '#b45309',
+        poly: [[0,-5], [-5,-1], [-3,-1], [-3,5], [-1,5], [-1,2], [0,2]], guide: 'Đếm số ô mái và tường nhà để vẽ nửa bên PHẢI đối xứng hoàn chỉnh!' },
+  a4: { group: 'axis', short: '★ 4. Chiếc cúp', name: '★ Bài 4 (Trục dọc) — Chiếc cúp vô địch', sym: 'axisV', fill: '#f59e0b', stroke: '#92400e',
+        poly: [[0,-5], [-4,-5], [-3,-1], [-1,0], [-1,4], [-3,4], [-3,5], [0,5]], guide: 'Đếm ô từng bậc của chiếc cúp để vẽ nửa bên PHẢI!' },
+  a5: { group: 'axis', short: '★★ 5. Cây thông (5.13a)', name: '★★ Bài 5 (Trục dọc) — Bài 5.13a SGK (Cây thông)', sym: 'axisV', fill: '#22c55e', stroke: '#15803d',
+        poly: [[0,-6], [-3,-3], [-1,-3], [-4,0], [-2,0], [-5,4], [0,4]], guide: 'Bài 5.13a SGK: Đếm số ô từng tầng tán lá rồi vẽ nửa cây thông bên PHẢI!' },
+  a6: { group: 'axis', short: '★★ 6. Vương miện (5.13b)', name: '★★ Bài 6 (Trục ngang) — Bài 5.13b SGK (Vương miện)', sym: 'axisH', fill: '#94a3b8', stroke: '#334155',
+        poly: [[-5,0], [-5,-4], [-2,-2], [0,-4], [2,-2], [5,-4], [5,0]], guide: 'Bài 5.13b SGK: Trục nằm NGANG — đếm ô lên trên trục d để vẽ phần phía DƯỚI!' },
+  a7: { group: 'axis', short: '★★ 7. Thuyền soi bóng', name: '★★ Bài 7 (Trục ngang) — Con thuyền soi bóng mặt nước', sym: 'axisH', fill: '#2dd4bf', stroke: '#0f766e',
+        poly: [[-6,0], [-4,-3], [-1,-3], [-1,-6], [3,-3], [6,0]], guide: 'Trục mặt nước nằm NGANG: vẽ ảnh bóng con thuyền đối xứng phía DƯỚI trục d!' },
+  a8: { group: 'axis', short: '★★ 8. Tên lửa', name: '★★ Bài 8 (Trục dọc) — Tên lửa không gian', sym: 'axisV', fill: '#818cf8', stroke: '#3730a3',
+        poly: [[0,-6], [-2,-3], [-2,2], [-5,5], [-2,4], [-1,5], [0,4]], guide: 'Vẽ thân và cánh tên lửa bên PHẢI đối xứng qua trục dọc d!' },
+  a9: { group: 'axis', short: '★★★ 9. Cánh bướm', name: '★★★ Bài 9 (Trục dọc) — Cánh bướm hình học', sym: 'axisV', fill: '#fb7185', stroke: '#be123c',
+        poly: [[0,-2], [-4,-5], [-6,-2], [-3,1], [-5,4], [-2,5], [0,2]], guide: 'Mức khó: Nhiều góc xiên nhọn — đếm chuẩn từng đỉnh cánh bướm bên trái để vẽ bên PHẢI!' },
+  a10:{ group: 'axis', short: '★★★ 10. Lâu đài', name: '★★★ Bài 10 (Trục dọc) — Lâu đài / Cổng thành', sym: 'axisV', fill: '#fb923c', stroke: '#9a3412',
+        poly: [[0,-6], [-2,-4], [-2,-2], [-5,-2], [-5,-4], [-6,-4], [-6,5], [-2,5], [-2,1], [0,1]], guide: 'Thử thách cao nhất Trục ĐX: Cổng thành nhiều tháp góc vuông — đếm thật chuẩn từng ô!' },
+
+  // --- 10 BÀI TÂM ĐỐI XỨNG O (DỄ → KHÓ) ---
+  c1: { group: 'center', short: '★ 1. Chữ L (5.9a)', name: '★ Bài 1 (Tâm O) — Bài 5.9a SGK (Khối chữ L)', sym: 'center', fill: '#f97316', stroke: '#c2410c',
+        poly: [[0,0], [-4,0], [-4,-4], [-2,-4], [-2,-2], [0,-2]], guide: 'Bài 5.9a SGK: Vẽ khối đối xứng qua tâm O (trên-trái đổi thành dưới-phải)!' },
+  c2: { group: 'center', short: '★ 2. Hình bình hành', name: '★ Bài 2 (Tâm O) — Hoàn thiện Hình bình hành', sym: 'center', fill: '#a78bfa', stroke: '#6d28d9',
+        poly: [[-5,3], [-1,-3], [5,-3]], guide: 'Vẽ nửa tam giác ở góc dưới-phải đối xứng qua O để ghép thành Hình bình hành!' },
+  c3: { group: 'center', short: '★ 3. Tam giác đối đỉnh', name: '★ Bài 3 (Tâm O) — Cặp tam giác đối xứng tâm', sym: 'center', fill: '#34d399', stroke: '#047857',
+        poly: [[0,0], [-5,-2], [-2,-5]], guide: 'Vẽ tam giác thứ 2 ở góc dưới-phải đối xứng với tam giác mẫu qua tâm O!' },
+  c4: { group: 'center', short: '★ 4. Bậc thang', name: '★ Bài 4 (Tâm O) — Bậc thang đối xứng tâm', sym: 'center', fill: '#38bdf8', stroke: '#0369a1',
+        poly: [[0,0], [-2,0], [-2,-2], [-4,-2], [-4,-4], [0,-4]], guide: 'Đếm số ô từng bậc thang ở góc trên-trái để dựng đối xứng ở góc dưới-phải!' },
+  c5: { group: 'center', short: '★★ 5. Chữ V (5.9b)', name: '★★ Bài 5 (Tâm O) — Bài 5.9b SGK (Mũi tên chữ V)', sym: 'center', fill: '#10b981', stroke: '#047857',
+        poly: [[-1,-4], [-3,-4], [-6,0], [-3,4], [-1,4], [-4,0]], guide: 'Bài 5.9b SGK: Vẽ chữ V đối xứng bên PHẢI qua tâm O!' },
+  c6: { group: 'center', short: '★★ 6. Chong chóng', name: '★★ Bài 6 (Tâm O) — Chong chóng 2 cánh', sym: 'center', fill: '#ef4444', stroke: '#991b1b',
+        poly: [[0,0], [-1,-5], [-5,-3], [-2,-1]], guide: 'Vẽ cánh chong chóng thứ hai ở góc dưới-phải đối xứng qua đinh ghim O!' },
+  c7: { group: 'center', short: '★★ 7. Cánh diều đôi', name: '★★ Bài 7 (Tâm O) — Cánh diều đôi đối xứng tâm', sym: 'center', fill: '#f472b6', stroke: '#be185d',
+        poly: [[0,0], [-2,-4], [-6,-4], [-4,-1]], guide: 'Lấy đối xứng từng đỉnh của cánh diều qua tâm O để vẽ cánh diều đối diện!' },
+  c8: { group: 'center', short: '★★ 8. Nửa chữ S/Z', name: '★★ Bài 8 (Tâm O) — Chữ cái hình học đối xứng tâm', sym: 'center', fill: '#fbbf24', stroke: '#b45309',
+        poly: [[-4,-5], [4,-5], [4,-3], [-2,-3], [-2,-1], [0,-1], [0,0], [-4,0]], guide: 'Vẽ nửa dưới của chữ cái hình học sao cho nhận điểm O làm tâm đối xứng!' },
+  c9: { group: 'center', short: '★★★ 9. Hoa văn móc', name: '★★★ Bài 9 (Tâm O) — Hoa văn móc khóa cổ điển', sym: 'center', fill: '#8b5cf6', stroke: '#4c1d95',
+        poly: [[0,0], [-3,0], [-3,-3], [-5,-3], [-5,-5], [-1,-5], [-1,-2], [0,-2]], guide: 'Mức khó: Hoa văn móc khóa nhiều góc vuông — đếm thật chuẩn từng ô qua tâm O!' },
+  c10:{ group: 'center', short: '★★★ 10. Vòng tròn (5.14)', name: '★★★ Bài 10 (Tâm O) — Bài 5.14 SGK (Vòng tròn nan chéo)', sym: 'center', fill: '#bae6fd', stroke: '#0284c7',
+        isCircle514: true, poly: [[0,-5], [3,-4], [5,0], [3,4], [0,5], [3,0]], guide: 'Thử thách cao nhất Tâm ĐX: Vẽ nửa vòng tròn & các nan bên PHẢI đối xứng qua O!' }
+};
+
+let currentGroup = 'axis';
+let taskId = 'a1';
+let restoredFull = false;   // true khi HS đạt >= 70% và không có đoạn vọt lệch > 1.2 ô
+let restoredPartial = false;// true khi HS < 70% hoặc vẽ thừa dài → giữ khuôn lệch + khoanh đỏ điểm sai
+let outlierPts = [];        // Lưu các điểm HS vẽ vọt/lệch quá xa để cảnh báo đỏ
+let foldAngle = 0, animId = null;
+
+const COLORS = ['#dc2626', '#16a34a', '#2563eb', '#ea580c', '#7c3aed', '#0f172a'];
+let penColor = COLORS[0], penWidth = 5;
+let strokes = [], drawing = false, curStroke = null;
+
+const pal = document.getElementById('palette');
+COLORS.forEach((c, i) => {
+  const d = document.createElement('div');
+  d.className = 'sw' + (i === 0 ? ' active' : '');
+  d.style.background = c;
+  d.onclick = () => { document.querySelectorAll('.sw').forEach(x => x.classList.remove('active')); d.classList.add('active'); penColor = c; };
+  pal.appendChild(d);
+});
+document.getElementById('penSize').oninput = e => penWidth = parseInt(e.target.value, 10);
+
+function getTask() { return TASKS[taskId]; }
+function toPx(pt) { return [CX + pt[0] * G, CY + pt[1] * G]; }
+function mirrorPt(pt, sym) {
+  if (sym === 'axisV') return [-pt[0], pt[1]];
+  if (sym === 'axisH') return [pt[0], -pt[1]];
+  return [-pt[0], -pt[1]];
+}
+
+function setStatus(msg, cls = '') {
+  const el = document.getElementById('statusBox');
+  el.className = 'result ' + cls;
+  el.innerHTML = msg;
+}
+
+function selectTask(id, btn) {
+  stopAuto(); taskId = id; strokes = []; restoredFull = false; restoredPartial = false; foldAngle = 0;
+  document.getElementById('foldSlider').value = 0; document.getElementById('foldDeg').textContent = '0°';
+  document.getElementById('btnResetAi').style.display = 'none';
+  document.getElementById('btnRealAi').style.display = 'none';
+  document.getElementById('realPhotoBox').style.display = 'none';
+  document.querySelectorAll('.panel .chip').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const t = getTask();
+  const isCenter = t.sym === 'center';
+  document.getElementById('lblCheck').textContent = isCenter ? 'Quay 180° quanh O:' : 'Gấp 3D kiểm chứng:';
+  document.getElementById('btnFoldAuto').textContent = isCenter ? '▶ Quay nửa vòng 180° quanh O' : '▶ Gấp 3D kiểm chứng (0° → 180°)';
+  setStatus(`<b>${t.name}:</b> ${t.guide}`);
+  draw();
+}
+
+// ============== VẼ LƯỚI Ô VUÔNG SẮC NÉT ==============
+function drawGrid() {
+  ctx.save();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+  for (let k = -13; k <= 13; k++) {
+    const x = CX + k * G;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H);
+    ctx.strokeStyle = (Math.abs(k) % 5 === 0) ? '#94a3b8' : '#cbd5e1';
+    ctx.lineWidth = (Math.abs(k) % 5 === 0) ? 1.3 : 0.9;
+    ctx.stroke();
+    if (k !== 0 && Math.abs(k) <= 10) {
+      ctx.fillStyle = '#64748b'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'center';
+      ctx.fillText(String(Math.abs(k)), x, 13);
+    }
+  }
+  for (let k = -8; k <= 8; k++) {
+    const y = CY + k * G;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y);
+    ctx.strokeStyle = (Math.abs(k) % 5 === 0) ? '#94a3b8' : '#cbd5e1';
+    ctx.lineWidth = (Math.abs(k) % 5 === 0) ? 1.3 : 0.9;
+    ctx.stroke();
+    if (k !== 0 && Math.abs(k) <= 6) {
+      ctx.fillStyle = '#64748b'; ctx.font = 'bold 11px Segoe UI'; ctx.textAlign = 'left';
+      ctx.fillText(String(Math.abs(k)), 6, y + 4);
+    }
+  }
+  ctx.restore();
+}
+
+// Vẽ nửa hình mẫu hoặc nửa đáp án chuẩn
+function drawTaskHalf(c, t, isTargetHalf) {
+  c.save();
+  if (t.isCircle514) {
+    // Bài 5.14 SGK: nửa vòng tròn bán kính 5 ô & 4 ô + 2 nan chéo
+    const startA = isTargetHalf ? -Math.PI/2 : Math.PI/2;
+    const endA = isTargetHalf ? Math.PI/2 : 3*Math.PI/2;
+    c.beginPath(); c.arc(CX, CY, 5 * G, startA, endA);
+    c.strokeStyle = '#0284c7'; c.lineWidth = 3.2; c.stroke();
+    c.beginPath(); c.arc(CX, CY, 4 * G, startA, endA);
+    c.strokeStyle = '#0284c7'; c.lineWidth = 2.6; c.stroke();
+    // 2 đoạn nan chéo tạo góc tam giác như hình 5.14 SGK
+    const s = isTargetHalf ? 1 : -1;
+    c.beginPath();
+    c.moveTo(CX, CY); c.lineTo(CX + s * 4 * G, CY - 2 * G);
+    c.moveTo(CX, CY); c.lineTo(CX + s * 4 * G, CY + 2 * G);
+    c.moveTo(CX + s * 4 * G, CY - 2 * G); c.lineTo(CX + s * 4 * G, CY + 2 * G);
+    c.strokeStyle = '#0369a1'; c.lineWidth = 2.6; c.stroke();
+    c.restore();
+    return;
+  }
+  const pts = t.poly.map(p => toPx(isTargetHalf ? mirrorPt(p, t.sym) : p));
+  c.beginPath(); c.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0], pts[i][1]);
+  c.closePath();
+  c.fillStyle = t.fill; c.fill();
+  c.strokeStyle = t.stroke; c.lineWidth = 3.2; c.stroke();
+  // Chấm nhẹ ở các đỉnh mẫu để HS dễ đếm ô
+  if (!isTargetHalf) {
+    pts.forEach(([x, y]) => {
+      c.beginPath(); c.arc(x, y, 4, 0, Math.PI*2); c.fillStyle = '#0f172a'; c.fill();
+    });
+  }
+  c.restore();
+}
+
+function renderStroke(c, s, isLive = false) {
+  if (s.pts.length < 2) return;
+  c.save(); c.strokeStyle = s.color; c.lineWidth = isLive ? Math.max(2, s.width * 0.85) : s.width;
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  if (isLive) { c.globalAlpha = 0.42; c.setLineDash([6, 5]); }
+  c.beginPath(); c.moveTo(s.pts[0][0], s.pts[0][1]);
+  for (let i = 1; i < s.pts.length; i++) c.lineTo(s.pts[i][0], s.pts[i][1]);
+  c.stroke(); c.restore();
+}
+
+function drawUserPart(c, t) {
+  if (restoredFull) {
+    drawTaskHalf(c, t, true);
+    return;
+  }
+  if (restoredPartial && strokes.length > 0) {
+    const allPts = []; strokes.forEach(s => s.pts.forEach(p => allPts.push(p)));
+    if (allPts.length >= 3) {
+      c.save(); c.beginPath();
+      // Khép kín tự nhiên về trục d (hoặc đóng kín đa giác) rồi tô ĐÚNG MÀU & VIỀN CỦA BẢN GỐC
+      if (t.sym === 'axisV') {
+        c.moveTo(CX, allPts[0][1]);
+        allPts.forEach(p => c.lineTo(p[0], p[1]));
+        c.lineTo(CX, allPts[allPts.length - 1][1]);
+      } else if (t.sym === 'axisH') {
+        c.moveTo(allPts[0][0], CY);
+        allPts.forEach(p => c.lineTo(p[0], p[1]));
+        c.lineTo(allPts[allPts.length - 1][0], CY);
+      } else {
+        c.moveTo(allPts[0][0], allPts[0][1]);
+        allPts.forEach(p => c.lineTo(p[0], p[1]));
+      }
+      c.closePath();
+      c.fillStyle = t.fill; c.fill();
+      c.strokeStyle = t.stroke; c.lineWidth = 3.2; c.lineJoin = 'round'; c.stroke();
+      c.restore();
+    }
+    // Chấm đỏ nhẹ đánh dấu đoạn bị vẽ lệch quá 1 ô
+    if (outlierPts.length > 0) {
+      c.save(); c.fillStyle = 'rgba(220, 38, 38, 0.85)';
+      outlierPts.forEach(([x, y]) => {
+        c.beginPath(); c.arc(x, y, 4.2, 0, Math.PI*2); c.fill();
+      });
+      c.restore();
+    }
+    return;
+  }
+  strokes.forEach(s => renderStroke(c, s, false));
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  drawGrid();
+  const t = getTask();
+
+  // 1. Vẽ nửa mẫu cố định
+  drawTaskHalf(ctx, t, false);
+
+  // 2. Vẽ phần HS vẽ / phục dựng (kèm biến đổi Gấp 3D hoặc Quay 180° quanh O)
+  const phi = foldAngle * Math.PI / 180;
+  const cosPhi = Math.cos(phi);
+  ctx.save();
+  if (t.sym === 'axisV') {
+    ctx.translate(CX, 0);
+    ctx.scale(Math.abs(cosPhi) < 0.02 ? 0.02 : cosPhi, 1);
+    ctx.translate(-CX, 0);
+  } else if (t.sym === 'axisH') {
+    ctx.translate(0, CY);
+    ctx.scale(1, Math.abs(cosPhi) < 0.02 ? 0.02 : cosPhi);
+    ctx.translate(0, -CY);
+  } else {
+    ctx.translate(CX, CY);
+    ctx.rotate(phi);
+    ctx.translate(-CX, -CY);
+  }
+  ctx.globalAlpha = foldAngle > 90 ? 0.68 : 1.0;
+  drawUserPart(ctx, t);
+  ctx.restore();
+
+  // 3. Nếu đang kéo chuột vẽ → hiện nét đứt mờ bám theo tay
+  if (drawing && curStroke) renderStroke(ctx, curStroke, true);
+
+  // 4. Vẽ Trục d hoặc Tâm O rõ nét
+  ctx.save();
+  if (t.sym === 'axisV') {
+    ctx.beginPath(); ctx.moveTo(CX, 16); ctx.lineTo(CX, H - 6);
+    ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 3.2; ctx.setLineDash([9, 6]); ctx.stroke();
+    ctx.fillStyle = '#dc2626'; ctx.font = 'bold 15px Segoe UI'; ctx.fillText('Trục d', CX + 8, 30);
+  } else if (t.sym === 'axisH') {
+    ctx.beginPath(); ctx.moveTo(22, CY); ctx.lineTo(W - 10, CY);
+    ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 3.2; ctx.setLineDash([9, 6]); ctx.stroke();
+    ctx.fillStyle = '#dc2626'; ctx.font = 'bold 15px Segoe UI'; ctx.fillText('Trục d', W - 62, CY - 8);
+  } else {
+    ctx.beginPath(); ctx.arc(CX, CY, 8.5, 0, Math.PI*2);
+    ctx.fillStyle = '#eab308'; ctx.fill(); ctx.strokeStyle = '#713f12'; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#0f172a'; ctx.font = 'bold 16px Segoe UI'; ctx.fillText('O', CX + 12, CY - 9);
+  }
+  ctx.restore();
+}
+
+// ============== TÍNH % ĐỘ CHÍNH XÁC CHẶT CHẼ (BẮT LỖI VẼ THỪA / LỆCH Ô) ==============
+function computeAccuracy() {
+  const t = getTask();
+  const targetPts = [];
+  if (t.isCircle514) {
+    for (let deg = -90; deg <= 90; deg += 4) {
+      const a = deg * Math.PI / 180;
+      targetPts.push([CX + 5*G*Math.cos(a), CY + 5*G*Math.sin(a)]);
+      targetPts.push([CX + 4*G*Math.cos(a), CY + 4*G*Math.sin(a)]);
+    }
+    const segs514 = [[[0,0],[4,-2]], [[0,0],[4,2]], [[4,-2],[4,2]]];
+    segs514.forEach(([a, b]) => {
+      const A = toPx(a), B = toPx(b), st = Math.max(6, Math.round(Math.hypot(B[0]-A[0],B[1]-A[1])/6));
+      for (let s=0;s<=st;s++) targetPts.push([A[0]+(B[0]-A[0])*(s/st), A[1]+(B[1]-A[1])*(s/st)]);
+    });
+  } else {
+    const verts = t.poly.map(p => toPx(mirrorPt(p, t.sym)));
+    for (let i = 0; i < verts.length; i++) {
+      const A = verts[i], B = verts[(i + 1) % verts.length];
+      if (t.sym === 'axisV' && Math.abs(A[0] - CX) < 2 && Math.abs(B[0] - CX) < 2) continue;
+      if (t.sym === 'axisH' && Math.abs(A[1] - CY) < 2 && Math.abs(B[1] - CY) < 2) continue;
+      const steps = Math.max(6, Math.round(Math.hypot(B[0]-A[0], B[1]-A[1]) / 6));
+      for (let s = 0; s <= steps; s++) {
+        targetPts.push([A[0] + (B[0]-A[0])*(s/steps), A[1] + (B[1]-A[1])*(s/steps)]);
+      }
+    }
+  }
+
+  // Lấy mẫu đều các điểm dọc theo nét vẽ tay của HS (tránh trường hợp vẽ chậm/nhanh làm lệch trọng số)
+  const userPts = [];
+  strokes.forEach(s => {
+    for (let i = 1; i < s.pts.length; i++) {
+      const A = s.pts[i-1], B = s.pts[i], d = Math.hypot(B[0]-A[0], B[1]-A[1]);
+      const st = Math.max(1, Math.round(d / 6));
+      for (let k = 0; k <= st; k++) userPts.push([A[0]+(B[0]-A[0])*(k/st), A[1]+(B[1]-A[1])*(k/st)]);
+    }
+  });
+  if (userPts.length === 0 || targetPts.length === 0) return { pct: 0, badPts: [], hasOvershoot: false };
+
+  const TOL = 13;        // ~0.46 ô vuông: chặt chẽ, lệch sang ô kế bên là tính SAI ngay!
+  const FAR_LIMIT = 34;  // ~1.2 ô vuông: vẽ vọt ra quá mức này là bị tính lỗi vẽ thừa nghiêm trọng!
+
+  let coveredTarget = 0;
+  for (const tp of targetPts) {
+    if (userPts.some(up => Math.hypot(up[0]-tp[0], up[1]-tp[1]) <= TOL)) coveredTarget++;
+  }
+
+  let validUser = 0;
+  const badPts = [];
+  let farCount = 0;
+  for (const up of userPts) {
+    let minD = Infinity;
+    for (const tp of targetPts) {
+      const d = Math.hypot(up[0]-tp[0], up[1]-tp[1]);
+      if (d < minD) minD = d;
+    }
+    if (minD <= TOL + 2) {
+      validUser++;
+    } else if (minD > FAR_LIMIT) {
+      farCount++;
+      if (farCount % 3 === 1) badPts.push(up);
+    }
+  }
+
+  const recall = coveredTarget / targetPts.length;
+  const precision = validUser / userPts.length;
+  const hasOvershoot = farCount >= 4; // chỉ cần vẽ thừa dài hơn ~24px ra ngoài là bắt ngay!
+  let f1 = (recall + precision > 0) ? (2 * recall * precision) / (recall + precision) : 0;
+  if (hasOvershoot) f1 = Math.min(f1 * 0.72, 0.64); // ép dưới 70% nếu cố tình vẽ vọt dài ra ngoài!
+  return { pct: Math.round(f1 * 100), badPts, hasOvershoot };
+}
+
+// ============== PHỤC DỰNG (ĐẠT >= 70% VÀ KHÔNG VẼ THỪA → PHỤC DỰNG 100%) ==============
+async function runRestore() {
+  if (strokes.length === 0) {
+    setStatus('⚠️ <b>Học sinh hãy dùng chuột vẽ phác thảo phần hình còn thiếu trước nhé!</b>', 'warn');
+    return;
+  }
+  setFold(0);
+  const { pct, badPts, hasOvershoot } = computeAccuracy();
+  outlierPts = badPts;
+  document.getElementById('btnResetAi').style.display = 'block';
+
+  let aiNote = '';
+  if (!IS_LOCAL_FILE) {
+    try {
+      const snap = canvas.toDataURL('image/png').split(',')[1];
+      const res = await fetch(GEMINI_DIRECT_ENDPOINT + 'gemini-2.5-flash:generateContent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit',
+        body: JSON.stringify({
+          contents: [{ parts: [
+            { text: `Bạn là giáo viên Toán 6 nhận xét ngắn gọn 1–2 câu về bài vẽ hình đối xứng của học sinh (độ chính xác đo được là ${pct}%${hasOvershoot ? ', có đoạn vẽ bị dài/thừa ra ngoài ô chuẩn' : ''}).` },
+            { inlineData: { mimeType: 'image/png', data: snap } }
+          ]}]
+        })
+      });
+      if (res.ok) {
+        const j = await res.json();
+        aiNote = j?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      }
+    } catch (_) {}
+  }
+
+  if (pct >= 70 && !hasOvershoot) {
+    restoredFull = true;
+    restoredPartial = false;
+    outlierPts = [];
+    document.getElementById('btnRealAi').style.display = 'block';
+    draw();
+    setStatus(
+      `<b>🎉 XUẤT SẮC! Độ chính xác nét vẽ đạt ${pct}% (≥ 70%) → Hệ thống đã PHỤC DỰNG 100% hình gốc đối xứng hoàn chỉnh!</b>` +
+      (aiNote ? `<br>🤖 <i>Gemini Canvas:</i> ${aiNote}` : '') +
+      `<br>👉 Hãy bấm <b>${getTask().sym === 'center' ? '▶ Quay nửa vòng 180° quanh O' : '▶ Gấp 3D kiểm chứng (0° → 180°)'}</b> để kiểm tra, hoặc bấm <b>🪄 Biến thành Ảnh Thật (Gemini Canvas)</b> để AI tạo ảnh sống động từ bài vẽ của em!`,
+      'ok'
+    );
+  } else {
+    restoredFull = false;
+    restoredPartial = true;
+    document.getElementById('btnRealAi').style.display = 'block';
+    draw();
+    const extraReason = hasOvershoot ? ' (phát hiện nét vẽ bị kéo dài/lệch quá 1 ô — đã chấm ĐỎ vùng sai!)' : '';
+    setStatus(
+      `<b>❌ CHƯA ĐẠT! Độ chính xác chỉ đạt ${pct}% (cần ≥ 70% và không vẽ thừa)${extraReason}.</b>` +
+      (aiNote ? `<br>🤖 <i>Gemini Canvas:</i> ${aiNote}` : '') +
+      `<br>👉 Bấm <b>Kiểm tra tại 180°</b> để nhìn rõ chỗ bị lệch ô, sau đó bấm <b>Xóa vẽ lại</b> và đếm kỹ từng ô nhé!`,
+      'warn'
+    );
+  }
+}
+
+// ============== GỌI GEMINI CANVAS IMAGE BIẾN BẢN PHỤC DỰNG THÀNH ẢNH THẬT SỐNG ĐỘNG ==============
+async function generateRealPhotoAI() {
+  if (IS_LOCAL_FILE) {
+    setStatus('💡 <b>Chức năng “🪄 Biến thành Ảnh Thật” cần chạy trong môi trường Gemini Canvas</b> (hãy dán mã tệp <code>canvas_phuc_dung_doi_xung_toan6.html</code> lên Gemini Canvas — chạy trực tiếp <code>gemini-2.5-flash-image</code> không cần API Key!).', 'warn');
+    return;
+  }
+  const btn = document.getElementById('btnRealAi');
+  btn.disabled = true;
+  btn.textContent = '⏳ Gemini Canvas đang tạo Ảnh Thật...';
+  setFold(0);
+
+  // Chụp sạch hình đã phục dựng (không kèm đường lưới) để gửi AI tạo ảnh thật cực đẹp
+  const clean = document.createElement('canvas'); clean.width = W; clean.height = H;
+  const cCtx = clean.getContext('2d');
+  cCtx.fillStyle = '#ffffff'; cCtx.fillRect(0, 0, W, H);
+  const t = getTask();
+  drawTaskHalf(cCtx, t, false);
+  drawUserPart(cCtx, t);
+  const b64 = clean.toDataURL('image/png').split(',')[1];
+
+  const prompt = `Transform this symmetric 6th-grade student geometric drawing ("${t.name}") into a vivid, realistic, studio-quality 3D photograph/artwork of the real object on a clean bright studio background. Keep the EXACT symmetric shape and proportions of the drawing (preserving its ${t.sym === 'center' ? '180-degree rotational central symmetry' : 'mirror reflection symmetry'}). High detail, cheerful educational style, no text.`;
+
+  try {
+    const imgModels = ['gemini-2.5-flash-image', 'gemini-2.0-flash-exp-image-generation'];
+    let dataUrl = '', lastErr = '';
+    for (const model of imgModels) {
+      const res = await fetch(GEMINI_DIRECT_ENDPOINT + model + ':generateContent', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit',
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: 'image/png', data: b64 } }] }],
+          generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+        })
+      });
+      const j = await res.json();
+      const parts = j?.candidates?.[0]?.content?.parts || [];
+      const imgPart = parts.find(p => p.inlineData && p.inlineData.data);
+      if (imgPart) {
+        dataUrl = `data:${imgPart.inlineData.mimeType || 'image/png'};base64,${imgPart.inlineData.data}`;
+        break;
+      }
+      lastErr = j?.error?.message || `Model ${model} không trả về ảnh`;
+    }
+    if (dataUrl) {
+      document.getElementById('realPhotoImg').src = dataUrl;
+      document.getElementById('btnDlReal').href = dataUrl;
+      document.getElementById('realPhotoBox').style.display = 'block';
+      document.getElementById('realPhotoBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      setStatus('🌟 <b>Gemini Canvas đã biến bản vẽ đối xứng của học sinh thành Ảnh Thật sống động!</b> Xem ngay khung ảnh bên dưới (có thể bấm Tải ảnh làm sản phẩm trưng bày).', 'ok');
+    } else {
+      setStatus(`⚠️ Gemini Canvas chưa trả về ảnh thật (${lastErr || 'Thử bấm lại sau vài giây'}).`, 'warn');
+    }
+  } catch (e) {
+    setStatus(`⚠️ Không thể gọi Gemini Canvas Image: ${e.message}`, 'warn');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🪄 Biến thành Ảnh Thật (Gemini Canvas)';
+  }
+}
+
+// ============== TƯƠNG TÁC VẼ NÉT MỜ → DỨT TAY CHỐT NÉT ==============
+function getPt(e) {
+  const r = canvas.getBoundingClientRect();
+  const cx = e.touches ? e.touches[0].clientX : e.clientX;
+  const cy = e.touches ? e.touches[0].clientY : e.clientY;
+  return [(cx - r.left) * (W / r.width), (cy - r.top) * (H / r.height)];
+}
+canvas.addEventListener('pointerdown', e => {
+  if (foldAngle > 0) setFold(0);
+  restoredFull = false; restoredPartial = false;
+  document.getElementById('btnResetAi').style.display = 'none';
+  document.getElementById('btnRealAi').style.display = 'none';
+  document.getElementById('realPhotoBox').style.display = 'none';
+  drawing = true;
+  curStroke = { color: penColor, width: penWidth, pts: [getPt(e)] };
+  draw();
+});
+canvas.addEventListener('pointermove', e => {
+  if (!drawing || !curStroke) return;
+  curStroke.pts.push(getPt(e));
+  draw();
+});
+window.addEventListener('pointerup', () => {
+  if (drawing && curStroke && curStroke.pts.length >= 2) strokes.push(curStroke);
+  drawing = false; curStroke = null;
+  draw();
+});
+
+function undoStroke() { strokes.pop(); restoredFull = false; restoredPartial = false; outlierPts = []; document.getElementById('btnResetAi').style.display = 'none'; draw(); }
+function clearDrawings() { strokes = []; restoredFull = false; restoredPartial = false; outlierPts = []; document.getElementById('btnResetAi').style.display = 'none'; draw(); }
+function clearAiResult() { restoredFull = false; restoredPartial = false; outlierPts = []; document.getElementById('btnResetAi').style.display = 'none'; draw(); }
+
+function setFold(val) {
+  stopAuto(); foldAngle = val;
+  document.getElementById('foldSlider').value = val;
+  document.getElementById('foldDeg').textContent = val + '°';
+  draw();
+}
+document.getElementById('foldSlider').oninput = e => setFold(parseInt(e.target.value, 10));
+function toggleFoldAuto() {
+  if (animId) { stopAuto(); return; }
+  if (foldAngle >= 180) foldAngle = 0;
+  document.getElementById('btnFoldAuto').textContent = '⏸ Tạm dừng';
+  function step() {
+    foldAngle += 3;
+    if (foldAngle >= 180) { setFold(180); return; }
+    document.getElementById('foldSlider').value = foldAngle;
+    document.getElementById('foldDeg').textContent = foldAngle + '°';
+    draw(); animId = requestAnimationFrame(step);
+  }
+  animId = requestAnimationFrame(step);
+}
+function stopAuto() {
+  if (animId) { cancelAnimationFrame(animId); animId = null; }
+  const isCenter = getTask().sym === 'center';
+  document.getElementById('btnFoldAuto').textContent = isCenter ? '▶ Quay nửa vòng 180° quanh O' : '▶ Gấp 3D kiểm chứng (0° → 180°)';
+}
+
+function switchGroup(grp) {
+  currentGroup = grp;
+  document.getElementById('btnGrpAxis').className = 'btn ' + (grp === 'axis' ? 'btn-primary' : 'btn-muted');
+  document.getElementById('btnGrpCenter').className = 'btn ' + (grp === 'center' ? 'btn-primary' : 'btn-muted');
+  const grid = document.getElementById('taskListGrid');
+  grid.innerHTML = '';
+  const keys = Object.keys(TASKS).filter(k => TASKS[k].group === grp);
+  keys.forEach((k, idx) => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (idx === 0 ? ' active' : '');
+    b.textContent = TASKS[k].short;
+    b.onclick = () => selectTask(k, b);
+    grid.appendChild(b);
+  });
+  selectTask(keys[0], grid.firstChild);
+}
+
+switchGroup('axis');
+</script>
+</body>
+</html>

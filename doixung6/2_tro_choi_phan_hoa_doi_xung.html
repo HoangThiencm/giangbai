@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đấu Trường Thao Tác Đối Xứng (Bắt Điểm Chuẩn 100%) - Toán 6</title>
+<style>
+  * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+  body { margin: 0; background: #f0f9ff; color: #0f172a; min-height: 100vh; }
+  header {
+    background: linear-gradient(135deg, #0f766e, #0284c7); color: white; padding: 12px 22px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+  }
+  header h1 { margin: 0; font-size: 1.18rem; }
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .tab {
+    border: none; border-radius: 10px; padding: 9px 14px; font-weight: 700; cursor: pointer;
+    background: rgba(255,255,255,0.18); color: white; font-size: 0.88rem;
+  }
+  .tab.active { background: white; color: #0f766e; }
+
+  .wrap { max-width: 920px; margin: 16px auto; padding: 0 16px; }
+  .card {
+    background: white; border-radius: 16px; padding: 20px; border: 1px solid #cbd5e1;
+    box-shadow: 0 6px 20px rgba(15,23,42,0.06);
+  }
+  .hud { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
+  .pill { background: #e0f2fe; color: #0369a1; padding: 6px 13px; border-radius: 99px; font-weight: 700; font-size: 0.88rem; }
+  .pill-score { background: #dcfce7; color: #166534; }
+  .task-title { font-size: 1.06rem; font-weight: 700; color: #1e293b; margin: 0 0 12px; text-align: center; }
+
+  .stage-box { display: flex; justify-content: center; margin: 8px 0 14px; }
+  canvas { border: 2px solid #cbd5e1; border-radius: 12px; background: #ffffff; cursor: pointer; touch-action: none; max-width: 100%; }
+
+  .actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+  .btn { border: none; border-radius: 10px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 0.9rem; }
+  .btn-primary { background: #0284c7; color: white; }
+  .btn-success { background: #16a34a; color: white; }
+  .btn-warn { background: #f59e0b; color: white; }
+  .btn-muted { background: #e2e8f0; color: #1e293b; }
+
+  .fb {
+    margin-top: 14px; padding: 12px 16px; border-radius: 10px; font-size: 0.92rem; line-height: 1.5;
+    border-left: 5px solid #94a3b8; background: #f8fafc;
+  }
+  .fb.ok { background: #dcfce7; border-left-color: #16a34a; color: #14532d; }
+  .fb.err { background: #fee2e2; border-left-color: #dc2626; color: #7f1d1d; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚔️ Đấu Trường Thao Tác Đối Xứng (Toán 6)</h1>
+  <div class="tabs">
+    <button class="tab active" id="tSlice" onclick="switchGame('slice')">✂️ 1. Nối điểm dựng trục &amp; Gấp 3D</button>
+    <button class="tab" id="tGrid" onclick="switchGame('grid')">🧩 2. Dựng hình lưới ô vuông</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <div class="hud">
+      <span class="pill" id="hudMode">Chế độ 1</span>
+      <span class="pill" id="hudRound">Hình 1 / 4</span>
+      <span class="pill pill-score" id="hudScore">Điểm: 0</span>
+    </div>
+
+    <div class="task-title" id="taskTitle"></div>
+    <div class="stage-box">
+      <canvas id="gameCanvas" width="600" height="400"></canvas>
+    </div>
+
+    <div class="actions" id="actionBar"></div>
+    <div class="fb" id="fbBox"></div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height, CX = W/2, CY = H/2;
+
+let gameMode = 'slice', score = 0;
+
+// ================== CHẾ ĐỘ 1: NỐI 2 CHẤM NEO (ĐỈNH / TRUNG ĐIỂM) → GẤP 3D ==================
+const SLICE_ROUNDS = [
+  { name: 'Hình chữ nhật', poly: [[-140,-80],[140,-80],[140,80],[-140,80]], hasAxis: true, hint: 'Bấm chọn 2 chấm tròn trên viền hình để kẻ 1 trục đối xứng (thử nối đường chéo xem điều gì xảy ra!).' },
+  { name: 'Hình thang cân', poly: [[-75,-85],[75,-85],[145,85],[-145,85]], hasAxis: true, hint: 'Bấm chọn 2 chấm tròn để kẻ trục đối xứng của Hình thang cân.' },
+  { name: 'Hình bình hành (Bẫy tư duy!)', poly: [[-95,-80],[155,-80],[95,80],[-155,80]], hasAxis: false, hint: 'Thử nối 2 chấm bất kỳ để kiểm chứng — hoặc bấm “Hình này KHÔNG có trục ĐX”!' },
+  { name: 'Hình thoi', poly: [[0,-120],[150,0],[0,120],[-150,0]], hasAxis: true, hint: 'Bấm nối 2 chấm tròn để dựng 1 trục đối xứng của Hình thoi.' }
+];
+let sliceIdx = 0, pickFirst = null, sliceLine = null, sliceFoldAngle = 0, sliceAnim = null, hoverAnchor = null;
+
+function getAnchors(poly) {
+  const pts = [];
+  for (let i = 0; i < poly.length; i++) {
+    const A = poly[i], B = poly[(i+1)%poly.length];
+    pts.push({ x: A[0], y: A[1], kind: 'đỉnh' });
+    pts.push({ x: (A[0]+B[0])/2, y: (A[1]+B[1])/2, kind: 'trung điểm' });
+  }
+  return pts;
+}
+
+// ================== CHẾ ĐỘ 2: DỰNG HÌNH LƯỚI Ô VUÔNG ==================
+const GRID_ROUNDS = [
+  { type: 'axis', title: 'Nhấp tô các ô bên PHẢI trục d để dựng hoàn thiện mũi tên đối xứng trục:', leftCells: [[4,1],[3,2],[4,2],[2,3],[3,3],[4,3],[4,4],[4,5],[4,6]] },
+  { type: 'axis', title: 'Nhấp tô các ô bên PHẢI trục d để dựng nửa cánh bướm đối xứng:', leftCells: [[4,1],[3,1],[2,2],[3,2],[4,2],[3,3],[4,3],[4,4],[3,5],[2,5],[3,6],[4,6]] },
+  { type: 'center', title: 'THỬ THÁCH TÂM O: Nhấp tô các ô đối xứng qua TÂM O (quay 180°):', leftCells: [[4,1],[3,1],[2,1],[4,2],[4,3]] }
+];
+let gridIdx = 0, userGrid = new Set(), gridChecked = false, gridSolved = false;
+
+// ================== CHẾ ĐỘ 3: THÁM TỬ SOI LỖI AI ==================
+const SPOT_ROUNDS = [
+  { title: 'AI vẽ họa tiết gạch bông đối xứng trục nhưng bị LỖI 1 Ô MÀU. Bấm trúng ô sai đó!', errors: [[5,2]] },
+  { title: 'Cấp độ khó: Họa tiết có 2 Ô MÀU bị AI làm lệch đối xứng. Hãy bấm sửa cả 2 ô!', errors: [[6,1],[2,5]] }
+];
+let spotIdx = 0, spotFound = new Set();
+
+function switchGame(m) {
+  if (sliceAnim) { cancelAnimationFrame(sliceAnim); sliceAnim = null; }
+  gameMode = m;
+  document.getElementById('tSlice').classList.toggle('active', m === 'slice');
+  document.getElementById('tGrid').classList.toggle('active', m === 'grid');
+  if (m === 'slice') { sliceIdx = 0; pickFirst = null; sliceLine = null; sliceFoldAngle = 0; }
+  if (m === 'grid') { gridIdx = 0; userGrid.clear(); gridChecked = false; gridSolved = false; }
+  renderUI(); draw();
+}
+
+function setFb(msg, cls='') { const fb = document.getElementById('fbBox'); fb.className = 'fb '+cls; fb.innerHTML = msg; }
+
+function renderUI() {
+  document.getElementById('hudScore').textContent = `Điểm: ${score}`;
+  const ab = document.getElementById('actionBar'); ab.innerHTML = '';
+  if (gameMode === 'slice') {
+    const r = SLICE_ROUNDS[sliceIdx];
+    document.getElementById('hudMode').textContent = 'Chế độ 1: Nối điểm dựng trục';
+    document.getElementById('hudRound').textContent = `Hình ${sliceIdx+1} / ${SLICE_ROUNDS.length}`;
+    document.getElementById('taskTitle').textContent = `${r.name} — ${r.hint}`;
+    ab.innerHTML = `
+      <button class="btn btn-warn" onclick="claimNoAxis()">🚫 Hình này KHÔNG có trục ĐX</button>
+      <button class="btn btn-muted" onclick="pickFirst=null; sliceLine=null; sliceFoldAngle=0; draw();">↺ Chọn lại</button>
+      <button class="btn btn-primary" onclick="nextSlice()">Hình tiếp theo ➔</button>
+    `;
+    setFb('<b>Cực kỳ chính xác:</b> Chỉ cần bấm chọn <b>chấm tròn thứ 1</b> rồi bấm <b>chấm tròn thứ 2</b> trên viền hình, máy sẽ kẻ thẳng tắp và tự gấp 3D ngay!');
+  } else if (gameMode === 'grid') {
+    const r = GRID_ROUNDS[gridIdx];
+    document.getElementById('hudMode').textContent = 'Chế độ 2: Dựng hình lưới ô vuông';
+    document.getElementById('hudRound').textContent = `Bài ${gridIdx+1} / ${GRID_ROUNDS.length}`;
+    document.getElementById('taskTitle').textContent = r.title;
+    ab.innerHTML = `
+      <button class="btn btn-success" onclick="checkGrid()">✅ Kiểm tra đối xứng</button>
+      <button class="btn btn-muted" onclick="userGrid.clear(); gridChecked=false; gridSolved=false; draw();">🗑 Xóa tô lại</button>
+      <button class="btn btn-primary" onclick="nextGrid()">Bài tiếp theo ➔</button>
+    `;
+    setFb('Nhấp chuột vào từng ô vuông để tô (hoặc bỏ tô), sau đó bấm <b>Kiểm tra đối xứng</b>!');
+  } else {
+    const r = SPOT_ROUNDS[spotIdx];
+    document.getElementById('hudMode').textContent = 'Chế độ 3: Thám tử soi lỗi AI';
+    document.getElementById('hudRound').textContent = `Vụ án ${spotIdx+1} / ${SPOT_ROUNDS.length}`;
+    document.getElementById('taskTitle').textContent = r.title;
+    ab.innerHTML = `<button class="btn btn-primary" onclick="nextSpot()">Vụ án tiếp theo ➔</button>`;
+    setFb(`Đã tìm thấy <b>${spotFound.size} / ${r.errors.length}</b> ô lỗi. Bấm trực tiếp vào ô màu bị lệch đối xứng!`);
+  }
+}
+
+// === TOÁN HỌC CHO CHẾ ĐỘ 1 ===
+function ptSegDist(p, a, b) {
+  const vx=b[0]-a[0], vy=b[1]-a[1], l2=vx*vx+vy*vy;
+  if (!l2) return Math.hypot(p[0]-a[0], p[1]-a[1]);
+  const t=Math.max(0, Math.min(1, ((p[0]-a[0])*vx+(p[1]-a[1])*vy)/l2));
+  return Math.hypot(p[0]-(a[0]+t*vx), p[1]-(a[1]+t*vy));
+}
+function checkSymLine(poly, A, B) {
+  const dx=B.x-A.x, dy=B.y-A.y, len=Math.hypot(dx,dy);
+  if (len < 10) return false;
+  const ux=dx/len, uy=dy/len;
+  const refl = poly.map(p => { const pr=(p[0]-A.x)*ux+(p[1]-A.y)*uy; return [2*(A.x+pr*ux)-p[0], 2*(A.y+pr*uy)-p[1]]; });
+  let err = 0;
+  for (const pt of refl) {
+    let m = Infinity;
+    for (let i=0;i<poly.length;i++) m = Math.min(m, ptSegDist(pt, poly[i], poly[(i+1)%poly.length]));
+    err = Math.max(err, m);
+  }
+  return err < 4;
+}
+function clipPoly(poly, A, B, keepPos) {
+  const dx=B.x-A.x, dy=B.y-A.y, len=Math.hypot(dx,dy)||1, nx=-dy/len, ny=dx/len, s=keepPos?1:-1;
+  const d = p => (p[0]-A.x)*nx+(p[1]-A.y)*ny;
+  const out = [];
+  for (let i=0;i<poly.length;i++) {
+    const P=poly[i], Q=poly[(i+1)%poly.length], inP=s*d(P)>=-1e-5, inQ=s*d(Q)>=-1e-5;
+    if (inP && inQ) out.push(Q);
+    else if (inP && !inQ) { const t=d(P)/(d(P)-d(Q)); out.push([P[0]+t*(Q[0]-P[0]), P[1]+t*(Q[1]-P[1])]); }
+    else if (!inP && inQ) { const t=d(P)/(d(P)-d(Q)); out.push([P[0]+t*(Q[0]-P[0]), P[1]+t*(Q[1]-P[1])]); out.push(Q); }
+  }
+  return out;
+}
+function foldPt(p, A, B, phi) {
+  const dx=B.x-A.x, dy=B.y-A.y, len=Math.hypot(dx,dy)||1, ux=dx/len, uy=dy/len, nx=-uy, ny=ux;
+  const px=p[0]-A.x, py=p[1]-A.y, al=px*ux+py*uy, di=px*nx+py*ny;
+  const sc = 1 + (di*Math.sin(phi))/900;
+  return [A.x+(al*ux+di*Math.cos(phi)*nx)*sc, A.y+(al*uy+di*Math.cos(phi)*ny)*sc];
+}
+function drawPoly(pts, fill, stroke, lw=2.5, dash=[]) {
+  if (!pts || pts.length<3) return;
+  ctx.save(); ctx.beginPath(); ctx.moveTo(CX+pts[0][0], CY+pts[0][1]);
+  for (let i=1;i<pts.length;i++) ctx.lineTo(CX+pts[i][0], CY+pts[i][1]);
+  ctx.closePath();
+  if (fill) { ctx.fillStyle=fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle=stroke; ctx.lineWidth=lw; ctx.setLineDash(dash); ctx.stroke(); }
+  ctx.restore();
+}
+
+function runFoldCheck() {
+  const r = SLICE_ROUNDS[sliceIdx];
+  const ok = r.hasAxis && checkSymLine(r.poly, sliceLine.a, sliceLine.b);
+  sliceFoldAngle = 0;
+  function anim() {
+    sliceFoldAngle += 6;
+    if (sliceFoldAngle >= 180) {
+      sliceFoldAngle = 180; draw(); sliceAnim = null;
+      if (ok) {
+        score += 10; document.getElementById('hudScore').textContent = `Điểm: ${score}`;
+        setFb('<b>✅ CHÍNH XÁC 100% (+10 điểm)!</b> Hai nửa hình gấp lại trùng khít tuyệt đối!', 'ok');
+      } else {
+        setFb(r.hasAxis
+          ? '<b>❌ BỊ LỆCH ĐỈNH/CẠNH!</b> Nhìn vùng màu đỏ bị thừa ra khi gấp 180°. Hãy chọn cặp chấm khác!'
+          : '<b>❌ KHÔNG TRÙNG KHÍT!</b> Hình bình hành không có trục đối xứng nào cả — hãy bấm nút màu cam “Hình này KHÔNG có trục ĐX”!', 'err');
+      }
+      return;
+    }
+    draw(); sliceAnim = requestAnimationFrame(anim);
+  }
+  anim();
+}
+
+function claimNoAxis() {
+  const r = SLICE_ROUNDS[sliceIdx];
+  if (!r.hasAxis) {
+    score += 10; document.getElementById('hudScore').textContent = `Điểm: ${score}`;
+    setFb('<b>✅ XUẤT SẮC (+10 điểm)!</b> Bạn đã phát hiện đúng bẫy: Hình bình hành KHÔNG có trục đối xứng!', 'ok');
+  } else {
+    setFb('<b>❌ Chưa đúng!</b> Hình này CÓ trục đối xứng. Hãy bấm nối 2 chấm tròn trên viền hình nhé!', 'err');
+  }
+}
+function nextSlice() {
+  if (sliceAnim) { cancelAnimationFrame(sliceAnim); sliceAnim = null; }
+  sliceIdx = (sliceIdx + 1) % SLICE_ROUNDS.length;
+  pickFirst = null; sliceLine = null; sliceFoldAngle = 0;
+  renderUI(); draw();
+}
+
+// === LƯỚI Ô VUÔNG ===
+const G_COLS=10, G_ROWS=8, G_SIZE=44, G_OX=(W-G_COLS*G_SIZE)/2, G_OY=(H-G_ROWS*G_SIZE)/2;
+function expectedSet(r) {
+  return new Set(r.leftCells.map(([c,row]) => r.type==='axis' ? `${G_COLS-1-c},${row}` : `${G_COLS-1-c},${G_ROWS-1-row}`));
+}
+function checkGrid() {
+  const r = GRID_ROUNDS[gridIdx], exp = expectedSet(r);
+  gridChecked = true;
+  let okCnt = 0, wrongCnt = 0;
+  userGrid.forEach(k => { if (exp.has(k)) okCnt++; else wrongCnt++; });
+  if (okCnt === exp.size && wrongCnt === 0) {
+    if (!gridSolved) { score += 15; gridSolved = true; document.getElementById('hudScore').textContent = `Điểm: ${score}`; }
+    setFb('<b>✅ HOÀN HẢO (+15 điểm)!</b> Hình đối xứng đã được dựng chính xác 100%!', 'ok');
+  } else {
+    setFb(`<b>❌ Còn lệch!</b> Đúng ${okCnt}/${exp.size} ô, thừa/sai ${wrongCnt} ô (các ô thừa được viền ĐỎ, hãy nhấp bỏ hoặc tô thêm ô thiếu).`, 'err');
+  }
+  draw();
+}
+function nextGrid() { gridIdx = (gridIdx+1)%GRID_ROUNDS.length; userGrid.clear(); gridChecked=false; gridSolved=false; renderUI(); draw(); }
+
+// === SOI LỖI AI ===
+const S_N=8, S_SIZE=44, S_OX=(W-S_N*S_SIZE)/2, S_OY=(H-S_N*S_SIZE)/2;
+const BASE_PAT = [
+  [0,0,1,2,2,1,0,0],[0,1,2,3,3,2,1,0],[1,2,3,1,1,3,2,1],[2,3,1,2,2,1,3,2],
+  [2,3,1,2,2,1,3,2],[1,2,3,1,1,3,2,1],[0,1,2,3,3,2,1,0],[0,0,1,2,2,1,0,0]
+];
+const PAL = ['#f1f5f9','#38bdf8','#f59e0b','#10b981'];
+function nextSpot() { spotIdx=(spotIdx+1)%SPOT_ROUNDS.length; spotFound.clear(); renderUI(); draw(); }
+
+// === VẼ CHÍNH ===
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  if (gameMode === 'slice') {
+    const r = SLICE_ROUNDS[sliceIdx], anchors = getAnchors(r.poly);
+    drawPoly(r.poly, 'rgba(59,130,246,0.16)', '#1d4ed8', 2.5);
+    if (sliceLine) {
+      const ok = r.hasAxis && checkSymLine(r.poly, sliceLine.a, sliceLine.b);
+      if (sliceFoldAngle > 0) {
+        drawPoly(clipPoly(r.poly, sliceLine.a, sliceLine.b, false), 'rgba(59,130,246,0.40)', '#1d4ed8', 2.5);
+        const h2 = clipPoly(r.poly, sliceLine.a, sliceLine.b, true).map(p => foldPt(p, sliceLine.a, sliceLine.b, sliceFoldAngle*Math.PI/180));
+        drawPoly(h2, sliceFoldAngle===180 ? (ok?'rgba(34,197,94,0.58)':'rgba(239,68,68,0.52)') : 'rgba(249,115,22,0.52)', ok?'#15803d':'#dc2626', 2.8);
+      }
+      const dx=sliceLine.b.x-sliceLine.a.x, dy=sliceLine.b.y-sliceLine.a.y, len=Math.hypot(dx,dy)||1;
+      ctx.save(); ctx.beginPath();
+      ctx.moveTo(CX+sliceLine.a.x-dx/len*45, CY+sliceLine.a.y-dy/len*45);
+      ctx.lineTo(CX+sliceLine.b.x+dx/len*45, CY+sliceLine.b.y+dy/len*45);
+      ctx.strokeStyle='#d97706'; ctx.lineWidth=3.2; ctx.setLineDash([8,5]); ctx.stroke(); ctx.restore();
+    }
+    // Vẽ các chấm neo (đỉnh & trung điểm) rõ ràng để HS bấm siêu dễ
+    anchors.forEach((pt, idx) => {
+      const isPick = pickFirst === idx;
+      const isHov = hoverAnchor === idx;
+      ctx.beginPath(); ctx.arc(CX+pt.x, CY+pt.y, isPick||isHov ? 10 : 7.5, 0, Math.PI*2);
+      ctx.fillStyle = isPick ? '#dc2626' : (isHov ? '#f59e0b' : '#ffffff');
+      ctx.fill(); ctx.strokeStyle = isPick ? '#991b1b' : '#0284c7'; ctx.lineWidth = 2.8; ctx.stroke();
+    });
+  } else if (gameMode === 'grid') {
+    const r = GRID_ROUNDS[gridIdx], exp = expectedSet(r);
+    for (let row=0;row<G_ROWS;row++) {
+      for (let col=0;col<G_COLS;col++) {
+        const x=G_OX+col*G_SIZE, y=G_OY+row*G_SIZE, k=`${col},${row}`;
+        const isLeft = r.leftCells.some(([c,rr])=>c===col&&rr===row);
+        const isUser = userGrid.has(k);
+        ctx.fillStyle = isLeft ? '#3b82f6' : (isUser ? (gridSolved ? '#22c55e' : '#f59e0b') : '#ffffff');
+        ctx.fillRect(x, y, G_SIZE, G_SIZE);
+        ctx.strokeStyle = (gridChecked && isUser && !exp.has(k)) ? '#dc2626' : '#cbd5e1';
+        ctx.lineWidth = (gridChecked && isUser && !exp.has(k)) ? 3.5 : 1;
+        ctx.strokeRect(x, y, G_SIZE, G_SIZE);
+      }
+    }
+    if (r.type==='axis') {
+      ctx.save(); ctx.beginPath(); ctx.moveTo(G_OX+5*G_SIZE, G_OY-14); ctx.lineTo(G_OX+5*G_SIZE, G_OY+G_ROWS*G_SIZE+14);
+      ctx.strokeStyle='#dc2626'; ctx.lineWidth=3.5; ctx.setLineDash([8,5]); ctx.stroke(); ctx.restore();
+    } else {
+      ctx.beginPath(); ctx.arc(G_OX+5*G_SIZE, G_OY+4*G_SIZE, 8, 0, Math.PI*2);
+      ctx.fillStyle='#dc2626'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+    }
+  } else {
+    const r = SPOT_ROUNDS[spotIdx];
+    for (let row=0;row<S_N;row++) {
+      for (let col=0;col<S_N;col++) {
+        const x=S_OX+col*S_SIZE, y=S_OY+row*S_SIZE, k=`${col},${row}`;
+        const isErr = r.errors.some(([ec,er])=>ec===col&&er===row);
+        let cIdx = BASE_PAT[row][col];
+        if (isErr && !spotFound.has(k)) cIdx = (cIdx+2)%PAL.length;
+        ctx.fillStyle = PAL[cIdx]; ctx.fillRect(x, y, S_SIZE, S_SIZE);
+        ctx.strokeStyle = spotFound.has(k) ? '#16a34a' : '#fff'; ctx.lineWidth = spotFound.has(k) ? 4 : 1.5;
+        ctx.strokeRect(x, y, S_SIZE, S_SIZE);
+      }
+    }
+    ctx.save(); ctx.beginPath(); ctx.moveTo(S_OX+4*S_SIZE, S_OY-10); ctx.lineTo(S_OX+4*S_SIZE, S_OY+S_N*S_SIZE+10);
+    ctx.strokeStyle='#0f172a'; ctx.lineWidth=2.5; ctx.setLineDash([7,5]); ctx.stroke(); ctx.restore();
+  }
+}
+
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const cx = e.touches ? e.touches[0].clientX : e.clientX;
+  const cy = e.touches ? e.touches[0].clientY : e.clientY;
+  return { rawX: (cx-r.left)*(W/r.width), rawY: (cy-r.top)*(H/r.height), x: (cx-r.left)*(W/r.width)-CX, y: (cy-r.top)*(H/r.height)-CY };
+}
+
+canvas.addEventListener('pointermove', e => {
+  if (gameMode !== 'slice') return;
+  const p = getPos(e), anchors = getAnchors(SLICE_ROUNDS[sliceIdx].poly);
+  let found = null;
+  anchors.forEach((pt, idx) => { if (Math.hypot(p.x-pt.x, p.y-pt.y) < 18) found = idx; });
+  if (found !== hoverAnchor) { hoverAnchor = found; draw(); }
+});
+
+canvas.addEventListener('pointerdown', e => {
+  const p = getPos(e);
+  if (gameMode === 'slice') {
+    if (sliceAnim) { cancelAnimationFrame(sliceAnim); sliceAnim = null; }
+    const anchors = getAnchors(SLICE_ROUNDS[sliceIdx].poly);
+    let hit = null;
+    anchors.forEach((pt, idx) => { if (Math.hypot(p.x-pt.x, p.y-pt.y) < 20) hit = idx; });
+    if (hit === null) return;
+    if (pickFirst === null) {
+      pickFirst = hit; sliceLine = null; sliceFoldAngle = 0; draw();
+      setFb('Đã chọn <b>điểm thứ 1</b> (chấm đỏ). Bây giờ bấm vào <b>chấm tròn thứ 2</b> để nối đường gấp!');
+    } else if (pickFirst !== hit) {
+      sliceLine = { a: anchors[pickFirst], b: anchors[hit] };
+      pickFirst = null;
+      runFoldCheck();
+    } else {
+      pickFirst = null; draw();
+    }
+  } else if (gameMode === 'grid') {
+    const col=Math.floor((p.rawX-G_OX)/G_SIZE), row=Math.floor((p.rawY-G_OY)/G_SIZE);
+    if (col>=0 && col<G_COLS && row>=0 && row<G_ROWS) {
+      if (GRID_ROUNDS[gridIdx].leftCells.some(([c,rr])=>c===col&&rr===row)) return;
+      const k = `${col},${row}`;
+      if (userGrid.has(k)) userGrid.delete(k); else userGrid.add(k);
+      gridChecked = false; gridSolved = false; draw();
+    }
+  } else {
+    const col=Math.floor((p.rawX-S_OX)/S_SIZE), row=Math.floor((p.rawY-S_OY)/S_SIZE);
+    if (col>=0 && col<S_N && row>=0 && row<S_N) {
+      const r = SPOT_ROUNDS[spotIdx], k = `${col},${row}`;
+      if (r.errors.some(([ec,er])=>ec===col&&er===row)) {
+        if (!spotFound.has(k)) {
+          spotFound.add(k); score += 10; document.getElementById('hudScore').textContent = `Điểm: ${score}`;
+          setFb(spotFound.size===r.errors.length ? '<b>🎉 XUẤT SẮC (+10 điểm)!</b> Đã sửa sạch lỗi của AI!' : `<b>✅ Đúng rồi (+10 điểm)!</b> Tìm thêm ô lỗi còn lại nhé!`, 'ok');
+          draw();
+        }
+      } else {
+        setFb('<b>❌ Ô này đối xứng chuẩn rồi!</b> Hãy so sánh kỹ 2 bên trục nét đứt.', 'err');
+      }
+    }
+  }
+});
+
+switchGame('slice');
+</script>
+</body>
+</html>
